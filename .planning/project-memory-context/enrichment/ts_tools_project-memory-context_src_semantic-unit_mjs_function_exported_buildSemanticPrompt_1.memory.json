@@ -1,0 +1,11 @@
+{
+  "content": " To create a function that generates a semantic prompt based on the provided `unit` object, we need to ensure that the prompt includes all the specified components. The `unit` object contains various properties such as `symbolKey`, `language`, `kind`, `name`, `filePath`, `range`, `context`, and `code`.\n\nHere's a breakdown of what each part of the function does:\n- **Symbol Key**: A unique identifier for the symbol.\n- **Language**: The programming language in which the code is written.\n- **Kind**: The type or kind of the symbol (e.g., function, class).\n- **Name**: The name of the symbol.\n- **Location**: The file path along with the start and end lines where the symbol is defined.\n- **Context**: Additional context information about the symbol.\n- **Code**: The actual code snippet representing the symbol.\n\nThe prompt should be structured to include:\n1. Symbol Key, Language, Kind, Name, and Location.\n2. A section for Context if available, otherwise stating \"None\".\n3. The provided code snippet.\n4. A final section that lists the required components in a compact structured format: responsibility, primary inputs, output, immediate dependencies, and role in module.\n\nHere's the implementation of the function:\n\n```typescript\nexport function buildSemanticPrompt(unit) {\n  return [\n    `Symbol Key: ${unit.symbolKey}`,\n    `Language: ${unit.language}`,\n    `Kind: ${unit.kind}`,\n    `Name: ${unit.name}`,\n    `Location: ${unit.filePath}:${unit.range.startLine}-${unit.range.endLine}`,\n    '',\n    'Context:',\n    unit.context || 'None',\n    '',\n    'Code:',\n    unit.code,\n    '',\n    'Return a compact structured explanation with:',\n    '- responsibility',\n    '- primary inputs',\n    '- output',\n    '- immediate dependencies',\n    '- role in module',\n  ].join('\\n');\n}\n```\n\nThis function constructs the prompt as an array of strings, which is then joined into a single string with newline characters (`\\n`). Each part of the prompt is dynamically inserted based on the properties of the `unit` object. If the context or any other information is",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-unit.mjs"
+  ]
+}

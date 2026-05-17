@@ -1,0 +1,9 @@
+{
+  "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|local|error|1",
+  "graphNodeId": null,
+  "memoryId": "7add7dbc-33dd-4fe1-8f5a-fe12b2f9656c",
+  "codeHash": "961de154c0a2f00257c01fa875bc1f452d745a5d",
+  "semanticSummary": "Defines the structure and content of an error message for the agent-memory-mcp module.",
+  "status": "enriched",
+  "enrichedAt": "2026-05-16T16:38:42.167Z"
+}

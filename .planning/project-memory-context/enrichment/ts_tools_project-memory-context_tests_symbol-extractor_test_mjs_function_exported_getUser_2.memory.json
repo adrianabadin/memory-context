@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getUser` function is responsible for creating an object representing a user based on the provided `id` and `includePosts` flag. It encapsulates the logic to construct a user object with minimal information, including only the necessary fields (`id` and `includePosts`) without fetching or storing any data directly.\n\n### Primary Inputs\n- **id**: A string representing the unique identifier of the user.\n- **includePosts**: A boolean indicating whether to include posts in the returned user object.\n\n### Output\nThe function outputs an object with two properties: `id` and `includePosts`. The value of `id` is directly assigned from the input, while `includePosts` follows suit as per the input's value.\n\n### Immediate Dependencies\n- None explicitly declared in the code provided; however, it implicitly depends on the type system (TypeScript) to enforce that inputs are strings and booleans.\n\n### Role in Module\nThe `getUser` function serves as a utility or helper function within the module where it is defined (`tools/project-memory-context/tests/symbol-extractor.test.mjs`), facilitating the creation of user objects for testing purposes, possibly by other test cases that need to create and manipulate user representations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/symbol-extractor.test.mjs"
+  ]
+}

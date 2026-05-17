@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `extractCSharpSymbols` is responsible for extracting C# symbols from a given C# file. It identifies and parses various types of symbols such as namespaces, classes, interfaces, records, enums, and methods within the code. The extracted symbols include details like their name, kind, namespace, container (class or interface), method parameters, and more.\n\n### Primary Inputs\n- `filePath`: A string representing the file path to the C# file.\n- `content`: A string containing the entire content of the C# file.\n\n### Output\nAn array of objects, where each object represents a parsed symbol with details like language, file path, kind, name, namespace, container, method parameters, and more.\n\n### Immediate Dependencies\n- **Imports**:\n  - `createHash` from `node:crypto`: Used to generate a hash for the code fragment of each symbol.\n  - `extname` from `node:path`: Not used in this function but part of Node.js core modules.\n  - `buildSymbolKey` from `./symbol-keys.mjs`: To create unique keys for each symbol based on its details.\n\n### Role in Module\nThis function is a central piece in the module responsible for converting raw C# code into structured, indexed symbols that can be used for further processing or visualization. It acts as an interface between the source code and other parts of the system requiring symbolic information about the C# project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "Symbol: buildInjectedPmcConfig\nKind: function\nLanguage: ts\nLocation: tools/project-memory-context/src/plugin-config.mjs:2-3\n\nResponsibility:\nDefines and exports the buildInjectedPmcConfig function which constructs configuration for the project memory context plugin.\n\nInputs:\n- packageRoot\n- installState\n\nOutput:\nA configuration object specific to the project's memory context settings.\n\nImmediate dependencies:\n- node:path (imported)\n\nRole in module:\nPrimary function that encapsulates logic for generating a custom configuration based on provided inputs.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/plugin-config.mjs"
+  ]
+}

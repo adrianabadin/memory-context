@@ -1,0 +1,11 @@
+{
+  "content": " **Responsibility:**\nThe `applyEnrichmentResult` function is responsible for applying the enrichment results to the graph and symbol index. It takes in an object containing the current state of the graph, the symbol index, and the enrichment result data. The goal is to update these structures based on the enrichment information provided in the result.\n\n**Primary Inputs:**\n- `graph`: An object representing the graph structure which will be updated with new nodes or edges as a result of enrichment.\n- `symbolIndex`: A collection (e.g., an array, map, etc.) that stores metadata about symbols. This will be updated by adding new entries corresponding to the enriched data.\n- `result`: The enrichment result object containing the information needed to update the graph and symbol index. This could include nodes or edges to add, properties to update, or other relevant data points.\n\n**Output:**\nThe function does not explicitly return a value but rather modifies its inputs (`graph` and `symbolIndex`) in place based on the enrichment result.\n\n**Immediate Dependencies:**\n- The immediate dependencies of this function are the functions imported from other modules:\n  - `backfillGraphNode`: This function is used to update or add nodes to the graph based on the enrichment result.\n  - `upsertSymbolIndexEntry`: This function is used to either insert new entries into the symbol index or update existing ones with additional metadata derived from the enrichment process.\n\n**Role in Module:**\nThe `applyEnrichmentResult` function serves as a central hub for integrating and applying results of an enrichment process to the core data structures (graph and symbol index) used within the module. It encapsulates the logic necessary to transform raw input data into actionable updates for these data structures, facilitating their ongoing evolution based on new insights or contextual information gained during the enrichment phase.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-linker.mjs"
+  ]
+}

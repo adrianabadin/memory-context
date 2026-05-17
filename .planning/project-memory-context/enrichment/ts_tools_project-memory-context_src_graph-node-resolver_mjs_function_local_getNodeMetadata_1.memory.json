@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `getNodeMetadata` is responsible for retrieving the metadata associated with a given graph node. It aims to provide a default empty object if the node's metadata property is either null or undefined, ensuring that the function always returns an object (or an empty object if no metadata exists).\n\n### Primary Inputs\n- **node**: This is the primary input to the function and represents a graph node which may contain metadata. The type of `node` could be any suitable structure depending on the context but typically would include at least a property for metadata.\n\n### Output\nThe output of the function is an object (`{}`) if the `metadata` property of the given `node` is either null or undefined. If the `metadata` property exists and is not null or undefined, it returns its value.\n\n### Immediate Dependencies\n- **Optional Chaining (??)**: This feature is used to handle cases where `node.metadata` might be missing, ensuring that if `node` does not have a `metadata` property, an empty object (`{}`) is returned instead of causing an error or returning undefined.\n\n### Role in Module\nThe function `getNodeMetadata` serves as a utility within the module to abstract away the handling of potential absent metadata properties on graph nodes. This abstraction simplifies other parts of the code that need to access node metadata, making them more robust against missing data and reducing repetitive null/undefined checks throughout the application logic.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

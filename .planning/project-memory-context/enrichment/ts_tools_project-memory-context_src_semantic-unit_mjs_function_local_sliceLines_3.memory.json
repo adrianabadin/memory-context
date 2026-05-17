@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `sliceLines` function is responsible for extracting a portion of text from a larger block of text, specifically designed to handle multi-line strings. It takes the entire content and slices it into lines, then selects a subset of these lines based on provided start and end line numbers, before reassembling them back into a single string with newline characters.\n\n### Primary Inputs\n- `content`: A string containing multiple lines of text.\n- `startLine`: An integer representing the first line to include in the output.\n- `endLine`: An integer representing the last line to include in the output.\n\n### Output\n- A string where only the lines between `startLine` and `endLine`, inclusive, are included. The selected lines are joined back together with newline characters (`\\n`).\n\n### Immediate Dependencies\n- None explicitly listed; this function is self-contained in handling string manipulation and array operations.\n\n### Role in Module\nThe `sliceLines` function serves as a utility within the module, providing functionality for manipulating text content based on line numbers. It helps in extracting relevant segments of text from larger documents, which can be particularly useful for log files, configuration sections, or any other multi-line data structures where selective extraction is necessary.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-unit.mjs"
+  ]
+}

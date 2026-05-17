@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "ia-local": {
+      "type": "local",
+      "command": ["node", "C:\\Users\\aabad\\Documents\\CODE\\ia\\localai\\dist\\index.js"],
+      "environment": {
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        // The localai MCP currently talks to Ollama's REST API.
+        "OLLAMA_MODEL": "deepseek-coder-v2:16b-ctx32k",
+        "SKILL_DIRS": "C:\\Users\\aabad\\.config\\opencode\\skills,C:\\Users\\aabad\\.agents\\skills"
+      },
+      "enabled": true
+    }
+  }
+}

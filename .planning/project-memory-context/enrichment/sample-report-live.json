@@ -1,0 +1,13 @@
+{
+  "summary": "Defines the structure and content of an error message for the agent-memory-mcp module.",
+  "findings": [
+    "```structured",
+    "responsibility: Defines the structure and content of an error message for the agent-memory-mcp module.",
+    "inputs: message (string)",
+    "output: { content: [{ type: 'text', text: message }], isError: true }",
+    "dependencies: z, @modelcontextprotocol/sdk/server/mcp.js",
+    "role: Utility function to generate a standardized error object with the specified message and marking it as an error.",
+    "```"
+  ],
+  "raw": "```structured\nresponsibility: Defines the structure and content of an error message for the agent-memory-mcp module.\ninputs: message (string)\noutput: { content: [{ type: 'text', text: message }], isError: true }\ndependencies: z, @modelcontextprotocol/sdk/server/mcp.js\nrole: Utility function to generate a standardized error object with the specified message and marking it as an error.\n```"
+}

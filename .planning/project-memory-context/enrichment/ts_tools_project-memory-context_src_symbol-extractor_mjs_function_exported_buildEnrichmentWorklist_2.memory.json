@@ -1,0 +1,11 @@
+{
+  "content": " **Responsibility:**\nThe `buildEnrichmentWorklist` function is responsible for creating a worklist of symbols that need to be enriched based on the provided symbol index. This function takes two main inputs, `symbols` and `symbolIndex`, and uses them to generate a list of symbols that will be processed or used in some way during the enrichment process.\n\n**Primary Inputs:**\n1. **symbols**: An array of objects representing the symbols (variables, functions, classes, etc.) present in the codebase. Each symbol object contains metadata about its type, name, location, and other relevant details.\n2. **symbolIndex**: A mapping or index that provides quick access to specific symbols based on their names or other unique identifiers. This is typically used for efficient retrieval of symbols during processing.\n\n**Output:**\nThe output of the `buildEnrichmentWorklist` function is a structured worklist containing the symbols that need to be enriched. The exact structure and content of this worklist depend on how the enrichment process is defined, but it will likely include:\n- Symbol names or identifiers.\n- Metadata about each symbol (type, location, etc.).\n- Dependencies or references to other symbols if needed for enrichment.\n\n**Immediate Dependencies:**\nThe immediate dependencies mentioned in the context are not explicitly detailed in the provided code snippet. However, based on typical usage and functionality of such functions, these could include:\n- Symbols that are directly referenced within the symbol definitions.\n- Any external modules or symbols that need to be included for complete enrichment (e.g., if a function depends on another function defined elsewhere).\n\n**Role in Module:**\nThe `buildEnrichmentWorklist` function plays a crucial role in the module by providing a structured way to manage and process symbols during application development or maintenance tasks, such as static analysis, code optimization, or documentation generation. It helps in organizing and prioritizing symbol processing based on their relevance and usage patterns within the broader software ecosystem.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

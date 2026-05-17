@@ -1,0 +1,16 @@
+{
+  "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|local|error|1",
+  "graphNodeId": null,
+  "language": "ts",
+  "filePath": "agent-memory-mcp/src/tools.ts",
+  "kind": "function",
+  "name": "error",
+  "range": {
+    "startLine": 40,
+    "endLine": 42
+  },
+  "codeHash": "961de154c0a2f00257c01fa875bc1f452d745a5d",
+  "context": "import { z } from 'zod';\r\nimport type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';\r\nimport {",
+  "code": "function error(message: string) {\r\n  return { content: [{ type: 'text' as const, text: message }], isError: true };\r\n}\r",
+  "prompt": "Symbol Key: ts|agent-memory-mcp/src/tools.ts|function|local|error|1\nLanguage: ts\nKind: function\nName: error\nLocation: agent-memory-mcp/src/tools.ts:40-42\n\nContext:\nimport { z } from 'zod';\r\nimport type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';\r\nimport {\n\nCode:\nfunction error(message: string) {\r\n  return { content: [{ type: 'text' as const, text: message }], isError: true };\r\n}\r\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module"
+}

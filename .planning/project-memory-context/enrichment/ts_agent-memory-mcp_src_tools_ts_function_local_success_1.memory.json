@@ -1,0 +1,11 @@
+{
+  "content": "Symbol: success\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/tools.ts:36-38\n\nResponsibility:\nFormats a successful MCP tool response as JSON text content.\n\nInputs:\n- data\n\nOutput:\nMCP text content object with serialized JSON.\n\nImmediate dependencies:\n- JSON.stringify\n\nRole in module:\nShared success formatter for MCP tool handlers.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

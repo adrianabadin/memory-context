@@ -1,0 +1,13 @@
+{
+  "summary": "Defines and exports the buildInjectedPmcConfig function which constructs configuration for the project memory context plugin.",
+  "findings": [
+    "```structured-text",
+    "responsibility: Defines and exports the buildInjectedPmcConfig function which constructs configuration for the project memory context plugin.",
+    "inputs: packageRoot, installState",
+    "output: A configuration object specific to the project's memory context settings.",
+    "dependencies: node:path (imported)",
+    "role: Primary function that encapsulates logic for generating a custom configuration based on provided inputs.",
+    "```"
+  ],
+  "raw": "```structured-text\nresponsibility: Defines and exports the buildInjectedPmcConfig function which constructs configuration for the project memory context plugin.\ninputs: packageRoot, installState\noutput: A configuration object specific to the project's memory context settings.\ndependencies: node:path (imported)\nrole: Primary function that encapsulates logic for generating a custom configuration based on provided inputs.\n```"
+}

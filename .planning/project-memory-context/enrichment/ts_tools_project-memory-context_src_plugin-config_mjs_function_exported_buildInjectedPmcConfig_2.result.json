@@ -1,0 +1,9 @@
+{
+  "symbolKey": "ts|tools/project-memory-context/src/plugin-config.mjs|function|exported|buildInjectedPmcConfig|2",
+  "graphNodeId": null,
+  "memoryId": "a8ff95f4-8b14-423d-afdf-08213686fd0b",
+  "codeHash": "2dead31054a41e7106fbcb0ab25eb74e73f89d11",
+  "semanticSummary": "Defines and exports the buildInjectedPmcConfig function which constructs configuration for the project memory context plugin.",
+  "status": "enriched",
+  "enrichedAt": "2026-05-16T16:59:23.717Z"
+}

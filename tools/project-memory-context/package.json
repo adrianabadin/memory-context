@@ -1,0 +1,24 @@
+{
+  "name": "opencode-project-memory-context",
+  "version": "0.1.0",
+  "description": "Bootstrap package for project memory context workflows in OpenCode using graphify, agent-memory, and a local Ollama-backed semantic MCP.",
+  "type": "module",
+  "main": "plugin/index.mjs",
+  "bin": {
+    "pmc-setup": "cli/setup.mjs",
+    "pmc-local-model-mcp": "mcp/local-model-server.mjs",
+    "pmc-agent-memory-mcp": "mcp/agent-memory-wrapper.mjs"
+  },
+  "files": [
+    "cli/",
+    "mcp/",
+    "plugin/",
+    "src/",
+    "templates/"
+  ],
+  "dependencies": {
+    "@adamrdrew/agent-memory-mcp": "^1.1.4",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  }
+}

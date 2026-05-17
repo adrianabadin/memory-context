@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `collectCSharpContext` function is responsible for collecting the C# code lines that are immediately preceding a given symbol, specifically focusing on \"using\" and \"namespace\" declarations. This is useful for understanding the context or environment within which a specific symbol (e.g., class, method) is defined in a C# project.\n\n### Primary Inputs\n- `lines`: An array of strings where each string represents a line of code from a C# file.\n- `symbolStartLine`: An integer representing the line number in the file where the symbol (e.g., class, method) starts.\n\n### Output\n- A list (`context`) containing strings that are \"using\" or \"namespace\" declarations found in lines preceding the specified symbol start line.\n\n### Immediate Dependencies\nThere are no external dependencies listed; all necessary operations are handled within the function scope:\n- `for` loop iterates over the lines up to but not including the symbolStartLine.\n- Regular expressions (`/^\\s*using\\s+/.test(line)` and `/^\\s*namespace\\s+/.test(line)`) are used to filter relevant lines based on their content.\n\n### Role in Module\nThis function serves as a utility within a larger module or tool that processes C# code, such as a parser or context collector designed for understanding the project structure or debugging purposes. It helps in isolating and analyzing parts of the code related to namespaces and using directives which are crucial for understanding the scope and dependencies of symbols defined in the code.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-unit.mjs"
+  ]
+}

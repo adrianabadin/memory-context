@@ -1,0 +1,11 @@
+{
+  "projectDescription": "Esquema de cerebro dividido para relacionar estructuras y simbolos de codigo mediante grafos y explicaciones semanticas con un modelo local de IA",
+  "mappingGoals": [
+    "codebase-map",
+    "incremental-memories",
+    "graph-relations",
+    "local-semantic-analysis"
+  ],
+  "focusAreas": [],
+  "createdAt": "2026-05-16T16:56:56.925Z"
+}

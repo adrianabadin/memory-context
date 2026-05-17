@@ -1,0 +1,77 @@
+[
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/embedder.ts|class|exported|TransformersEmbedder|0",
+    "payload": {
+      "content": "Symbol: TransformersEmbedder\nKind: class\nLanguage: ts\nLocation: agent-memory-mcp/src/embedder.ts:3-46\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+      "category": "architecture",
+      "tags": [
+        "symbol",
+        "ts",
+        "class",
+        "project:memory-context",
+        "file:agent-memory-mcp/src/embedder.ts"
+      ]
+    },
+    "memoryFile": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment/ts_agent-memory-mcp_src_embedder_ts_class_exported_TransformersEmbedder_0.memory.json"
+  },
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/embedder.ts|interface|local|ExtractorPipeline|0",
+    "payload": {
+      "content": "Symbol: ExtractorPipeline\nKind: interface\nLanguage: ts\nLocation: agent-memory-mcp/src/embedder.ts:49-53\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+      "category": "architecture",
+      "tags": [
+        "symbol",
+        "ts",
+        "interface",
+        "project:memory-context",
+        "file:agent-memory-mcp/src/embedder.ts"
+      ]
+    },
+    "memoryFile": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment/ts_agent-memory-mcp_src_embedder_ts_interface_local_ExtractorPipeline_0.memory.json"
+  },
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/hardcopy-store.ts|class|exported|HardcopyMemoryStore|0",
+    "payload": {
+      "content": "Symbol: HardcopyMemoryStore\nKind: class\nLanguage: ts\nLocation: agent-memory-mcp/src/hardcopy-store.ts:25-108\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+      "category": "architecture",
+      "tags": [
+        "symbol",
+        "ts",
+        "class",
+        "project:memory-context",
+        "file:agent-memory-mcp/src/hardcopy-store.ts"
+      ]
+    },
+    "memoryFile": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment/ts_agent-memory-mcp_src_hardcopy-store_ts_class_exported_HardcopyMemoryStore_0.memory.json"
+  },
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/memory-store.ts|type|local|MemoryRow|0",
+    "payload": {
+      "content": "Symbol: MemoryRow\nKind: type\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:20-30\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+      "category": "architecture",
+      "tags": [
+        "symbol",
+        "ts",
+        "type",
+        "project:memory-context",
+        "file:agent-memory-mcp/src/memory-store.ts"
+      ]
+    },
+    "memoryFile": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment/ts_agent-memory-mcp_src_memory-store_ts_type_local_MemoryRow_0.memory.json"
+  },
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/memory-store.ts|function|local|safeAccessCount|2",
+    "payload": {
+      "content": "Symbol: safeAccessCount\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:40-44\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+      "category": "architecture",
+      "tags": [
+        "symbol",
+        "ts",
+        "function",
+        "project:memory-context",
+        "file:agent-memory-mcp/src/memory-store.ts"
+      ]
+    },
+    "memoryFile": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment/ts_agent-memory-mcp_src_memory-store_ts_function_local_safeAccessCount_2.memory.json"
+  }
+]

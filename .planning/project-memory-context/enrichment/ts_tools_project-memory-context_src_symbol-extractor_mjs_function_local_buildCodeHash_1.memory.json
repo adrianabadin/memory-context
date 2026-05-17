@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildCodeHash` function is responsible for generating a SHA-1 hash of the provided content. This hash is used to uniquely identify and verify the integrity of the code or data it represents.\n\n### Primary Inputs\n- **content**: A string representing the content from which the hash needs to be generated.\n\n### Output\n- **hash**: A hexadecimal string that is a SHA-1 hash of the input content.\n\n### Immediate Dependencies\n- `createHash` from 'node:crypto': This function creates a cryptographic hash object for SHA-1 hashing.\n- `update`: Method on the hash object to update the hash content with the provided data.\n- `digest`: Method on the hash object to finalize and return the digest in hexadecimal format.\n\n### Role in Module\nThis function is part of the module's utility functions, providing a mechanism for generating unique identifiers based on the content. This can be useful for versioning, caching, or ensuring data integrity across different stages of development or deployment.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

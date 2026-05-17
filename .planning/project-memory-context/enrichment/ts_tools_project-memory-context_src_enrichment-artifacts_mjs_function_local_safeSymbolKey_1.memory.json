@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `safeSymbolKey` function is responsible for sanitizing and normalizing symbol keys. It ensures that the key contains only alphanumeric characters, underscores, and hyphens, replacing any other characters with an underscore to maintain a consistent format suitable for file or directory names. This helps in avoiding issues like invalid characters that might cause errors when creating paths or using symbols in various contexts.\n\n### Primary Inputs\n- `symbolKey`: A string representing the key to be sanitized. This could be any string potentially containing special characters which need to be removed or replaced for safe use, such as file names or identifiers in a module system.\n\n### Output\n- The output is a new string where all non-alphanumeric characters (except underscores and hyphens) have been replaced with an underscore (`_`). This ensures that the resulting string is clean and suitable for further processing without potential issues arising from special characters.\n\n### Immediate Dependencies\n- None explicitly listed, but it implicitly depends on JavaScript's built-in functions like `replace()` which are used to manipulate strings according to a specified pattern.\n\n### Role in Module\nThe `safeSymbolKey` function plays a crucial role in maintaining the integrity and usability of symbol keys within the module by ensuring that these keys conform to expected naming conventions, thus preventing potential errors or issues related to invalid characters. This is particularly important when symbols are used in paths for file system operations or as identifiers in other contexts where unsupported characters can lead to problems.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-artifacts.mjs"
+  ]
+}

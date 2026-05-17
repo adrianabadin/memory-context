@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `inferScriptLanguage` function is responsible for determining the scripting language of a given file based on its extension. It takes a file path as input and returns 'js' if the file has a `.js` or `.jsx` extension, otherwise it returns 'ts'.\n\n### Primary Inputs\n- **filePath**: A string representing the path to the file whose script language needs to be inferred.\n\n### Output\n- The output is a string that indicates the scripting language of the file:\n  - `'js'` if the file has a `.js` or `.jsx` extension.\n  - `'ts'` otherwise.\n\n### Immediate Dependencies\n- **extname**: A function from the 'node:path' module used to extract the file extension from the filePath.\n- **createHash** and **buildSymbolKey**: These are functions imported from 'node:crypto' and './symbol-keys.mjs', respectively, but they are not directly used within `inferScriptLanguage`.\n\n### Role in Module\nThe `inferScriptLanguage` function serves as a utility to assist in determining the appropriate handling or interpretation of files based on their type (script language). This is particularly useful for tasks that need to differentiate between JavaScript and TypeScript files, such as syntax highlighting, linting, or other script-related operations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

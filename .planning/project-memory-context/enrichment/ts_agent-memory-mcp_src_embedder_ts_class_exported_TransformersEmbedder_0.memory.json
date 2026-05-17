@@ -1,0 +1,11 @@
+{
+  "content": "Symbol: TransformersEmbedder\nKind: class\nLanguage: ts\nLocation: agent-memory-mcp/src/embedder.ts:3-46\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/embedder.ts"
+  ]
+}

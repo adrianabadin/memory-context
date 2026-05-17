@@ -1,0 +1,10 @@
+{
+  "summary": "Formats a successful MCP tool response as JSON text content.",
+  "findings": [
+    "responsibility: Formats a successful MCP tool response as JSON text content.",
+    "inputs: data",
+    "output: MCP text content object with serialized JSON.",
+    "dependencies: JSON.stringify",
+    "role: Shared success formatter for MCP tool handlers."
+  ]
+}

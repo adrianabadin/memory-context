@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `normalizePath` function is responsible for converting file paths from the Windows format (using backslashes) to the Unix format (using forward slashes). This standardization ensures compatibility across different operating systems and environments.\n\n### Primary Inputs\n- **filePath**: A string representing a file path, which may use backslashes on Windows or forward slashes elsewhere.\n\n### Output\n- The function returns a new string where all backslashes (`\\`) have been replaced with forward slashes (`/`).\n\n### Immediate Dependencies\n- None explicitly imported; the function is self-contained and operates solely based on its input.\n\n### Role in Module\nThe `normalizePath` function serves as a utility within the module, ensuring that file paths are consistently formatted regardless of the operating system they were originally specified under. This helps maintain clean data handling and avoids issues related to path separators in various environments.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-keys.mjs"
+  ]
+}

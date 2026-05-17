@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `parseCSharpParameters` is responsible for parsing and extracting the types of parameters from a C# method signature string. It takes a list of parameter types as input and returns an object containing the arity (number of parameters) and a formatted signature representing the types.\n\n### Primary Inputs\n- **parameterList**: A string that represents the list of parameter types in a C# method signature, separated by commas.\n\n### Output\n- An object with two properties:\n  - `arity`: The number of parameters extracted from the input string.\n  - `signature`: A formatted string representing the types of the parameters, enclosed in parentheses and separated by commas.\n\n### Immediate Dependencies\n- **`trim()`**: Used to remove any leading or trailing whitespace from the input string.\n- **`split(',')`**: Splits the input string into an array of individual parameter type strings.\n- **`map((part) => part.trim())`**: Trims each part of the split string.\n- **`filter(Boolean)`**: Removes any empty strings from the array after trimming.\n- **`map((part) => part.split(/\\s+/).slice(0, -1).join(' ') || part.split(/\\s+/)[0])`**: Further processes each parameter type to clean up whitespace and extract the type name (removing modifiers like `params` if present).\n- **`map((part) => part.replace(/^params\\s+/, '').trim())`**: Removes any leading \"params\" text from the type names.\n\n### Role in Module\nThis function is a crucial component of the module responsible for extracting and formatting symbol information related to C# method parameters, which can be used for various purposes such as documentation generation, code analysis, or other symbolic manipulations within the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

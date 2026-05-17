@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe responsibility of the `extractTopLevelSymbols` function is to analyze the provided file path and its content to extract top-level symbols such as functions, classes, or variables. This is part of a larger tool that likely aims to provide context about memory usage within a software project by analyzing the code structure.\n\n### Primary Inputs\nThe primary inputs for this function are:\n- `filePath`: A string representing the file path where the content resides.\n- `content`: A string or buffer containing the actual source code of the file.\n\n### Output\nThe output is an array of objects, each object representing a top-level symbol found in the file. Each object includes details about the symbol such as its name and type (e.g., function, class).\n\n### Immediate Dependencies\nThe immediate dependencies for this function include:\n- `createHash` from `node:crypto`: Used to generate unique keys for symbols based on their content or location.\n- `extname` from `node:path`: To determine the file extension which might be used in symbol identification or categorization.\n- `buildSymbolKey` from `./symbol-keys.mjs`: This function likely constructs a key that uniquely identifies each symbol, possibly for hashing as mentioned earlier.\n\n### Role in Module\nIn this module, `extractTopLevelSymbols` serves as a core utility function that helps in understanding the structure and contents of source files at a high level. It contributes to the overall functionality by providing insights into what top-level entities (symbols) are present in each file, which is crucial for further analysis or visualization related to memory context within the project. This information can be used for various purposes such as static code analysis, debugging, or even automated refactoring tools that need to understand the structure of a software system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

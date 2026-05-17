@@ -1,0 +1,11 @@
+{
+  "content": "Symbol: rowToMemory\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:525-534\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

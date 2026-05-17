@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `lineNumberAt` is responsible for determining the line number of a given character index within a string of text. This is useful for debugging and source code analysis, particularly when dealing with large files or multi-line strings where knowing which line a specific character belongs to can be invaluable.\n\n### Primary Inputs\n- `content`: A string containing the full text from which you want to determine the line number.\n- `index`: An integer representing the position of a character within the `content` string.\n\n### Output\nThe function returns an integer representing the line number in which the specified index resides within the given content string.\n\n### Immediate Dependencies\n- None explicitly imported from other modules, but it uses native JavaScript methods (`slice`, `split`) which are part of the language and not directly related to this specific module's functionality.\n\n### Role in Module\n`lineNumberAt` serves as a utility function within the module where it is defined, providing a method for quickly determining line numbers from character indices. This can be used by other parts of the application that need such functionality or by developers working with debuggers and log messages to pinpoint errors or specific lines of code in large scripts.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

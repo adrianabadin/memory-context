@@ -1,0 +1,7 @@
+[
+  {
+    "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|local|error|1",
+    "error": "ia-local returned no report operation",
+    "failedAt": "2026-05-15T18:20:00Z"
+  }
+]

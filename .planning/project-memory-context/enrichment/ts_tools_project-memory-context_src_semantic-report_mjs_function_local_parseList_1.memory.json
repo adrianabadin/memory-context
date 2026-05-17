@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseList` function is responsible for taking an input value, which can be of any type, and converting it into a list of strings. This is achieved by first ensuring the input is a string (even if it's initially null or undefined), splitting that string by commas to create individual items, trimming each item to remove leading and trailing whitespace, and then filtering out any empty strings.\n\n### Primary Input\n- `value`: The input can be of any type. It could be a string, number, object, etc., but the function expects it to be coerced into a string if necessary.\n\n### Output\n- An array of strings: Each element in this array is derived from an item in the original value (after being converted to a string and split by commas), with leading and trailing whitespace removed, and filtered to exclude empty strings.\n\n### Immediate Dependencies\n- `String(value ?? '')`: Ensures that even if the input `value` is null or undefined, it gets treated as an empty string when converting to a string for processing.\n- `.split(',')`: Splits the string into parts wherever there's a comma.\n- `.map((item) => item.trim())`: Trims any whitespace from each split part.\n- .filter(Boolean): Removes any empty strings that might have resulted from trimming or were initially present due to multiple commas together without spaces in between.\n\n### Role in Module\nThe `parseList` function serves as a utility within the module, providing a consistent way to transform various types of input into an array of string elements, which can be used for further processing or presentation purposes across different parts of the application that interact with this function.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-report.mjs"
+  ]
+}

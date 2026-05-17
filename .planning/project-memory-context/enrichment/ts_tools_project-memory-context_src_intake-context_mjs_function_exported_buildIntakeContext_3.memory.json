@@ -1,0 +1,11 @@
+{
+  "content": " **Responsibility:**\nThe `buildIntakeContext` function is responsible for creating and returning an object that encapsulates the necessary context information required to initialize or configure a system related to a project. This includes details about the project description, mapping goals, and focus areas.\n\n**Primary Inputs:**\n- `projectDescription`: A string or object that describes the project in detail.\n- `mappingGoals`: An array or object that outlines the specific goals or objectives of the project related to data mapping or other relevant aspects.\n- `focusAreas`: An optional parameter (default is an empty array) that specifies the areas within the project where attention and resources should be concentrated.\n\n**Output:**\nThe function outputs a structured object containing the inputs provided, with default values for focus areas if not specified. This output object is designed to be used as a configuration or initialization context for further processing in the application.\n\n**Immediate Dependencies:**\n- None explicitly listed; however, it assumes that the input parameters are well-defined and correctly passed into the function.\n\n**Role in Module:**\nThe `buildIntakeContext` function serves as a utility within the module to standardize how project context is constructed across different instances or invocations. It ensures consistency in data handling and provides a clear, structured output that can be easily utilized by other parts of the application for tasks such as logging, reporting, or automated decision-making processes related to the project's goals and objectives.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/intake-context.mjs"
+  ]
+}

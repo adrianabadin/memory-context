@@ -1,0 +1,11 @@
+{
+  "content": "Symbol: error\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/tools.ts:40-42\n\nResponsibility:\nDefines the structure and content of an error message for the agent-memory-mcp module.\n\nInputs:\n- message (string)\n\nOutput:\n{ content: [{ type: 'text', text: message }], isError: true }\n\nImmediate dependencies:\n- z\n- @modelcontextprotocol/sdk/server/mcp.js\n\nRole in module:\nUtility function to generate a standardized error object with the specified message and marking it as an error.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

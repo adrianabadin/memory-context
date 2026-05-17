@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `findBySymbolKey` Function\n\n#### Responsibility\nThe function `findBySymbolKey` is responsible for searching through a graph structure to find a node that matches the given symbol key. It aims to locate any node within the graph where either the direct property `symbolKey` or an indirectly accessed metadata property (`metadata.symbolKey`) matches the provided `symbolKey`.\n\n#### Primary Inputs\n- **graph**: An object representing the graph structure, expected to contain nodes with potential properties for symbol identification.\n- **symbolKey**: A string identifier used to match against available node properties.\n\n#### Output\n- The function returns:\n  - The first node that matches the `symbolKey` in either its direct property or through metadata if present.\n  - If no matching node is found, it returns `null`.\n\n#### Immediate Dependencies\n- **getNodeMetadata(node)**: A utility function assumed to be defined elsewhere in the module or imported from a shared library, used to extract metadata from nodes for comparison with the provided `symbolKey`.\n\n#### Role in Module\nThis function serves as a utility to facilitate node retrieval based on symbolic identifiers within complex graph structures. It enhances the functionality of traversing and querying such structures by providing a straightforward method to locate specific nodes using their symbol keys, regardless of where they are stored (directly in the node or through metadata). This is particularly useful for applications requiring quick access to particular nodes identified by unique symbols across multiple interconnected components.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

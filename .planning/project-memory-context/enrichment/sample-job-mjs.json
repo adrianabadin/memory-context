@@ -1,0 +1,16 @@
+{
+  "symbolKey": "ts|tools/project-memory-context/src/plugin-config.mjs|function|exported|buildInjectedPmcConfig|2",
+  "graphNodeId": null,
+  "language": "ts",
+  "filePath": "tools/project-memory-context/src/plugin-config.mjs",
+  "kind": "function",
+  "name": "buildInjectedPmcConfig",
+  "range": {
+    "startLine": 2,
+    "endLine": 3
+  },
+  "codeHash": "2dead31054a41e7106fbcb0ab25eb74e73f89d11",
+  "context": "import { join } from 'node:path';",
+  "code": "\nexport function buildInjectedPmcConfig({ packageRoot, installState }) {",
+  "prompt": "Symbol Key: ts|tools/project-memory-context/src/plugin-config.mjs|function|exported|buildInjectedPmcConfig|2\nLanguage: ts\nKind: function\nName: buildInjectedPmcConfig\nLocation: tools/project-memory-context/src/plugin-config.mjs:2-3\n\nContext:\nimport { join } from 'node:path';\n\nCode:\n\nexport function buildInjectedPmcConfig({ packageRoot, installState }) {\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module"
+}

@@ -1,0 +1,9 @@
+{
+  "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|local|success|1",
+  "graphNodeId": null,
+  "memoryId": "mem_demo_success",
+  "codeHash": "0107e313575b2cc5413f41e1378db605d1864649",
+  "semanticSummary": "Formats a successful MCP tool response as JSON text content.",
+  "status": "enriched",
+  "enrichedAt": "2026-05-15T15:00:00Z"
+}

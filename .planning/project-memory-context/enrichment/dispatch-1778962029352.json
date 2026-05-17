@@ -1,0 +1,137 @@
+{
+  "batchId": 1778962029352,
+  "projectRoot": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context",
+  "ollamaUrl": "http://localhost:11434",
+  "ollamaModel": "deepseek-coder-v2:16b-ctx32k",
+  "projectSlug": "memory-context",
+  "batchSize": 8,
+  "symbols": [
+    {
+      "index": 0,
+      "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|exported|handleStats|1",
+      "name": "handleStats",
+      "filePath": "agent-memory-mcp/src/tools.ts",
+      "kind": "function",
+      "language": "ts",
+      "arity": 1,
+      "range": {
+        "startLine": 176,
+        "endLine": 187
+      },
+      "codeHash": "b9d8b4add598719fd518b45128e4040b5cc40ddc",
+      "exportScope": "exported"
+    },
+    {
+      "index": 1,
+      "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|exported|handlePrune|1",
+      "name": "handlePrune",
+      "filePath": "agent-memory-mcp/src/tools.ts",
+      "kind": "function",
+      "language": "ts",
+      "arity": 1,
+      "range": {
+        "startLine": 187,
+        "endLine": 206
+      },
+      "codeHash": "e8f8b4be68f65ec87704f8b4b76b8dcd03c89d58",
+      "exportScope": "exported"
+    },
+    {
+      "index": 2,
+      "symbolKey": "ts|agent-memory-mcp/src/tools.ts|function|exported|registerTools|2",
+      "name": "registerTools",
+      "filePath": "agent-memory-mcp/src/tools.ts",
+      "kind": "function",
+      "language": "ts",
+      "arity": 2,
+      "range": {
+        "startLine": 208,
+        "endLine": 321
+      },
+      "codeHash": "89e2c18c15259c932ef6be5db90102ef8d7fd96f",
+      "exportScope": "exported"
+    },
+    {
+      "index": 3,
+      "symbolKey": "ts|agent-memory-mcp/src/types.ts|interface|exported|UpdateRequest|0",
+      "name": "UpdateRequest",
+      "filePath": "agent-memory-mcp/src/types.ts",
+      "kind": "interface",
+      "language": "ts",
+      "range": {
+        "startLine": 67,
+        "endLine": 73
+      },
+      "codeHash": "e30be28cf012a0d3f3c657b542b713675ccc0ac1",
+      "exportScope": "exported"
+    },
+    {
+      "index": 4,
+      "symbolKey": "ts|agent-memory-mcp/src/types.ts|interface|exported|SearchFilters|0",
+      "name": "SearchFilters",
+      "filePath": "agent-memory-mcp/src/types.ts",
+      "kind": "interface",
+      "language": "ts",
+      "range": {
+        "startLine": 73,
+        "endLine": 81
+      },
+      "codeHash": "3eb1f707ec0714d394dff924b9c61aa0b59628fb",
+      "exportScope": "exported"
+    },
+    {
+      "index": 5,
+      "symbolKey": "ts|agent-memory-mcp/src/types.ts|type|exported|SearchMode|0",
+      "name": "SearchMode",
+      "filePath": "agent-memory-mcp/src/types.ts",
+      "kind": "type",
+      "language": "ts",
+      "range": {
+        "startLine": 81,
+        "endLine": 92
+      },
+      "codeHash": "c3091ee72eec56a912fb47ac68a1096cbb6aed4a",
+      "exportScope": "exported"
+    },
+    {
+      "index": 6,
+      "symbolKey": "ts|agent-memory-mcp/src/types.ts|interface|exported|Embedder|0",
+      "name": "Embedder",
+      "filePath": "agent-memory-mcp/src/types.ts",
+      "kind": "interface",
+      "language": "ts",
+      "range": {
+        "startLine": 85,
+        "endLine": 92
+      },
+      "codeHash": "980f3f393f9c0d47a36e3bb36dc5ae993ea1aa26",
+      "exportScope": "exported"
+    },
+    {
+      "index": 7,
+      "symbolKey": "ts|agent-memory-mcp/src/types.ts|interface|exported|MemoryStore|0",
+      "name": "MemoryStore",
+      "filePath": "agent-memory-mcp/src/types.ts",
+      "kind": "interface",
+      "language": "ts",
+      "range": {
+        "startLine": 92,
+        "endLine": 105
+      },
+      "codeHash": "7e43d7de7c082aa6c267ce45cfc9b3ce9c1f6f12",
+      "exportScope": "exported"
+    }
+  ],
+  "subagentPrompts": [
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/tools.ts\",\"kind\":\"function\",\"name\":\"handleStats\",\"exportScope\":\"exported\",\"arity\":1,\"range\":{\"startLine\":176,\"endLine\":187},\"codeHash\":\"b9d8b4add598719fd518b45128e4040b5cc40ddc\",\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|handleStats|1\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: handleStats\\nKind: function\\nLanguage: ts\\nLocation: agent-memory-mcp/src/tools.ts:176-187\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"function\", \"project:memory-context\", \"file:agent-memory-mcp/src/tools.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|handleStats|1\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.352Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/tools.ts\",\"kind\":\"function\",\"name\":\"handlePrune\",\"exportScope\":\"exported\",\"arity\":1,\"range\":{\"startLine\":187,\"endLine\":206},\"codeHash\":\"e8f8b4be68f65ec87704f8b4b76b8dcd03c89d58\",\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|handlePrune|1\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: handlePrune\\nKind: function\\nLanguage: ts\\nLocation: agent-memory-mcp/src/tools.ts:187-206\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"function\", \"project:memory-context\", \"file:agent-memory-mcp/src/tools.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|handlePrune|1\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/tools.ts\",\"kind\":\"function\",\"name\":\"registerTools\",\"exportScope\":\"exported\",\"arity\":2,\"range\":{\"startLine\":208,\"endLine\":321},\"codeHash\":\"89e2c18c15259c932ef6be5db90102ef8d7fd96f\",\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|registerTools|2\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: registerTools\\nKind: function\\nLanguage: ts\\nLocation: agent-memory-mcp/src/tools.ts:208-321\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"function\", \"project:memory-context\", \"file:agent-memory-mcp/src/tools.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/tools.ts|function|exported|registerTools|2\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/types.ts\",\"kind\":\"interface\",\"name\":\"UpdateRequest\",\"exportScope\":\"exported\",\"range\":{\"startLine\":67,\"endLine\":73},\"codeHash\":\"e30be28cf012a0d3f3c657b542b713675ccc0ac1\",\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|UpdateRequest|0\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: UpdateRequest\\nKind: interface\\nLanguage: ts\\nLocation: agent-memory-mcp/src/types.ts:67-73\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"interface\", \"project:memory-context\", \"file:agent-memory-mcp/src/types.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|UpdateRequest|0\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/types.ts\",\"kind\":\"interface\",\"name\":\"SearchFilters\",\"exportScope\":\"exported\",\"range\":{\"startLine\":73,\"endLine\":81},\"codeHash\":\"3eb1f707ec0714d394dff924b9c61aa0b59628fb\",\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|SearchFilters|0\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: SearchFilters\\nKind: interface\\nLanguage: ts\\nLocation: agent-memory-mcp/src/types.ts:73-81\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"interface\", \"project:memory-context\", \"file:agent-memory-mcp/src/types.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|SearchFilters|0\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/types.ts\",\"kind\":\"type\",\"name\":\"SearchMode\",\"exportScope\":\"exported\",\"range\":{\"startLine\":81,\"endLine\":92},\"codeHash\":\"c3091ee72eec56a912fb47ac68a1096cbb6aed4a\",\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|type|exported|SearchMode|0\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: SearchMode\\nKind: type\\nLanguage: ts\\nLocation: agent-memory-mcp/src/types.ts:81-92\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"type\", \"project:memory-context\", \"file:agent-memory-mcp/src/types.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|type|exported|SearchMode|0\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/types.ts\",\"kind\":\"interface\",\"name\":\"Embedder\",\"exportScope\":\"exported\",\"range\":{\"startLine\":85,\"endLine\":92},\"codeHash\":\"980f3f393f9c0d47a36e3bb36dc5ae993ea1aa26\",\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|Embedder|0\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: Embedder\\nKind: interface\\nLanguage: ts\\nLocation: agent-memory-mcp/src/types.ts:85-92\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"interface\", \"project:memory-context\", \"file:agent-memory-mcp/src/types.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|Embedder|0\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result.",
+    "You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: {\"language\":\"ts\",\"filePath\":\"agent-memory-mcp/src/types.ts\",\"kind\":\"interface\",\"name\":\"MemoryStore\",\"exportScope\":\"exported\",\"range\":{\"startLine\":92,\"endLine\":105},\"codeHash\":\"7e43d7de7c082aa6c267ce45cfc9b3ce9c1f6f12\",\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|MemoryStore|0\",\"graphNodeId\":null,\"status\":\"pending\",\"memoryId\":null}\nPROJECT_ROOT: C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS (do all, in order):\n1. Read the source file at the symbol's filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Build a semantic prompt:\n   \"Symbol: MemoryStore\\nKind: interface\\nLanguage: ts\\nLocation: agent-memory-mcp/src/types.ts:92-105\\n\\nReturn a compact structured explanation with:\\n- responsibility\\n- primary inputs\\n- output\\n- immediate dependencies\\n- role in module\"\n3. Call Ollama via bash:\n   node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n4. Store memory using agent-memory_store tool:\n   - content: the full Ollama response (structured explanation)\n   - category: \"architecture\"\n   - tags: [\"symbol\", \"ts\", \"interface\", \"project:memory-context\", \"file:agent-memory-mcp/src/types.ts\"]\n5. Return JSON: {\"symbolKey\":\"ts|agent-memory-mcp/src/types.ts|interface|exported|MemoryStore|0\",\"memoryId\":\"...\",\"status\":\"enriched\",\"enrichedAt\":\"2026-05-16T20:07:09.365Z\"}\n\nIMPORTANT: Do NOT update any shared JSON files (worklist.json, symbol-index.json). Only: read code, call Ollama, store memory, return result."
+  ],
+  "dispatchCommand": "node tools/project-memory-context/cli/enrich-sync.mjs \"C:/Users/aabad/Documents/CODE/ia/memory-context/.planning/project-memory-context/enrichment/dispatch-1778962029365.json\"",
+  "status": "ready"
+}
