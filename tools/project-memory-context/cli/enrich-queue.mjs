@@ -618,19 +618,38 @@ export async function maybeLaunchRetryErrors({
   const scriptPath = resolve(PROJECT_ROOT, 'tools/project-memory-context/cli/retry-errors.mjs');
   const stdoutPath = resolve(enrichmentDir, 'retry-stdout.log');
   const stderrPath = resolve(enrichmentDir, 'retry-stderr.log');
+  const startedAt = new Date().toISOString();
+  const pid = process.pid;
+
+  await writeRetryState({
+    enrichmentDir,
+    status: 'running',
+    pid,
+    projectRoot,
+    startedAt,
+    heartbeatAt: startedAt,
+  });
 
   await spawnRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath });
   return { launched: true, reason: 'spawned', stdoutPath, stderrPath };
 }
 
-async function launchRetryProcess({ scriptPath, stdoutPath, stderrPath }) {
+async function launchRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath }) {
   const stdout = await open(stdoutPath, 'a');
   const stderr = await open(stderrPath, 'a');
-  const child = spawn(process.execPath, [scriptPath, process.cwd(), '--concurrency', '1', '--timeout', String(TIMEOUT_MS)], {
+  const child = spawn(process.execPath, [scriptPath, projectRoot, '--concurrency', '1', '--timeout', String(TIMEOUT_MS)], {
     detached: true,
     stdio: ['ignore', stdout.fd, stderr.fd],
+    cwd: projectRoot,
   });
   child.unref();
+  stdout.close();
+  stderr.close();
+}
+
+export async function writeRetryState({ enrichmentDir, status, pid, projectRoot, startedAt, heartbeatAt, finishedAt = null, lastError = null }) {
+  const retryStateFile = resolve(enrichmentDir, 'retry-state.json');
+  await saveJson(retryStateFile, { status, pid, projectRoot, startedAt, heartbeatAt, finishedAt, lastError });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
