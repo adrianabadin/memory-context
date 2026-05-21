@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
 
 import { appendProviderEvent, withRecordedAttempt } from '../src/enrichment-attempts.mjs';
 import { PMC_ENRICHMENT_CONFIG_FILE, resolveEnrichmentConfig } from '../src/enrichment-config.mjs';
@@ -29,6 +31,8 @@ let _symbolIndex = {};
 let _worklistFile = '';
 let _symbolIndexFile = '';
 let _enrichmentDir = '';
+let _queueStateFile = '';
+let _startedAt = '';
 
 async function loadJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -320,6 +324,30 @@ export async function runQueueSymbolEnrichment({
   throw createQueueEnrichmentError(failure);
 }
 
+export function buildQueueState({ status, pid, startedAt, heartbeatAt, finishedAt = null, lastError = null, summary }) {
+  return {
+    status,
+    pid,
+    startedAt,
+    heartbeatAt,
+    finishedAt,
+    lastError,
+    summary: {
+      pending: summary?.pending ?? 0,
+      enriched: summary?.enriched ?? 0,
+      errors: summary?.errors ?? 0,
+    },
+  };
+}
+
+export async function writeQueueState(input) {
+  await saveJson(input.queueStateFile, buildQueueState(input));
+}
+
+export async function finalizeQueueState(input) {
+  await writeQueueState(input);
+}
+
 async function checkpointSave() {
   if (!_worklistFile) return;
   console.error('\n[checkpoint] Saving progress...');
@@ -371,6 +399,9 @@ async function main() {
   _worklist = worklist;
   _symbolIndex = symbolIndex;
 
+  const queueStateFile = resolve(enrichmentDir, 'queue-state.json');
+  _queueStateFile = queueStateFile;
+
   for (const entry of worklist) {
     if (entry.status === 'enriched' && entry.memoryId) {
       entry.status = 'already_enriched';
@@ -385,9 +416,28 @@ async function main() {
 
   if (pending.length === 0) {
     const summary = buildQueueSummary(worklist);
+    await finalizeQueueState({
+      queueStateFile,
+      status: 'finished',
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      heartbeatAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      summary,
+    });
     console.log(JSON.stringify({ complete: true, total, enriched: summary.enriched, errors: summary.errors }));
     return;
   }
+
+  _startedAt = new Date().toISOString();
+  await writeQueueState({
+    queueStateFile,
+    status: 'running',
+    pid: process.pid,
+    startedAt: _startedAt,
+    heartbeatAt: _startedAt,
+    summary: buildQueueSummary(worklist),
+  });
 
   console.error(`[queue] Starting continuous enrichment: ${pending.length} pending (${staleCount} stale), ${alreadyEnriched} already enriched, ${PMC_CONCURRENCY} parallel slots`);
   console.error(`[queue] Modes: ${enrichmentConfig.preferredModes.join(', ')} | Local: ${enrichmentConfig.localModel.baseUrl} | Model: ${enrichmentConfig.localModel.model} | Timeout: ${TIMEOUT_MS}ms per symbol\n`);
@@ -458,7 +508,7 @@ async function main() {
   await Promise.all(initPromises);
 
   await new Promise((resolve) => {
-    const checkInterval = setInterval(() => {
+    const checkInterval = setInterval(async () => {
       if (!tracker.hasActiveSlots() && queue.length === 0) {
         clearInterval(checkInterval);
         resolve();
@@ -468,6 +518,14 @@ async function main() {
         const active = tracker.activeCount();
         const done = results.length + errors.length;
         console.error(`[queue status] done=${done} active=${active} queued=${remaining} elapsed=${Math.round(elapsedTotal / 1000)}s`);
+        await writeQueueState({
+          queueStateFile,
+          status: 'running',
+          pid: process.pid,
+          startedAt: _startedAt,
+          heartbeatAt: new Date().toISOString(),
+          summary: buildQueueSummary(worklist),
+        }).catch(() => {});
       }
     }, REPORT_INTERVAL_MS);
   });
@@ -504,6 +562,30 @@ async function main() {
   const summary = buildQueueSummary(worklist);
   const avgTime = results.length > 0 ? results.reduce((a, r) => a + r.elapsed, 0) / results.length : 0;
 
+  const finishedAt = new Date().toISOString();
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'finished',
+    pid: process.pid,
+    startedAt: _startedAt,
+    heartbeatAt: finishedAt,
+    finishedAt,
+    summary,
+  });
+
+  const retryLaunch = await maybeLaunchRetryErrors({
+    projectRoot: PROJECT_ROOT,
+    enrichmentDir,
+    summary,
+    loadRetryState: async () => loadOptionalJson(resolve(enrichmentDir, 'retry-state.json')),
+  });
+
+  if (retryLaunch.launched) {
+    console.error(`[queue] Auto-launched retry-errors in background -> ${retryLaunch.stdoutPath}`);
+  } else if (retryLaunch.reason === 'already-running') {
+    console.error('[queue] Retry-errors already running; skipping second launch');
+  }
+
   console.log(JSON.stringify({
     complete: summary.pending === 0,
     total: worklist.length,
@@ -517,8 +599,56 @@ async function main() {
   }, null, 2));
 }
 
+export async function maybeLaunchRetryErrors({
+  projectRoot,
+  enrichmentDir,
+  summary,
+  loadRetryState = async () => null,
+  spawnRetryProcess = launchRetryProcess,
+}) {
+  if ((summary?.errors ?? 0) === 0) {
+    return { launched: false, reason: 'no-errors' };
+  }
+
+  const retryState = await loadRetryState();
+  if (retryState?.status === 'running') {
+    return { launched: false, reason: 'already-running', retryState };
+  }
+
+  const scriptPath = resolve(PROJECT_ROOT, 'tools/project-memory-context/cli/retry-errors.mjs');
+  const stdoutPath = resolve(enrichmentDir, 'retry-stdout.log');
+  const stderrPath = resolve(enrichmentDir, 'retry-stderr.log');
+
+  await spawnRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath });
+  return { launched: true, reason: 'spawned', stdoutPath, stderrPath };
+}
+
+async function launchRetryProcess({ scriptPath, stdoutPath, stderrPath }) {
+  const stdout = await open(stdoutPath, 'a');
+  const stderr = await open(stderrPath, 'a');
+  const child = spawn(process.execPath, [scriptPath, process.cwd(), '--concurrency', '1', '--timeout', String(TIMEOUT_MS)], {
+    detached: true,
+    stdio: ['ignore', stdout.fd, stderr.fd],
+  });
+  child.unref();
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(err => {
+  main().catch(async (err) => {
+    try {
+      const summary = Array.isArray(_worklist) ? buildQueueSummary(_worklist) : { pending: 0, enriched: 0, errors: 0 };
+      const enrichmentDir = _enrichmentDir || resolve(PROJECT_ROOT, '.planning/project-memory-context/enrichment');
+      await finalizeQueueState({
+        queueStateFile: resolve(enrichmentDir, 'queue-state.json'),
+        status: 'failed',
+        pid: process.pid,
+        startedAt: _startedAt || new Date().toISOString(),
+        heartbeatAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        lastError: err.message,
+        summary,
+      });
+    } catch {}
     console.error('[fatal]', err.message);
     process.exit(1);
   });

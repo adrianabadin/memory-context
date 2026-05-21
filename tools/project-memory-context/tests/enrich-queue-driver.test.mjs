@@ -4,7 +4,15 @@ import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { buildQueueSummary, parseQueueConcurrency, runQueueSymbolEnrichment } from '../cli/enrich-queue.mjs';
+import {
+  buildQueueSummary,
+  parseQueueConcurrency,
+  runQueueSymbolEnrichment,
+  writeQueueState,
+  finalizeQueueState,
+  buildQueueState,
+  maybeLaunchRetryErrors,
+} from '../cli/enrich-queue.mjs';
 import {
   ensureProjectMemoryContextDirs,
   readJsonArtifact,
@@ -301,4 +309,113 @@ test('buildQueueSummary counts already_enriched entries as enriched in reports',
     errors: 1,
     pending: 1,
   });
+});
+
+test('writeQueueState persists running heartbeat with pid and summary', async () => {
+  const { dirs } = await createQueueFixture();
+  const queueStateFile = join(dirs.enrichment, 'queue-state.json');
+
+  await writeQueueState({
+    queueStateFile,
+    status: 'running',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    summary: { pending: 3, enriched: 2, errors: 1 },
+  });
+
+  const payload = await readJsonArtifact(queueStateFile);
+  assert.equal(payload.status, 'running');
+  assert.equal(payload.pid, 4242);
+  assert.equal(payload.heartbeatAt, '2026-05-20T21:00:30.000Z');
+  assert.equal(payload.summary.pending, 3);
+  assert.equal(payload.summary.enriched, 2);
+  assert.equal(payload.summary.errors, 1);
+  assert.equal(payload.finishedAt, null);
+  assert.equal(payload.lastError, null);
+});
+
+test('finalizeQueueState persists failed terminal state with lastError', async () => {
+  const { dirs } = await createQueueFixture();
+  const queueStateFile = join(dirs.enrichment, 'queue-state.json');
+
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'failed',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    finishedAt: '2026-05-20T21:02:00.000Z',
+    lastError: 'fatal queue error',
+    summary: { pending: 3, enriched: 2, errors: 1 },
+  });
+
+  const payload = await readJsonArtifact(queueStateFile);
+  assert.equal(payload.status, 'failed');
+  assert.equal(payload.finishedAt, '2026-05-20T21:02:00.000Z');
+  assert.equal(payload.lastError, 'fatal queue error');
+});
+
+test('buildQueueState normalizes missing summary fields to zero', () => {
+  const state = buildQueueState({
+    status: 'running',
+    pid: 1234,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    summary: {},
+  });
+
+  assert.equal(state.summary.pending, 0);
+  assert.equal(state.summary.enriched, 0);
+  assert.equal(state.summary.errors, 0);
+});
+
+test('maybeLaunchRetryErrors skips spawn when retry state is already running', async () => {
+  const launches = [];
+
+  const result = await maybeLaunchRetryErrors({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { errors: 3 },
+    loadRetryState: async () => ({ status: 'running', pid: 4242, heartbeatAt: '2026-05-21T12:00:00.000Z' }),
+    spawnRetryProcess: async (spec) => { launches.push(spec); },
+  });
+
+  assert.equal(result.launched, false);
+  assert.equal(result.reason, 'already-running');
+  assert.equal(launches.length, 0);
+});
+
+test('maybeLaunchRetryErrors spawns detached retry when errors remain and no retry is active', async () => {
+  const launches = [];
+
+  const result = await maybeLaunchRetryErrors({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { errors: 2 },
+    loadRetryState: async () => null,
+    spawnRetryProcess: async (spec) => { launches.push(spec); },
+  });
+
+  assert.equal(result.launched, true);
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].scriptPath.endsWith('retry-errors.mjs'), true);
+  assert.equal(launches[0].stdoutPath.endsWith('retry-stdout.log'), true);
+  assert.equal(launches[0].stderrPath.endsWith('retry-stderr.log'), true);
+});
+
+test('maybeLaunchRetryErrors skips spawn when summary.errors is 0', async () => {
+  const launches = [];
+
+  const result = await maybeLaunchRetryErrors({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { errors: 0 },
+    loadRetryState: async () => null,
+    spawnRetryProcess: async (spec) => { launches.push(spec); },
+  });
+
+  assert.equal(result.launched, false);
+  assert.equal(result.reason, 'no-errors');
+  assert.equal(launches.length, 0);
 });
