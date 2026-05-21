@@ -4,10 +4,11 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { appendProviderEvent, withRecordedAttempt } from '../src/enrichment-attempts.mjs';
+import { appendProviderEvent } from '../src/enrichment-attempts.mjs';
 import { resolveEnrichmentConfig, PMC_ENRICHMENT_CONFIG_FILE } from '../src/enrichment-config.mjs';
 import { runEnrichmentWithFallback } from '../src/enrichment-driver.mjs';
 import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
+import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs';
 import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 import { MAX_RETRY_ITERATIONS, runRetryLoop } from '../src/retry-errors-runner.mjs';
 import { homedir } from 'node:os';
@@ -254,6 +255,7 @@ async function main() {
     }
   };
 
+  const startedAt = new Date().toISOString();
   const result = await runRetryLoop({
     worklist,
     maxIterations: MAX_RETRY_ITERATIONS,
@@ -262,7 +264,7 @@ async function main() {
 
   const reportPath = args.reportFile || resolve(enrichmentDir, 'retry-report.json');
   await saveJson(reportPath, {
-    startedAt: result.startedAt,
+    startedAt,
     finishedAt: new Date().toISOString(),
     iterations: result.iterations,
     config: { model: config.localModel.model, baseUrl: config.localModel.baseUrl, timeoutMs: args.timeoutMs },
