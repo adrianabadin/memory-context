@@ -174,7 +174,7 @@ body {
   font-size: 12px;
   background: var(--bg-elevated);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius);
 }
 
 .badge {
@@ -192,7 +192,7 @@ body {
 }
 
 .badge-community {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .relations-list {
