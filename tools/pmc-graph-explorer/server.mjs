@@ -1,5 +1,5 @@
 import express from "express";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -13,6 +13,7 @@ const WORKLIST_PATH = resolve(PROJECT_ROOT, ".planning/project-memory-context/en
 const TRACKER_PATH = resolve(PROJECT_ROOT, ".planning/project-memory-context/context-tracker.json");
 
 app.use(express.static(resolve(__dirname, "public")));
+app.use(express.json());
 
 app.get("/api/graph", (req, res) => {
   try {
@@ -42,6 +43,20 @@ app.get("/api/context", (req, res) => {
   } catch {
     res.json({ activeNodeIds: [] });
   }
+});
+
+app.post("/api/context", (req, res) => {
+  const { add } = req.body;
+  if (!Array.isArray(add)) return res.status(400).json({ error: "add must be array" });
+  let tracker = { activeNodeIds: [] };
+  if (existsSync(TRACKER_PATH)) {
+    try { tracker = JSON.parse(readFileSync(TRACKER_PATH, "utf-8")); } catch {}
+  }
+  const existing = new Set(tracker.activeNodeIds || []);
+  add.forEach((id) => existing.add(id));
+  tracker.activeNodeIds = [...existing];
+  writeFileSync(TRACKER_PATH, JSON.stringify(tracker, null, 2));
+  res.json(tracker);
 });
 
 app.listen(PORT, () => {
