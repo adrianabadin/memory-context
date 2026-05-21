@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PMC Graph Explorer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <h1 class="header-title">PMC Graph Explorer</h1>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="header-right">
+      <input type="text" id="search" class="search-input" placeholder="Search nodes..." autocomplete="off">
+      <button id="toggle-active" class="btn-toggle" title="Show only active context">Active only</button>
+      <button id="toggle-panel" class="btn-toggle" title="Toggle side panel">&#9776;</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-content" id="sidebar-content">
+        <p class="sidebar-empty">Click a node to see details</p>
+      </div>
+      <div class="sidebar-filters" id="filters"></div>
+    </aside>
+
+    <div class="canvas" id="canvas">
+      <svg id="graph-svg"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
