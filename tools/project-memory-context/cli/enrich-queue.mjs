@@ -1,14 +1,25 @@
 #!/usr/bin/env node
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+
+import { appendProviderEvent, withRecordedAttempt } from '../src/enrichment-attempts.mjs';
+import { PMC_ENRICHMENT_CONFIG_FILE, resolveEnrichmentConfig } from '../src/enrichment-config.mjs';
+import { runEnrichmentWithFallback } from '../src/enrichment-driver.mjs';
+import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs';
+import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
+import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, '..', '..', '..');
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b-ctx32k';
-const PMC_CONCURRENCY = parseInt(process.env.PMC_CONCURRENCY || '8', 10);
+export function parseQueueConcurrency(rawValue) {
+  const parsed = parseInt(rawValue || '8', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
+const PMC_CONCURRENCY = parseQueueConcurrency(process.env.PMC_CONCURRENCY);
 const PROJECT_SLUG = process.env.PMC_PROJECT_SLUG || basename(PROJECT_ROOT);
 const TIMEOUT_MS = parseInt(process.env.PMC_TIMEOUT_MS || '300000', 10);
 const REPORT_INTERVAL_MS = parseInt(process.env.PMC_REPORT_INTERVAL || '30000', 10);
@@ -21,6 +32,14 @@ let _enrichmentDir = '';
 
 async function loadJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
+}
+
+async function loadOptionalJson(path, fallback = null) {
+  try {
+    return await loadJson(path);
+  } catch {
+    return fallback;
+  }
 }
 
 async function saveJson(path, data) {
@@ -85,23 +104,27 @@ class SlotTracker {
   }
 }
 
-async function callOllama(prompt) {
-  const resp = await fetch(`${OLLAMA_URL}/api/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: OLLAMA_MODEL,
-      prompt,
-      stream: false,
-      options: { temperature: 0.1, num_predict: 512 },
-    }),
-  });
-  if (!resp.ok) throw new Error(`Ollama ${resp.status}: ${await resp.text()}`);
-  const data = await resp.json();
-  return data.response;
+function createAgentSubagentProvider() {
+  return {
+    kind: 'agent-subagent',
+    isConfigured(context) {
+      const { enabled = true, agentName = 'enrich' } = context?.config?.agentSubagent ?? {};
+      if (!enabled) {
+        return { ok: false, reason: 'agent-subagent is disabled' };
+      }
+
+      return { ok: true, provider: agentName };
+    },
+    async isAvailable() {
+      return { ok: false, reason: 'agent-subagent is unavailable in cli context', errorType: 'provider' };
+    },
+    async enrich() {
+      throw new Error('agent-subagent is unavailable in cli context');
+    },
+  };
 }
 
-async function enrichSymbol(symbol, projectRoot, ollamaUrl, ollamaModel, projectSlug) {
+async function buildSymbolPrompt(symbol, projectRoot) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
   const content = await readFile(absoluteFile, 'utf8');
   const lines = content.split('\n');
@@ -109,19 +132,192 @@ async function enrichSymbol(symbol, projectRoot, ollamaUrl, ollamaModel, project
   const codeSection = lines.slice(symbol.range.startLine - 1, symbol.range.endLine).join('\n');
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
 
-  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
+  return `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
+}
 
-  const response = await callOllama(prompt);
+function applyAttemptsToEntry(entry, attempts) {
+  let updated = { ...entry };
+  for (const attempt of attempts ?? []) {
+    updated = withRecordedAttempt(updated, attempt);
+  }
+  return updated;
+}
 
+function getLastAttemptMode(attempts) {
+  return attempts?.length ? attempts[attempts.length - 1].mode ?? null : null;
+}
+
+function getLastAttemptError(attempts) {
+  for (let idx = (attempts?.length ?? 0) - 1; idx >= 0; idx--) {
+    const message = attempts[idx]?.errorMessage;
+    if (message) {
+      return message;
+    }
+  }
+
+  return 'All enrichment providers failed';
+}
+
+function createQueueEnrichmentError(result) {
+  const error = new Error(result.error);
+  error.symbolKey = result.symbolKey;
+  error.attempts = result.attempts;
+  error.lastModeUsed = result.lastModeUsed;
+  error.failedAt = result.failedAt;
+  return error;
+}
+
+export function buildQueueSummary(worklist) {
   return {
-    symbolKey: symbol.symbolKey,
-    memoryContent: response,
-    language: symbol.language,
-    kind: symbol.kind,
-    filePath: symbol.filePath,
-    projectSlug,
-    codeHash: symbol.codeHash,
+    enriched: worklist.filter((entry) => entry.status === 'enriched' || entry.status === 'already_enriched').length,
+    errors: worklist.filter((entry) => entry.status === 'error').length,
+    pending: worklist.filter((entry) => entry.status === 'pending' || entry.status === 'stale').length,
   };
+}
+
+async function loadRuntimeEnrichmentConfig(projectRoot, env) {
+  const projectConfig = await loadOptionalJson(resolve(projectRoot, '.opencode', PMC_ENRICHMENT_CONFIG_FILE));
+  const globalConfig = await loadOptionalJson(resolve(homedir(), '.config', 'opencode', PMC_ENRICHMENT_CONFIG_FILE));
+  return resolveEnrichmentConfig({ projectConfig, globalConfig, env });
+}
+
+function createQueueProviders() {
+  return [
+    createLocalModelProvider(),
+    createCloudApiProvider(),
+    createAgentSubagentProvider(),
+  ];
+}
+
+export async function runQueueSymbolEnrichment({
+  symbol,
+  projectRoot,
+  projectSlug,
+  timeoutMs,
+  enrichmentDir,
+  worklist,
+  worklistFile,
+  symbolIndex = {},
+  symbolIndexFile = '',
+  config,
+  providers,
+  env = process.env,
+  runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
+}) {
+  const prompt = await buildSymbolPrompt(symbol, projectRoot);
+  const result = await runEnrichmentWithFallbackImpl({
+    request: { prompt, timeoutMs },
+    config,
+    providers,
+    env,
+  });
+  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+
+  for (const attempt of result.attempts ?? []) {
+    await appendProviderEvent(enrichmentDir, {
+      symbolKey: symbol.symbolKey,
+      name: symbol.name,
+      ...attempt,
+    });
+  }
+
+  if (result.status === 'succeeded') {
+    const memoryId = `queue-${safeKey(symbol.symbolKey)}`;
+    const enrichedAt = new Date().toISOString();
+    const memoryFile = resolve(enrichmentDir, `${safeKey(symbol.symbolKey)}.memory.json`);
+    await saveJson(memoryFile, {
+      content: result.content,
+      category: 'architecture',
+      tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`],
+    });
+
+    if (wlEntry) {
+      Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, result.attempts), {
+        status: 'enriched',
+        memoryId,
+        enrichedAt,
+        error: undefined,
+        failedAt: undefined,
+      });
+    }
+
+    symbolIndex[symbol.symbolKey] = {
+      memoryId,
+      graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
+      codeHash: symbol.codeHash,
+      status: 'enriched',
+      lastEnrichedAt: enrichedAt,
+    };
+
+    await saveJson(worklistFile, worklist);
+    if (symbolIndexFile) {
+      await saveJson(symbolIndexFile, symbolIndex);
+    }
+
+    try {
+      await appendSyncEntry(enrichmentDir, createSyncEntry({
+        action: 'upsert',
+        keyTag: `key:symbol:${safeKey(symbol.symbolKey)}`,
+        content: `## ${symbol.name}\n\n${result.content}`,
+        category: 'architecture',
+        tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`, 'enriched-by-queue'],
+        source: 'enrich-queue',
+        symbolKey: symbol.symbolKey,
+      }));
+    } catch (syncErr) {
+      console.error(`[queue] WARN: sync-manifest append failed for ${symbol.name}: ${syncErr.message}`);
+    }
+
+    return {
+      status: 'enriched',
+      symbolKey: symbol.symbolKey,
+      memoryId,
+      memoryContent: result.content,
+      language: symbol.language,
+      kind: symbol.kind,
+      filePath: symbol.filePath,
+      projectSlug,
+      codeHash: symbol.codeHash,
+      attempts: result.attempts ?? [],
+      lastModeUsed: wlEntry?.lastModeUsed ?? result.mode ?? getLastAttemptMode(result.attempts),
+      enrichedAt,
+    };
+  }
+
+  const error = getLastAttemptError(result.attempts);
+  const failedAt = new Date().toISOString();
+
+  if (wlEntry) {
+    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, result.attempts), {
+      status: 'error',
+      error,
+      failedAt,
+    });
+  }
+
+  symbolIndex[symbol.symbolKey] = {
+    memoryId: null,
+    graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
+    codeHash: symbol.codeHash,
+    status: 'error',
+    lastEnrichedAt: failedAt,
+  };
+
+  await saveJson(worklistFile, worklist);
+  if (symbolIndexFile) {
+    await saveJson(symbolIndexFile, symbolIndex);
+  }
+
+  const failure = {
+    status: 'error',
+    symbolKey: symbol.symbolKey,
+    error,
+    attempts: result.attempts ?? [],
+    lastModeUsed: wlEntry?.lastModeUsed ?? getLastAttemptMode(result.attempts),
+    failedAt,
+  };
+
+  throw createQueueEnrichmentError(failure);
 }
 
 async function checkpointSave() {
@@ -168,6 +364,9 @@ async function main() {
   let symbolIndex = {};
   try { symbolIndex = await loadJson(symbolIndexFile); } catch {}
 
+  const enrichmentConfig = await loadRuntimeEnrichmentConfig(PROJECT_ROOT, process.env);
+  const providers = createQueueProviders();
+
   _enrichmentDir = enrichmentDir;
   _worklist = worklist;
   _symbolIndex = symbolIndex;
@@ -179,19 +378,19 @@ async function main() {
     }
   }
 
-  const pending = worklist.filter(s => s.status === 'pending');
+  const pending = worklist.filter(s => s.status === 'pending' || s.status === 'stale');
   const alreadyEnriched = worklist.filter(s => s.status === 'already_enriched').length;
+  const staleCount = worklist.filter(s => s.status === 'stale').length;
   const total = worklist.length;
 
   if (pending.length === 0) {
-    const enriched = worklist.filter(s => s.status === 'enriched').length;
-    const errors = worklist.filter(s => s.status === 'error').length;
-    console.log(JSON.stringify({ complete: true, total, enriched, errors }));
+    const summary = buildQueueSummary(worklist);
+    console.log(JSON.stringify({ complete: true, total, enriched: summary.enriched, errors: summary.errors }));
     return;
   }
 
-  console.error(`[queue] Starting continuous enrichment: ${pending.length} pending, ${alreadyEnriched} already enriched, ${PMC_CONCURRENCY} parallel slots`);
-  console.error(`[queue] Ollama: ${OLLAMA_URL} | Model: ${OLLAMA_MODEL} | Timeout: ${TIMEOUT_MS}ms per symbol\n`);
+  console.error(`[queue] Starting continuous enrichment: ${pending.length} pending (${staleCount} stale), ${alreadyEnriched} already enriched, ${PMC_CONCURRENCY} parallel slots`);
+  console.error(`[queue] Modes: ${enrichmentConfig.preferredModes.join(', ')} | Local: ${enrichmentConfig.localModel.baseUrl} | Model: ${enrichmentConfig.localModel.model} | Timeout: ${TIMEOUT_MS}ms per symbol\n`);
 
   const tracker = new SlotTracker(PMC_CONCURRENCY);
   const queue = [...pending];
@@ -209,35 +408,32 @@ async function main() {
       return null;
     }
 
-    enrichSymbol(symbol, PROJECT_ROOT, OLLAMA_URL, OLLAMA_MODEL, PROJECT_SLUG)
+    runQueueSymbolEnrichment({
+      symbol,
+      projectRoot: PROJECT_ROOT,
+      projectSlug: PROJECT_SLUG,
+      timeoutMs: TIMEOUT_MS,
+      enrichmentDir: _enrichmentDir,
+      worklist,
+      worklistFile,
+      symbolIndex,
+      symbolIndexFile,
+      config: enrichmentConfig,
+      providers,
+      env: process.env,
+    })
       .then(async (result) => {
         const completion = tracker.complete(slotIdx, result);
 
-        const memoryFile = resolve(_enrichmentDir, `${safeKey(symbol.symbolKey)}.memory.json`);
-        await saveJson(memoryFile, {
-          content: result.memoryContent,
-          category: 'architecture',
-          tags: ['symbol', result.language, result.kind, `project:${result.projectSlug}`, `file:${result.filePath}`],
-        });
-
         console.error(`[slot ${slotIdx}] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(completion.elapsed / 1000)}s — queuing next`);
-        results.push({ symbolKey: symbol.symbolKey, memoryId: `queue-${safeKey(symbol.symbolKey)}`, elapsed: completion.elapsed });
-
-        const wlEntry = worklist.find(s => s.symbolKey === symbol.symbolKey);
-        if (wlEntry) {
-          wlEntry.status = 'enriched';
-          wlEntry.memoryId = `queue-${safeKey(symbol.symbolKey)}`;
-          wlEntry.enrichedAt = new Date().toISOString();
-        }
-
-        await saveJson(worklistFile, worklist);
+        results.push({ symbolKey: symbol.symbolKey, memoryId: result.memoryId, elapsed: completion.elapsed });
 
         dispatchNext();
       })
       .catch(async (err) => {
         const failure = tracker.fail(slotIdx, err.message);
         console.error(`[slot ${slotIdx}] ERROR ${symbol.name}: ${err.message} (${Math.round(failure.elapsed / 1000)}s)`);
-        errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed: failure.elapsed });
+        errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed: failure.elapsed, failedAt: err.failedAt ?? null });
 
         const wlEntry = worklist.find(s => s.symbolKey === symbol.symbolKey);
         if (wlEntry) {
@@ -283,7 +479,7 @@ async function main() {
     if (entry) {
       symbolIndex[r.symbolKey] = {
         memoryId: r.memoryId,
-        graphNodeId: null,
+        graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'enriched',
         lastEnrichedAt: entry.enrichedAt,
@@ -295,7 +491,7 @@ async function main() {
     if (entry) {
       symbolIndex[err.symbolKey] = {
         memoryId: null,
-        graphNodeId: null,
+        graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'error',
         lastEnrichedAt: err.failedAt || null,
@@ -305,17 +501,15 @@ async function main() {
   await saveJson(symbolIndexFile, symbolIndex);
 
   const totalElapsed = Date.now() - startTime;
-  const enriched = worklist.filter(s => s.status === 'enriched').length;
-  const errCount = worklist.filter(s => s.status === 'error').length;
-  const stillPending = worklist.filter(s => s.status === 'pending').length;
+  const summary = buildQueueSummary(worklist);
   const avgTime = results.length > 0 ? results.reduce((a, r) => a + r.elapsed, 0) / results.length : 0;
 
   console.log(JSON.stringify({
-    complete: stillPending === 0,
+    complete: summary.pending === 0,
     total: worklist.length,
-    enriched,
-    errors: errCount,
-    pending: stillPending,
+    enriched: summary.enriched,
+    errors: summary.errors,
+    pending: summary.pending,
     totalElapsedSeconds: Math.round(totalElapsed / 1000),
     avgSymbolTimeSeconds: Math.round(avgTime / 1000),
     resultsPerSecond: Math.round((results.length / (totalElapsed / 1000)) * 100) / 100,
@@ -323,7 +517,9 @@ async function main() {
   }, null, 2));
 }
 
-main().catch(err => {
-  console.error('[fatal]', err.message);
-  process.exit(1);
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(err => {
+    console.error('[fatal]', err.message);
+    process.exit(1);
+  });
+}
