@@ -26,7 +26,7 @@ export function updateSidebar(node, state) {
       <div class="node-detail-value"><span class="badge" style="background:var(--bg-elevated)">${kind}</span></div>
 
       <div class="node-detail-label">Source</div>
-      <div class="node-detail-value"><code>${escapeHtml(node.source_file)}:${escapeHtml(node.source_location)}</code></div>
+      <div class="node-detail-value"><code>${escapeHtml(node.source_file || "")}:${escapeHtml(node.source_location || "")}</code></div>
 
       <div class="node-detail-label">Community</div>
       <div class="node-detail-value">
@@ -45,7 +45,7 @@ export function updateSidebar(node, state) {
         ${inLinks.map((l) => {
           const srcId = typeof l.source === "object" ? l.source.id : l.source;
           const srcNode = state.graphData.nodes.find((n) => n.id === srcId);
-          return `<li data-node-id="${srcId}"><span class="rel-type">${l.relation}</span>${srcNode ? escapeHtml(srcNode.label) : srcId}</li>`;
+          return `<li data-node-id="${srcId}"><span class="rel-type">${escapeHtml(l.relation)}</span>${srcNode ? escapeHtml(srcNode.label) : srcId}</li>`;
         }).join("")}
       </ul>
 
@@ -54,7 +54,7 @@ export function updateSidebar(node, state) {
         ${outLinks.map((l) => {
           const tgtId = typeof l.target === "object" ? l.target.id : l.target;
           const tgtNode = state.graphData.nodes.find((n) => n.id === tgtId);
-          return `<li data-node-id="${tgtId}"><span class="rel-type">${l.relation}</span>${tgtNode ? escapeHtml(tgtNode.label) : tgtId}</li>`;
+          return `<li data-node-id="${tgtId}"><span class="rel-type">${escapeHtml(l.relation)}</span>${tgtNode ? escapeHtml(tgtNode.label) : tgtId}</li>`;
         }).join("")}
       </ul>
     </div>
