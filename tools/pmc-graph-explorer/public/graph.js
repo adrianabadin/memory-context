@@ -11,7 +11,7 @@ const EDGE_RELATION_THICKNESS = {
 
 function nodeRadius(node) {
   const label = (node.label || "").toLowerCase();
-  if (!label.includes(".") && !label.includes("(") && label.includes(".ts") || label.includes(".mjs") || label.includes(".json")) return 12;
+  if (/\.(ts|js|mjs|json)$/.test(label)) return 12;
   if (label.includes("(")) return 5;
   return 8;
 }
