@@ -87,3 +87,31 @@ test('refreshContext returns total=0 when no changes', async () => {
 
   await rm(TMP, { recursive: true });
 });
+
+test('refreshContext marks symbols as removed when file is deleted', async () => {
+  await mkdir(join(TMP, 'src'), { recursive: true });
+  await mkdir(join(TMP, '.planning', 'project-memory-context', 'enrichment'), { recursive: true });
+  await mkdir(join(TMP, '.planning', 'project-memory-context', 'graph'), { recursive: true });
+
+  await writeFile(join(TMP, 'src', 'temp.mjs'), 'export function willBeRemoved() { return 1; }\n');
+
+  // First run: establish the file and symbol
+  await writeFile(
+    join(TMP, '.planning', 'project-memory-context', 'enrichment', 'hash-store.json'),
+    JSON.stringify({ hashes: {}, updatedAt: new Date().toISOString() }),
+  );
+  await writeFile(
+    join(TMP, '.planning', 'project-memory-context', 'enrichment', 'worklist.json'),
+    JSON.stringify([]),
+  );
+  await refreshContext(TMP);
+
+  // Second run: remove the file and detect removed symbols
+  await rm(join(TMP, 'src', 'temp.mjs'));
+  const result = await refreshContext(TMP);
+
+  assert.equal(result.removed, 1, 'file should be detected as removed');
+  assert.ok(result.removedSymbols > 0, 'symbol should be marked as removed');
+
+  await rm(TMP, { recursive: true });
+});

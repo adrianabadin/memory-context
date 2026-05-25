@@ -65,8 +65,9 @@ export async function refreshContext(projectRoot) {
   const existingWorklist = await readJsonArtifact(resolve(dirs.enrichment, 'worklist.json'), []);
 
   const changedFileSet = new Set(changedFiles);
+  const removedFileSet = new Set(fileDelta.removed);
   const unchangedWorklistEntries = existingWorklist.filter(
-    entry => !changedFileSet.has(entry.filePath)
+    entry => !changedFileSet.has(entry.filePath) && !removedFileSet.has(entry.filePath)
   );
 
   const allCurrentSymbols = [...resolvedChangedSymbols, ...unchangedWorklistEntries];
