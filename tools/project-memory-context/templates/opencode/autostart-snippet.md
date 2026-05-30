@@ -1,9 +1,25 @@
 <!-- pmc:autostart -->
 On EVERY session start, BEFORE responding to the user, execute these steps IN ORDER:
 
-1. **Check enrichment status**: Read `.planning/project-memory-context/enrichment/worklist.json`. Count entries with `status: "pending"` or `status: "stale"`. If count > 0, launch background enrichment:
-   - Windows: `Start-Process -FilePath "npx" -ArgumentList "--yes","--package","@aabadin/project-memory-context","pmc","enrich","." -WindowStyle Hidden`
-   - POSIX: `nohup npx --yes --package @aabadin/project-memory-context pmc enrich . > /dev/null 2>&1 &`
+1. **Check enrichment status**: Read `.planning/project-memory-context/enrichment/worklist.json`.
+   Count entries with `status: "pending"` or `status: "stale"`. **Report the count to the user**
+   (e.g. "PMC: 12 symbols pending enrichment").
+   If count > 0, launch background enrichment via the **Bash tool with `run_in_background: true`**:
+
+   ```bash
+   {{PMC_BIN}} enrich .
+   ```
+
+   ⚠️ Do NOT use PowerShell `Start-Process -WindowStyle Hidden` — the hidden process inherits a
+   restricted PATH, crashes silently, and leaves a stalled queue-state that blocks restart for ~90 s.
+
+   After launching, run the **Still-Alive watchdog** (cap: 3 auto-relaunches):
+   - Periodically run `{{PMC_BIN}} enrich-status` and check `.state`.
+   - `running` → alive, keep waiting.
+   - `finished` → done, report completion summary.
+   - `stalled` or `failed` AND `.worklist.pending > 0` → crashed; relaunch (Bash
+     `run_in_background: true`), report "PMC enrichment crashed — relaunched (attempt N/3)".
+   - After 3 failed relaunches: tell the user to run `/doctor`.
 
 2. **Check sync-manifest**: Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If `entries` contains any element with `status: "pending"`, surface: "PMC has N pending sync operations. Run `/sync-context` to apply them."
 
@@ -14,9 +30,9 @@ On EVERY session start, BEFORE responding to the user, execute these steps IN OR
 ## Mandatory PMC Workflow (ENFORCED)
 
 - **BEFORE reading any source file**: Run `pmc get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.
-- **AFTER implementing code changes**: Run `pmc refresh-context` to detect changes, update graph, and queue re-enrichment.
-- **AFTER refresh-context completes**: Run `pmc sync-context` to persist new/updated memories.
+- **AFTER implementing code changes**: Run `pmc refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `pmc sync-context` to persist new memories.
 - **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
+- **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
 
 ## Context Retrieval Rules
 
@@ -28,5 +44,5 @@ On EVERY session start, BEFORE responding to the user, execute these steps IN OR
 | Debugging complex issues | `pmc get-context <symbol> deep all` | deep |
 | Need raw source code | `pmc get-context <symbol> disk` | disk |
 | Quick project overview | `agent-memory_search "project context overview"` | — |
-| After code changes | `pmc refresh-context` then `pmc sync-context` | — |
+| After code changes | `pmc refresh-context --enrich` then `pmc sync-context` | — |
 <!-- /pmc:autostart -->

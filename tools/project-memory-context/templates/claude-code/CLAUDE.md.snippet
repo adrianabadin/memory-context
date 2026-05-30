@@ -22,6 +22,14 @@ When the user types `/get-context`, run:
 {{PMC_BIN}} get-context <target> [depth] [focus]
 ```
 
+When the user types `/enrich`, launch enrichment via the Bash tool (`run_in_background: true`):
+
+```bash
+{{PMC_BIN}} enrich .
+```
+
+⚠️ Do NOT use `Start-Process -WindowStyle Hidden` — see Still-Alive watchdog below.
+
 When the user types `/enrich-status`, run:
 
 ```bash
@@ -56,13 +64,24 @@ When the user types `/sanitize`, run:
 
 On EVERY session start, BEFORE responding to the user, execute these steps IN ORDER:
 
-1. **Check enrichment**: Read `.planning/project-memory-context/enrichment/worklist.json`. If any entry has `status: "pending"` or `status: "stale"`, launch background enrichment:
+1. **Check enrichment**: Read `.planning/project-memory-context/enrichment/worklist.json`. Count
+   entries with `status: "pending"` or `status: "stale"`. **Report the count to the user**
+   (e.g. "PMC: 12 symbols pending enrichment").
+   If count > 0, launch via the Bash tool with `run_in_background: true`:
    ```bash
-   nohup {{PMC_BIN}} enrich . >/dev/null 2>&1 &
+   {{PMC_BIN}} enrich .
    ```
-   ```powershell
-   Start-Process -FilePath "{{PMC_BIN}}" -ArgumentList "enrich", "." -WindowStyle Hidden
-   ```
+   ⚠️ Do NOT use `Start-Process -WindowStyle Hidden` — the hidden process inherits a restricted PATH,
+   crashes silently, and leaves a stalled queue-state that blocks restart for ~90 s.
+
+   Then run the **Still-Alive watchdog** (cap: 3 auto-relaunches):
+   - Periodically run `{{PMC_BIN}} enrich-status` and check `.state`.
+   - `running` → alive, keep waiting.
+   - `finished` → done, report completion summary.
+   - `stalled` or `failed` AND `.worklist.pending > 0` → crashed; relaunch (Bash
+     `run_in_background: true`), report "PMC enrichment crashed — relaunched (attempt N/3)".
+   - After 3 failed relaunches: tell the user to run `/doctor`.
+
 2. **Check sync-manifest**: Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If entries have `status: "pending"`, inform: "PMC has N pending sync operations. Run `/sync-context`."
 3. **Recall base context**: Search agent-memory with `query: "project context overview"` and `tags: ["project-context"]`. Summarize in ~500 tokens.
 4. **Remind**: "Use `/get-context <target>` before reading files."
@@ -70,7 +89,8 @@ On EVERY session start, BEFORE responding to the user, execute these steps IN OR
 ## Mandatory Workflow (ENFORCED)
 
 - BEFORE reading any source file: run `/get-context <file-or-symbol>` FIRST
-- AFTER code changes: run `{{PMC_BIN}} refresh-context` then `{{PMC_BIN}} sync-context`
+- AFTER code changes: run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph + queues + launches enrichment) then `{{PMC_BIN}} sync-context`
 - Default depth: `compact`. `extended`/`deep` only on explicit request.
+- `map-project --all` only for full reinstall or ground-up graph rebuild — not needed for routine changes.
 
 <!-- /pmc:init -->

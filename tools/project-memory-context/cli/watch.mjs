@@ -14,9 +14,9 @@ async function main() {
   log('Press Ctrl+C to stop.');
 
   const onChange = debounce(async () => {
-    log('Changes detected, running refresh-context...');
+    log('Changes detected, running refresh-context --enrich...');
     try {
-      await refreshContext(projectRoot);
+      await refreshContext(projectRoot, { enrich: true });
     } catch (err) {
       log(`refresh-context error: ${err.message}`);
     }

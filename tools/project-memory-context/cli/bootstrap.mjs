@@ -2,11 +2,11 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { access, constants, readFile, writeFile, mkdir } from 'node:fs/promises';
-import { existsSync, readdirSync, copyFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 import { bootstrapProjectInstall } from '../src/setup-bootstrap.mjs';
-import { resolveGraphify, spawnBackground, resolvePythonBin } from '../src/platform.mjs';
+import { spawnBackground } from '../src/platform.mjs';
+import { runGraphifyUpdate, installGraphify } from '../src/graphify-runner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PMC_CLI_ROOT = resolve(__dirname);
@@ -80,59 +80,15 @@ async function readJson(filePath) {
   catch { return null; }
 }
 
-async function installGraphify() {
-  log('Installing graphify (Python)...');
-  const pythonBin = resolvePythonBin();
-  // Temporarily installing from fork until PR #1085 is merged into safishamsi/graphify
-  const forkUrl = 'git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction';
-  const r = spawnSync(pythonBin, ['-m', 'pip', 'install', forkUrl], { stdio: 'inherit' });
-  if (r.status === 0) {
-    log(`graphifyy (fork with Razor/CSHTML support) installed via ${pythonBin}`);
-    return true;
-  }
-  log('WARNING: graphifyy install failed. Graphify step may not work.');
-  return false;
-}
-
 async function runStageA(projectRoot) {
-  log('Running graphify update (structural AST analysis, no LLM)...');
-
-  let graphifyExe;
-  try {
-    graphifyExe = resolveGraphify();
-  } catch (e) {
-    log(`  ${e.message}`);
-    log('  Stage-a skipped. Install graphify with `pip install graphifyy` or set PMC_GRAPHIFY_PATH.');
-    return true;
-  }
-
-  const graphOutDir = resolve(projectRoot, '.planning', 'project-memory-context', 'graph');
-  const graphifyOutDir = resolve(projectRoot, 'graphify-out');
-
-  log(`  Using graphify: ${graphifyExe}`);
-  const r = spawnSync(graphifyExe, ['update', projectRoot], {
-    cwd: projectRoot,
-    stdio: 'inherit',
-  });
-
-  if (r.status === 0) {
-    log('  Graph extraction complete. Copying to .planning...');
-    try {
-      if (!existsSync(graphifyOutDir)) { log('  graphify-out not found'); return false; }
-      const files = readdirSync(graphifyOutDir);
-      for (const f of files) {
-        if (f === 'graph.json' || f === 'graph.metadata.json' || f === 'graph.html' || f === 'GRAPH_REPORT.md') {
-          copyFileSync(resolve(graphifyOutDir, f), resolve(graphOutDir, f));
-          log(`    copied ${f}`);
-        }
-      }
-    } catch (e) { log(`  Copy error: ${e.message}`); }
+  log('Executing stage-a (graphify update)...');
+  const { ran } = await runGraphifyUpdate(projectRoot, { log: (msg) => log(msg) });
+  if (ran) {
     log('  Graphify update complete (AST only, no semantic LLM).');
     log('  For full semantic enrichment, set ANTHROPIC_API_KEY and run graphify extract.');
   } else {
-    log(`  Graphify update failed with code ${r.status}. Stage-b and enrichment still work.`);
+    log('  Stage-a skipped or graphify unavailable. Stage-b and enrichment still work.');
   }
-
   return true;
 }
 
@@ -247,7 +203,7 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   log('Installing graphify...');
-  await installGraphify();
+  installGraphify({ log: (msg) => log(msg) });
 
   log('Running portable project install...');
   const { configPath } = await bootstrapProjectInstall({

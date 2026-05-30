@@ -9,6 +9,8 @@ import { extractTopLevelSymbols } from '../src/symbol-extractor.mjs';
 import { attachGraphNodeIds } from '../src/graph-node-resolver.mjs';
 import { computeSymbolDelta } from '../src/symbol-delta.mjs';
 import { appendSyncEntries, createSyncEntry } from '../src/sync-manifest.mjs';
+import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
+import { spawnBackground } from '../src/platform.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,7 +26,8 @@ function hashCodeFragment(content, startLine, endLine) {
     .digest('hex');
 }
 
-export async function refreshContext(projectRoot) {
+export async function refreshContext(projectRoot, options = {}) {
+  const { enrich = false } = options;
   const projectSlug = basename(projectRoot).toLowerCase();
   const dirs = await ensureProjectMemoryContextDirs(projectRoot);
 
@@ -44,6 +47,10 @@ export async function refreshContext(projectRoot) {
   }
 
   log(`Changes: ${fileDelta.added.length} added, ${fileDelta.modified.length} modified, ${fileDelta.removed.length} removed`);
+
+  // Refresh the graph before resolving symbol node IDs so attachGraphNodeIds
+  // can link new/changed symbols to up-to-date nodes (with startLine, edges, community).
+  await runGraphifyUpdate(projectRoot, { log });
 
   let existingGraph = await readJsonArtifact(resolve(dirs.graph, 'graph.json'), { nodes: [], edges: [] });
 
@@ -130,6 +137,15 @@ export async function refreshContext(projectRoot) {
   log(`Sync-manifest operations: ${result.syncOps}`);
   log(`Pending enrichment: ${result.pendingEnrichment}`);
 
+  if (enrich && result.pendingEnrichment > 0) {
+    const enrichQueueScript = resolve(dirname(fileURLToPath(import.meta.url)), 'enrich-queue.mjs');
+    spawnBackground(process.execPath, [enrichQueueScript], { cwd: projectRoot });
+    log(`Launched background enrichment (${result.pendingEnrichment} pending).`);
+    result.enrichLaunched = true;
+  } else if (result.pendingEnrichment > 0) {
+    log(`Tip: run \`pmc refresh-context --enrich\` or \`pmc enrich .\` to enrich ${result.pendingEnrichment} pending symbol(s).`);
+  }
+
   console.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -137,7 +153,8 @@ export async function refreshContext(projectRoot) {
 async function main() {
   const args = process.argv.slice(2);
   const projectRoot = resolve(args.find(a => !a.startsWith('--')) ?? process.cwd());
-  await refreshContext(projectRoot);
+  const enrich = args.includes('--enrich');
+  await refreshContext(projectRoot, { enrich });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
