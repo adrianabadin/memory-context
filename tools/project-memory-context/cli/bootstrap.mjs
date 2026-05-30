@@ -2,7 +2,8 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { access, constants, readFile, writeFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 
 import { bootstrapProjectInstall } from '../src/setup-bootstrap.mjs';
 import { spawnBackground } from '../src/platform.mjs';
