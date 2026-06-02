@@ -4,9 +4,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readJsonArtifact } from '../src/artifacts.mjs';
+import { openGraphDb } from '../src/graph-store/graph-db.mjs';
 import { createQueryEngine, focusToEdgeTypes } from '../src/retrieval/query-engine.mjs';
 import { resolveTarget } from '../src/retrieval/target-resolver.mjs';
 import { renderTargetContext } from '../src/retrieval/context-renderer-v1.mjs';
+import { getSymbolSource } from '../src/retrieval/source-cache.mjs';
 
 async function fileExists(filePath) {
   try {
@@ -104,15 +106,25 @@ export function parseArgs(args) {
 export async function loadArtifacts(projectRoot) {
   const pmcRoot = join(projectRoot, '.planning', 'project-memory-context');
   try {
-    const [graph, symbolIndex, worklist] = await Promise.all([
-      readJsonArtifact(join(pmcRoot, 'graph', 'graph.json'), { nodes: [], links: [] }),
+    const [graphStore, symbolIndex, worklist] = await Promise.all([
+      openGraphDbLazy(pmcRoot),
       readJsonArtifact(join(pmcRoot, 'enrichment', 'symbol-index.json'), {}),
       readJsonArtifact(join(pmcRoot, 'enrichment', 'worklist.json'), []),
     ]);
-    return { graph, symbolIndex, worklist };
+    return { graphStore, symbolIndex, worklist };
   } catch (error) {
     throw new Error(`Failed to load PMC artifacts from ${pmcRoot}: ${error.message}`);
   }
+}
+
+async function openGraphDbLazy(pmcRoot) {
+  const dbPath   = join(pmcRoot, 'graph', 'graph.db');
+  const jsonPath = join(pmcRoot, 'graph', 'graph.json');
+  if (!existsSync(jsonPath)) {
+    const { createInMemoryGraphStore } = await import('../src/graph-store/in-memory-graph.mjs');
+    return createInMemoryGraphStore({ nodes: [], links: [] });
+  }
+  return openGraphDb(dbPath, jsonPath);
 }
 
 function groupEdges(edges, edgeTypes) {
@@ -147,7 +159,13 @@ export function buildRenderInput(engine, resolved, { depth, focus }) {
   switch (resolved.mode) {
     case 'symbol': {
       const ctx = engine.querySymbolContext({ symbolKey: resolved.symbolKey, depth });
-      target = { mode: 'symbol', name: ctx.target?.name, filePath: ctx.target?.filePath };
+      target = {
+        mode: 'symbol',
+        name: ctx.target?.name,
+        filePath: ctx.target?.filePath,
+        range: ctx.target?.range ?? null,
+        codeHash: ctx.target?.codeHash ?? null,
+      };
       summary = [`Symbol: ${ctx.target?.name || resolved.target} (${ctx.target?.kind || 'unknown'})`];
       relevant = (ctx.neighbors || []).map((n) => ({
         label: n.name || n.label || 'unknown',
@@ -208,21 +226,43 @@ export function buildRenderInput(engine, resolved, { depth, focus }) {
 }
 
 export async function runTargetContext({ projectRoot, target, explicitMode, depth, focus, artifacts }) {
+  const ownedArtifacts = artifacts == null;
   const artfs = artifacts ?? await loadArtifacts(projectRoot);
-  const engine = createQueryEngine({
-    graph: artfs.graph,
-    symbolIndex: artfs.symbolIndex,
-    worklist: artfs.worklist,
-    enrichmentDir: join(projectRoot, '.planning', 'project-memory-context', 'enrichment'),
-    projectSlug: 'project',
-  });
+  try {
+    const engine = createQueryEngine({
+      graphStore: artfs.graphStore,
+      symbolIndex: artfs.symbolIndex,
+      worklist: artfs.worklist,
+      enrichmentDir: join(projectRoot, '.planning', 'project-memory-context', 'enrichment'),
+      projectSlug: 'project',
+    });
 
-  const resolved = resolveTarget({ engine, explicitMode, target });
+    const resolved = resolveTarget({ engine, explicitMode, target });
 
-  const input = buildRenderInput(engine, resolved, { depth, focus });
-  const output = renderTargetContext(input);
+    const input = buildRenderInput(engine, resolved, { depth, focus });
 
-  return { output, resolved, input, artifacts: artfs };
+    // When depth is 'disk' and we resolved a single symbol, fetch the source slice.
+    if (depth === 'disk' && resolved.mode === 'symbol' && input.target?.filePath && input.target?.range) {
+      const enrichmentDir = join(projectRoot, '.planning', 'project-memory-context', 'enrichment');
+      input.source = await getSymbolSource({
+        projectRoot,
+        filePath: input.target.filePath,
+        range: input.target.range,
+        codeHash: input.target.codeHash ?? null,
+        enrichmentDir,
+      });
+    }
+
+    const output = renderTargetContext(input);
+
+    return { output, resolved, input, artifacts: artfs };
+  } finally {
+    // Close the SQLite connection when we own the lifecycle (no pre-loaded artifacts).
+    // This releases WAL/SHM locks so callers can safely delete the project dir.
+    if (ownedArtifacts && typeof artfs.graphStore?.close === 'function') {
+      artfs.graphStore.close();
+    }
+  }
 }
 
 export async function runProjectContext(projectRoot = process.cwd(), refresh = false) {
@@ -235,8 +275,8 @@ export async function runProjectContext(projectRoot = process.cwd(), refresh = f
 }
 
 function printHelp() {
-  console.log('Usage: pmc context [options] [<target>]');
-  console.log('       pmc context {symbol|file|query} <target> [depth] [focus]');
+  console.log('Usage: pmc get-context [options] [<target>]');
+  console.log('       pmc get-context {symbol|file|query} <target> [depth] [focus]');
   console.log('');
   console.log('Get structural context about symbols, files, or free-text queries');
   console.log('from the PMC project graph.');
@@ -253,11 +293,11 @@ function printHelp() {
   console.log('  --help, -h Show this help');
   console.log('');
   console.log('Examples:');
-  console.log('  pmc context createQueryEngine');
-  console.log('  pmc context symbol MyFunc extended dependencies');
-  console.log('  pmc context file src/auth.ts deep callers');
-  console.log('  pmc context query "how auth works"');
-  console.log('  pmc context . --refresh');
+  console.log('  pmc get-context createQueryEngine');
+  console.log('  pmc get-context symbol MyFunc extended dependencies');
+  console.log('  pmc get-context file src/auth.ts deep callers');
+  console.log('  pmc get-context query "how auth works"');
+  console.log('  pmc get-context . --refresh');
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -319,27 +359,34 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   const artifacts = await loadArtifacts(projectRoot);
-  const { output, resolved } = await runTargetContext({
-    projectRoot,
-    target: parsed.target,
-    explicitMode: parsed.explicitMode,
-    depth: parsed.depth,
-    focus: parsed.focus,
-  });
+  try {
+    const { output, resolved } = await runTargetContext({
+      projectRoot,
+      target: parsed.target,
+      explicitMode: parsed.explicitMode,
+      depth: parsed.depth,
+      focus: parsed.focus,
+      artifacts,
+    });
 
-  const nodeIdsToMark = [];
-  if (resolved.symbolKey) {
-    const entry = artifacts.symbolIndex[resolved.symbolKey];
-    if (entry?.graphNodeId) nodeIdsToMark.push(entry.graphNodeId);
-  } else if (resolved.target && (resolved.mode === 'file' || resolved.mode === 'symbol-missing')) {
-    const fileNodeId = resolved.target.replace(/[/\\]/g, '_').replace(/[:.]/g, '_');
-    nodeIdsToMark.push(fileNodeId);
+    const nodeIdsToMark = [];
+    if (resolved.symbolKey) {
+      const entry = artifacts.symbolIndex[resolved.symbolKey];
+      if (entry?.graphNodeId) nodeIdsToMark.push(entry.graphNodeId);
+    } else if (resolved.target && (resolved.mode === 'file' || resolved.mode === 'symbol-missing')) {
+      const fileNodeId = resolved.target.replace(/[/\\]/g, '_').replace(/[:.]/g, '_');
+      nodeIdsToMark.push(fileNodeId);
+    }
+
+    await markContext(projectRoot, nodeIdsToMark);
+
+    console.log(output);
+    return 0;
+  } finally {
+    if (typeof artifacts.graphStore?.close === 'function') {
+      artifacts.graphStore.close();
+    }
   }
-
-  await markContext(projectRoot, nodeIdsToMark);
-
-  console.log(output);
-  return 0;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
