@@ -60,8 +60,8 @@ async function checkNodeVersion() {
   };
 }
 
-async function checkNodeSqlite() {
-  const parts = process.version.slice(1).split('.').map(Number);
+export async function checkNodeSqlite(getVersion = () => process.version) {
+  const parts = getVersion().slice(1).split('.').map(Number);
   const [major, minor] = parts;
 
   if (major >= 24) {

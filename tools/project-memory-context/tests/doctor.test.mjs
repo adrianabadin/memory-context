@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runDoctor } from '../src/doctor.mjs';
+import { runDoctor, checkNodeSqlite } from '../src/doctor.mjs';
 
 const noFetch = async () => { throw new Error('ECONNREFUSED'); };
 const okFetch = async () => ({ ok: true, status: 200 });
@@ -32,6 +32,20 @@ test('node-sqlite check is ok on Node >= 24', async () => {
   assert.ok(c, 'node-sqlite check should exist');
   assert.equal(c?.status, 'ok');
   assert.ok(c?.message.includes('node:sqlite'));
+});
+
+test('node-sqlite warns on Node 22.5.0', async () => {
+  const c = await checkNodeSqlite(() => 'v22.5.0');
+  assert.equal(c.name, 'node-sqlite');
+  assert.equal(c.status, 'warn');
+  assert.ok(c.message.includes('--experimental-sqlite'));
+});
+
+test('node-sqlite fails on Node 22.4.0', async () => {
+  const c = await checkNodeSqlite(() => 'v22.4.0');
+  assert.equal(c.name, 'node-sqlite');
+  assert.equal(c.status, 'fail');
+  assert.ok(c.message.includes('≥ 22.5'));
 });
 
 test('python check fails when resolvePythonBin returns null', async () => {
