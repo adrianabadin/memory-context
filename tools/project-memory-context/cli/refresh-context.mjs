@@ -57,14 +57,16 @@ export async function refreshContext(projectRoot, options = {}) {
   // Rebuild graph.db so get-context queries use the updated graph.
   const graphJsonPath = resolve(dirs.graph, 'graph.json');
   const graphDbPath   = resolve(dirs.graph, 'graph.db');
-  try {
-    if (existsSync(graphJsonPath)) {
-      const store = openGraphDb(graphDbPath, graphJsonPath);
-      store.close();
+  if (existsSync(graphJsonPath)) {
+    let store;
+    try {
+      store = openGraphDb(graphDbPath, graphJsonPath);
       log('graph.db refreshed ✓');
+    } catch (err) {
+      log(`graph.db rebuild failed (non-fatal): ${err.message}\n${err.stack ?? ''}`);
+    } finally {
+      try { store?.close(); } catch { /* ignore close errors */ }
     }
-  } catch (err) {
-    log(`graph.db rebuild failed (non-fatal): ${err.message}`);
   }
 
   let existingGraph = await readJsonArtifact(resolve(dirs.graph, 'graph.json'), { nodes: [], edges: [] });

@@ -15,7 +15,7 @@ const PMC_CLI_ROOT = resolve(__dirname);
 const PMC_PACKAGE_ROOT = resolve(__dirname, '..');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b-ctx16k';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b-ctx32k';
 const PMC_CONCURRENCY = parseInt(process.env.PMC_CONCURRENCY || '8', 10);
 
 function log(msg) { console.error(`[bootstrap] ${msg}`); }
@@ -98,15 +98,17 @@ async function runStageA(projectRoot) {
   // Build / refresh graph.db from the updated graph.json
   const graphJsonPath = resolve(projectRoot, '.planning', 'project-memory-context', 'graph', 'graph.json');
   const graphDbPath   = resolve(projectRoot, '.planning', 'project-memory-context', 'graph', 'graph.db');
-  try {
-    if (existsSync(graphJsonPath)) {
+  if (existsSync(graphJsonPath)) {
+    let store;
+    try {
       log('Building graph.db from graph.json...');
-      const store = openGraphDb(graphDbPath, graphJsonPath);
-      store.close();
+      store = openGraphDb(graphDbPath, graphJsonPath);
       log('graph.db built ✓');
+    } catch (err) {
+      log(`graph.db build failed (non-fatal): ${err.message}\n${err.stack ?? ''}`);
+    } finally {
+      try { store?.close(); } catch { /* ignore close errors */ }
     }
-  } catch (err) {
-    log(`graph.db build failed (non-fatal): ${err.message}`);
   }
 
   return true;
@@ -189,7 +191,7 @@ Options:
 
 Environment variables:
   OLLAMA_URL           Ollama URL (default: http://localhost:11434)
-  OLLAMA_MODEL         Ollama model (default: deepseek-coder-v2:16b-ctx16k)
+  OLLAMA_MODEL         Ollama model (default: deepseek-coder-v2:16b-ctx32k)
   PMC_CONCURRENCY      Parallel slots (default: 8)
   PMC_GRAPHIFY_PATH    Custom path to graphify executable
 
