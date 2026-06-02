@@ -105,14 +105,17 @@ export function parseArgs(args) {
 
 export async function loadArtifacts(projectRoot) {
   const pmcRoot = join(projectRoot, '.planning', 'project-memory-context');
+  let graphStore;
   try {
-    const [graphStore, symbolIndex, worklist] = await Promise.all([
+    const results = await Promise.all([
       openGraphDbLazy(pmcRoot),
       readJsonArtifact(join(pmcRoot, 'enrichment', 'symbol-index.json'), {}),
       readJsonArtifact(join(pmcRoot, 'enrichment', 'worklist.json'), []),
     ]);
-    return { graphStore, symbolIndex, worklist };
+    graphStore = results[0];
+    return { graphStore, symbolIndex: results[1], worklist: results[2] };
   } catch (error) {
+    graphStore?.close();
     throw new Error(`Failed to load PMC artifacts from ${pmcRoot}: ${error.message}`);
   }
 }
