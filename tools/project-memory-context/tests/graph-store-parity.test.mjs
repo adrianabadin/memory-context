@@ -41,6 +41,12 @@ function nodeIds(result) {
   return result.nodes.map((n) => n.id).sort();
 }
 
+function edgeTuples(result) {
+  return result.edges
+    .map((e) => `${e.source}->${e.target}:${e.relation}`)
+    .sort();
+}
+
 // ── createQueryEngine backward-compat ────────────────────────────────────────
 
 test('createQueryEngine accepts old graph param and wraps in InMemoryGraphStore', () => {
@@ -82,10 +88,10 @@ function parityTest(label, fn) {
       nodeIds(sqliteResult),
       `node sets should match for: ${label}`,
     );
-    assert.equal(
-      inmemResult.edges.length,
-      sqliteResult.edges.length,
-      `edge counts should match for: ${label}`,
+    assert.deepEqual(
+      edgeTuples(inmemResult),
+      edgeTuples(sqliteResult),
+      `edge sets should match for: ${label}`,
     );
   });
 }
