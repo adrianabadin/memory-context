@@ -8,13 +8,14 @@ import { spawnSync } from 'node:child_process';
 import { bootstrapProjectInstall } from '../src/setup-bootstrap.mjs';
 import { spawnBackground } from '../src/platform.mjs';
 import { runGraphifyUpdate, installGraphify } from '../src/graphify-runner.mjs';
+import { openGraphDb } from '../src/graph-store/graph-db.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PMC_CLI_ROOT = resolve(__dirname);
 const PMC_PACKAGE_ROOT = resolve(__dirname, '..');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b-ctx32k';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b-ctx16k';
 const PMC_CONCURRENCY = parseInt(process.env.PMC_CONCURRENCY || '8', 10);
 
 function log(msg) { console.error(`[bootstrap] ${msg}`); }
@@ -37,6 +38,9 @@ export function buildDefaultEnrichmentConfig() {
       enabled: true,
       agentName: 'enrich',
     },
+    // Symbols with prompt_eval_count >= threshold are routed to the subagent
+    // queue; all others are enriched by Ollama sequentially.
+    subagentTokenThreshold: 10000,
   };
 }
 
@@ -90,6 +94,21 @@ async function runStageA(projectRoot) {
   } else {
     log('  Stage-a skipped or graphify unavailable. Stage-b and enrichment still work.');
   }
+
+  // Build / refresh graph.db from the updated graph.json
+  const graphJsonPath = resolve(projectRoot, '.planning', 'project-memory-context', 'graph', 'graph.json');
+  const graphDbPath   = resolve(projectRoot, '.planning', 'project-memory-context', 'graph', 'graph.db');
+  try {
+    if (existsSync(graphJsonPath)) {
+      log('Building graph.db from graph.json...');
+      const store = openGraphDb(graphDbPath, graphJsonPath);
+      store.close();
+      log('graph.db built ✓');
+    }
+  } catch (err) {
+    log(`graph.db build failed (non-fatal): ${err.message}`);
+  }
+
   return true;
 }
 
@@ -170,7 +189,7 @@ Options:
 
 Environment variables:
   OLLAMA_URL           Ollama URL (default: http://localhost:11434)
-  OLLAMA_MODEL         Ollama model (default: deepseek-coder-v2:16b-ctx32k)
+  OLLAMA_MODEL         Ollama model (default: deepseek-coder-v2:16b-ctx16k)
   PMC_CONCURRENCY      Parallel slots (default: 8)
   PMC_GRAPHIFY_PATH    Custom path to graphify executable
 
