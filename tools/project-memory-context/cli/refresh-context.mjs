@@ -1,6 +1,7 @@
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 import { ensureProjectMemoryContextDirs, readJsonArtifact, writeJsonArtifact } from '../src/artifacts.mjs';
@@ -11,6 +12,7 @@ import { computeSymbolDelta } from '../src/symbol-delta.mjs';
 import { appendSyncEntries, createSyncEntry } from '../src/sync-manifest.mjs';
 import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
 import { spawnBackground } from '../src/platform.mjs';
+import { openGraphDb } from '../src/graph-store/graph-db.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -51,6 +53,19 @@ export async function refreshContext(projectRoot, options = {}) {
   // Refresh the graph before resolving symbol node IDs so attachGraphNodeIds
   // can link new/changed symbols to up-to-date nodes (with startLine, edges, community).
   await runGraphifyUpdate(projectRoot, { log });
+
+  // Rebuild graph.db so get-context queries use the updated graph.
+  const graphJsonPath = resolve(dirs.graph, 'graph.json');
+  const graphDbPath   = resolve(dirs.graph, 'graph.db');
+  try {
+    if (existsSync(graphJsonPath)) {
+      const store = openGraphDb(graphDbPath, graphJsonPath);
+      store.close();
+      log('graph.db refreshed ✓');
+    }
+  } catch (err) {
+    log(`graph.db rebuild failed (non-fatal): ${err.message}`);
+  }
 
   let existingGraph = await readJsonArtifact(resolve(dirs.graph, 'graph.json'), { nodes: [], edges: [] });
 
