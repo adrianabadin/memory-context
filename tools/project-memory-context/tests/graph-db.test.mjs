@@ -95,6 +95,9 @@ test('buildFromGraphJson is idempotent — calling twice yields same row count',
   assert.equal(nodeCount, 5);
   const edgeCount = db.prepare('SELECT COUNT(*) AS n FROM edges').get().n;
   assert.equal(edgeCount, 4);
+  // Verify meta was updated to the second hash (DELETE+INSERT was complete)
+  const hashRow = db.prepare(`SELECT value FROM meta WHERE key = 'content_hash'`).get();
+  assert.equal(hashRow?.value, 'h2', 'content_hash should be updated to second build hash');
 });
 
 // ── getNode ───────────────────────────────────────────────────────────────────
@@ -290,11 +293,32 @@ test('openGraphDb rebuilds when graph.json content changes', () => {
 
 // ── WAL mode ──────────────────────────────────────────────────────────────────
 
-test('graph.db is opened in WAL mode', () => {
-  const db = makeDb();
-  const row = db.prepare(`PRAGMA journal_mode`).get();
-  const journalMode = row?.journal_mode ?? row?.['journal_mode'] ?? '';
-  assert.ok(journalMode === 'wal' || journalMode === 'memory', `unexpected journal_mode: ${journalMode}`);
+test('openGraphDb opens graph.db in WAL mode on disk', () => {
+  const dir = tmpdir();
+  const dbPath = join(dir, `pmc-wal-test-${Date.now()}.db`);
+  const jsonPath = join(dir, `pmc-wal-test-${Date.now()}.json`);
+
+  try {
+    writeFileSync(jsonPath, JSON.stringify(FIXTURE), 'utf8');
+    const store = openGraphDb(dbPath, jsonPath);
+    store.close();
+
+    // Re-open the file directly to check journal_mode
+    const db = new DatabaseSync(dbPath);
+    const row = db.prepare(`PRAGMA journal_mode`).get();
+    db.close();
+
+    const mode = row?.journal_mode ?? row?.['journal_mode'] ?? '';
+    assert.equal(mode, 'wal', `Expected WAL mode on disk DB, got: ${mode}`);
+  } finally {
+    if (existsSync(dbPath)) rmSync(dbPath);
+    if (existsSync(jsonPath)) rmSync(jsonPath);
+    // Also clean up WAL sidecar files if present
+    const shmPath = dbPath + '-shm';
+    const walPath = dbPath + '-wal';
+    if (existsSync(shmPath)) rmSync(shmPath);
+    if (existsSync(walPath)) rmSync(walPath);
+  }
 });
 
 // ── hashGraphJson ─────────────────────────────────────────────────────────────
