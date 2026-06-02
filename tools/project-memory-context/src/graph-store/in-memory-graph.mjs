@@ -75,9 +75,11 @@ export function createInMemoryGraphStore(graph) {
 
     getNodesByFile(filePath) {
       const normalized = normalizePath(filePath);
-      return (graph.nodes ?? []).filter(
-        (n) => normalizePath(n.source_file ?? '') === normalized,
-      );
+      const result = [];
+      for (const node of nodeMap.values()) {
+        if (normalizePath(node.source_file ?? '') === normalized) result.push(node);
+      }
+      return result;
     },
 
     traverse,
