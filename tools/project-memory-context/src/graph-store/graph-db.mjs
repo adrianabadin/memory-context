@@ -89,7 +89,8 @@ export function buildFromGraphJson(db, graph, contentHash) {
     `INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`,
   );
 
-  const build = db.transaction(() => {
+  db.exec('BEGIN');
+  try {
     db.exec('DELETE FROM nodes; DELETE FROM edges;');
 
     for (const node of graph.nodes ?? []) {
@@ -97,7 +98,7 @@ export function buildFromGraphJson(db, graph, contentHash) {
         node.id,
         node.label ?? null,
         node.kind ?? null,
-        node.source_file ?? null,
+        node.source_file != null ? node.source_file.replace(/\\/g, '/') : null,
         node.community ?? null,
         node.degree ?? null,
         toMetadataJson(node),
@@ -110,9 +111,11 @@ export function buildFromGraphJson(db, graph, contentHash) {
 
     upsertMeta.run('content_hash', contentHash);
     upsertMeta.run('built_at', new Date().toISOString());
-  });
-
-  build();
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -183,7 +186,7 @@ export function createSqliteGraphStore(db) {
     },
 
     getNodesByFile(filePath) {
-      const normalized = filePath.replace(/\\/g, '/');
+      const normalized = String(filePath ?? '').replace(/\\/g, '/');
       const rows = db.prepare('SELECT * FROM nodes WHERE source_file = ?').all(normalized);
       return rows.map(toGraphNode);
     },
