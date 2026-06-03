@@ -62,7 +62,7 @@ export async function loadHashStore(storePath) {
     const parsed = JSON.parse(raw);
     // If the store was written with a different hash algorithm, discard it.
     // This forces a full re-hash on next run (acceptable — no re-enrichment storm).
-    if (parsed.hashVersion !== undefined && parsed.hashVersion !== HASH_VERSION) {
+    if (parsed.hashVersion !== HASH_VERSION) {
       return {};
     }
     return parsed.hashes ?? parsed;

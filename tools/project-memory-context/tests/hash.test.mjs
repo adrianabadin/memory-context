@@ -72,6 +72,21 @@ test('loadHashStore with matching hashVersion returns hashes', async () => {
   await rm(TMP, { recursive: true, force: true });
 });
 
+test('loadHashStore with missing hashVersion (legacy store) returns {}', async () => {
+  await mkdir(TMP, { recursive: true });
+  const storePath = join(TMP, 'hash-store-legacy.json');
+  // Simulate a legacy store without hashVersion field
+  await writeFile(storePath, JSON.stringify({
+    hashes: { 'app.ts': 'oldsha256hash' },
+    updatedAt: new Date().toISOString(),
+  }), 'utf-8');
+
+  const result = await loadHashStore(storePath);
+  assert.deepEqual(result, {});
+
+  await rm(TMP, { recursive: true, force: true });
+});
+
 // ── computeSymbolDelta hashVersion gate ────────────────────────────
 
 test('computeSymbolDelta: symbol with different hashVersion goes to unchanged (silent re-hash)', () => {
