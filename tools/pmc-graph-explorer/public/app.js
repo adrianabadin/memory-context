@@ -65,6 +65,7 @@ async function init() {
     },
     getActiveNodeIds,
     getEnrichedNodeIds,
+    getWorklistStatusMap,
   });
 }
 

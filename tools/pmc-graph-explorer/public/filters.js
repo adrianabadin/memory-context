@@ -23,6 +23,27 @@ export function initFilters(state, communities) {
   });
 
   container.appendChild(communitySection);
+
+  // Status ring legend — explains the colored rings drawn around enriched/stale/error nodes.
+  const STATUS_LEGEND = [
+    { status: 'enriched',         color: '#22c55e', label: 'Enriched' },
+    { status: 'stale',            color: '#f59e0b', label: 'Stale (changed)' },
+    { status: 'pending',          color: '#94a3b8', label: 'Pending (new)' },
+    { status: 'error',            color: '#ef4444', label: 'Error' },
+    { status: 'subagent-queued',  color: '#a78bfa', label: 'Subagent queued' },
+  ];
+
+  const legendSection = document.createElement('div');
+  legendSection.className = 'legend-section';
+  legendSection.innerHTML = '<h3>Enrichment Status</h3>';
+  STATUS_LEGEND.forEach(({ color, label }) => {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = `<span class="filter-dot" style="background:transparent;border:2.5px solid ${color};box-sizing:border-box;"></span>${label}`;
+    legendSection.appendChild(row);
+  });
+
+  container.appendChild(legendSection);
 }
 
 export function updateStats(state) {

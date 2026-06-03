@@ -35,11 +35,13 @@ test('agent snippets and setup docs do not reference copied local CLI paths', ()
   const cursor = readTemplate('cursor/.cursorrules.snippet');
   const generic = readTemplate('generic/README-SETUP.md');
   const autostart = readTemplate('opencode/autostart-snippet.md');
+  const antigravity = readTemplate('antigravity/autostart-snippet.md');
 
   assert.doesNotMatch(claude, /tools\/project-memory-context\/cli\/enrich-queue\.mjs/);
   assert.doesNotMatch(cursor, /tools\/project-memory-context\/cli\/enrich-queue\.mjs/);
   assert.doesNotMatch(generic, /tools\/project-memory-context\/cli\/enrich-queue\.mjs/);
   assert.doesNotMatch(autostart, /tools\/project-memory-context\/cli\/enrich-queue\.mjs/);
+  assert.doesNotMatch(antigravity, /tools\/project-memory-context\/cli\/enrich-queue\.mjs/);
 
   assert.match(claude, /\{\{PMC_BIN\}\} map-project --all --enrich/);
   assert.match(claude, /\{\{PMC_BIN\}\} get-context <target> \[depth\] \[focus\]/);
@@ -63,7 +65,35 @@ test('agent snippets and setup docs do not reference copied local CLI paths', ()
   assert.match(generic, /\{\{PMC_BIN\}\} sanitize/);
   assert.match(generic, /\{\{PMC_BIN\}\} sync-context/);
 
-  assert.match(autostart, /npx.*pmc enrich \./);
+  // autostart-snippet uses session-start to handle enrich automatically — no explicit enrich . needed
+
+  // antigravity autostart-snippet uses session-start — no explicit enrich-status command needed
+  assert.match(antigravity, /\{\{PMC_BIN\}\} get-context/);
+  assert.match(antigravity, /\{\{PMC_BIN\}\} refresh-context/);
+  assert.match(antigravity, /\{\{PMC_BIN\}\} sync-context/);
+});
+
+test('enrich subagent templates reference pmc enrich and use correct frontmatter', () => {
+  const claudeEnrich = readTemplate('claude-code/agents/enrich.md');
+  const antigravityEnrich = readTemplate('antigravity/skills/enrich/SKILL.md');
+  const opencodeEnrich = readTemplate('opencode/agent/enrich.md');
+
+  // All three invoke pmc enrich
+  assert.match(claudeEnrich, /\{\{PMC_BIN\}\} enrich \./);
+  assert.match(antigravityEnrich, /\{\{PMC_BIN\}\} enrich \./);
+  assert.match(opencodeEnrich, /\{\{PMC_BIN\}\} enrich \./);
+
+  // Claude Code subagent frontmatter
+  assert.match(claudeEnrich, /^name:\s*enrich/m);
+  assert.match(claudeEnrich, /^tools:\s*Bash/m);
+
+  // Antigravity skill frontmatter (Agent Skills Standard)
+  assert.match(antigravityEnrich, /^name:\s*enrich/m);
+  assert.match(antigravityEnrich, /^allowed-tools:/m);
+
+  // OpenCode agent frontmatter
+  assert.match(opencodeEnrich, /^name:\s*enrich/m);
+  assert.match(opencodeEnrich, /^allowed-tools:/m);
 });
 
 test('README advertises the new agent-facing subcommands', () => {

@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { detectAgentType, resolveConfigDirs } from '../src/platform.mjs';
+import { loadSubagentQueue, summarizeSubagentQueue } from '../src/subagent-queue.mjs';
 
 const DEFAULT_STALE_AFTER_SECONDS = 90;
 
@@ -12,6 +13,7 @@ export function summarizeWorklist(worklist) {
     pending: worklist.filter((e) => e.status === 'pending' || e.status === 'stale').length,
     enriched: worklist.filter((e) => e.status === 'enriched' || e.status === 'already_enriched').length,
     errors: worklist.filter((e) => e.status === 'error').length,
+    subagentQueued: worklist.filter((e) => e.status === 'subagent-queued').length,
   };
 }
 
@@ -84,19 +86,22 @@ export async function buildStatusReport({ projectRoot = process.cwd(), now = new
   const planningDir = join(projectRoot, '.planning', 'project-memory-context');
   const enrichmentDir = join(planningDir, 'enrichment');
   const worklistPath = join(enrichmentDir, 'worklist.json');
-  const installStatePath = join(planningDir, 'install.json');
+  const installPath = join(planningDir, 'install.json');
   const queueStatePath = join(enrichmentDir, 'queue-state.json');
 
   const worklist = await readJsonSafe(worklistPath);
-  const installState = await readJsonSafe(installStatePath);
+  const installState = await readJsonSafe(installPath);
   const queueState = await readJsonSafe(queueStatePath);
   const lastSync = await getLastSyncTimestamp(enrichmentDir);
   const { state, runtime } = deriveRuntimeState(queueState, now);
   const worklistSummary = Array.isArray(worklist) ? summarizeWorklist(worklist) : null;
 
+  const subagentQueueData = await loadSubagentQueue(enrichmentDir).catch(() => null);
+  const subagentQueueSummary = subagentQueueData ? summarizeSubagentQueue(subagentQueueData) : null;
+
   return {
     ok: true,
-    command: 'status',
+    command: 'enrich-status',
     projectRoot: resolve(projectRoot),
     configLocation: dirs.projectConfig,
     agentType: detectAgentType(projectRoot),
@@ -104,13 +109,14 @@ export async function buildStatusReport({ projectRoot = process.cwd(), now = new
     state,
     runtime,
     worklist: worklistSummary,
+    subagentQueue: subagentQueueSummary,
     lastSync,
   };
 }
 
 export async function main(args = process.argv.slice(2)) {
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('Usage: pmc status [project-dir]');
+    console.log('Usage: pmc enrich-status [project-dir]');
     console.log('');
     console.log('Shows enrichment queue state, worklist counts, config location,');
     console.log('agent type, and last sync timestamp.');
