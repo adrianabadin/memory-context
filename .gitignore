@@ -1,0 +1,28 @@
+# Node
+node_modules/
+
+# SQLite WAL files (generated at runtime)
+*.db-shm
+*.db-wal
+
+# Build artifacts
+graphify-out/
+
+# Playwright MCP state
+.playwright-mcp/
+
+# Orphan directory (created by bug in --refresh flag parsing)
+--refresh/
+
+# NPM pack artifacts
+*.tgz
+
+# PMC enrichment runtime state (not source)
+.planning/project-memory-context/memory-db/
+.planning/project-memory-context/memory-db.db
+.planning/project-memory-context/memory-db.db-shm
+.planning/project-memory-context/memory-db.db-wal
+.planning/project-memory-context/embedding-cache/
+
+# graphify intermediate files
+.graphify_*.json
