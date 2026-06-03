@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { sliceLines } from '../semantic-unit.mjs';
+import { hashSymbol } from '../hash.mjs';
 
 // ── Persistence ────────────────────────────────────────────────────
 
@@ -39,11 +39,11 @@ function memoKey(filePath, range, mtime) {
 // ── Hash ────────────────────────────────────────────────────────────
 
 /**
- * Compute the sha1 hash for a symbol slice — matches regex-extractor.mjs
+ * Compute the XXH3 hash for a symbol slice — matches regex-extractor.mjs
  * exactly so the hash is comparable to worklist codeHash values.
  */
-export function computeCodeHash(code) {
-  return createHash('sha1').update(code).digest('hex');
+export async function computeCodeHash(code) {
+  return hashSymbol(code);
 }
 
 // ── Public API ─────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export async function getSymbolSource({ projectRoot, filePath, range, codeHash, 
   }
 
   const code = sliceLines(content, range.startLine, range.endLine);
-  const currentHash = computeCodeHash(code);
+  const currentHash = await computeCodeHash(code);
   const fresh = codeHash != null ? currentHash === codeHash : null;
 
   const result = {

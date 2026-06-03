@@ -1,18 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { computeSymbolDelta } from '../src/symbol-delta.mjs';
+import { HASH_VERSION } from '../src/hash.mjs';
 
 test('computeSymbolDelta identifies new, stale, removed, and unchanged symbols', () => {
   const currentSymbols = [
-    { symbolKey: 'js_src_app_mjs_function_exported_handleRequest_2', filePath: 'src/app.mjs', codeHash: 'h1' },
-    { symbolKey: 'js_src_app_mjs_function_exported_parseInput_1', filePath: 'src/app.mjs', codeHash: 'h2_new' },
-    { symbolKey: 'js_src_utils_mjs_function_exported_format_1', filePath: 'src/utils.mjs', codeHash: 'h3' },
+    { symbolKey: 'js_src_app_mjs_function_exported_handleRequest_2', filePath: 'src/app.mjs', codeHash: 'h1', hashVersion: HASH_VERSION },
+    { symbolKey: 'js_src_app_mjs_function_exported_parseInput_1', filePath: 'src/app.mjs', codeHash: 'h2_new', hashVersion: HASH_VERSION },
+    { symbolKey: 'js_src_utils_mjs_function_exported_format_1', filePath: 'src/utils.mjs', codeHash: 'h3', hashVersion: HASH_VERSION },
   ];
 
   const existingWorklist = [
-    { symbolKey: 'js_src_app_mjs_function_exported_handleRequest_2', filePath: 'src/app.mjs', codeHash: 'h1', status: 'enriched', memoryId: 'mem-1' },
-    { symbolKey: 'js_src_app_mjs_function_exported_parseInput_1', filePath: 'src/app.mjs', codeHash: 'h2_old', status: 'enriched', memoryId: 'mem-2' },
-    { symbolKey: 'js_src_removed_mjs_function_exported_oldFunc_1', filePath: 'src/removed.mjs', codeHash: 'h4', status: 'enriched', memoryId: 'mem-3' },
+    { symbolKey: 'js_src_app_mjs_function_exported_handleRequest_2', filePath: 'src/app.mjs', codeHash: 'h1', hashVersion: HASH_VERSION, status: 'enriched', memoryId: 'mem-1' },
+    { symbolKey: 'js_src_app_mjs_function_exported_parseInput_1', filePath: 'src/app.mjs', codeHash: 'h2_old', hashVersion: HASH_VERSION, status: 'enriched', memoryId: 'mem-2' },
+    { symbolKey: 'js_src_removed_mjs_function_exported_oldFunc_1', filePath: 'src/removed.mjs', codeHash: 'h4', hashVersion: HASH_VERSION, status: 'enriched', memoryId: 'mem-3' },
   ];
 
   const delta = computeSymbolDelta(currentSymbols, existingWorklist);

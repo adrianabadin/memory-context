@@ -2,9 +2,8 @@ import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-
 import { ensureProjectMemoryContextDirs, readJsonArtifact, writeJsonArtifact } from '../src/artifacts.mjs';
+import { hashSymbol } from '../src/hash.mjs';
 import { computeFileHashes, loadHashStore, saveHashStore, detectChangedFiles } from '../src/file-hash-store.mjs';
 import { extractTopLevelSymbols } from '../src/symbol-extractor.mjs';
 import { attachGraphNodeIds } from '../src/graph-node-resolver.mjs';
@@ -22,10 +21,8 @@ function safeKey(key) {
   return key.replace(/[^a-zA-Z0-9_-]+/g, '_');
 }
 
-function hashCodeFragment(content, startLine, endLine) {
-  return createHash('sha256')
-    .update(content.split('\n').slice(startLine - 1, endLine).join('\n'))
-    .digest('hex');
+async function hashCodeFragment(content, startLine, endLine) {
+  return hashSymbol(content.split('\n').slice(startLine - 1, endLine).join('\n'));
 }
 
 export async function refreshContext(projectRoot, options = {}) {
@@ -76,9 +73,9 @@ export async function refreshContext(projectRoot, options = {}) {
   for (const file of changedFiles) {
     try {
       const content = await readFile(resolve(projectRoot, file), 'utf8');
-      const symbols = extractTopLevelSymbols({ filePath: file, content });
+      const symbols = await extractTopLevelSymbols({ filePath: file, content });
       for (const sym of symbols) {
-        sym.codeHash = hashCodeFragment(content, sym.range.startLine, sym.range.endLine);
+        sym.codeHash = await hashCodeFragment(content, sym.range.startLine, sym.range.endLine);
       }
       changedFileSymbols.push(...symbols);
     } catch { /* skip unreadable */ }

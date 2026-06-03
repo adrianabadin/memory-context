@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
+import { hashSymbol } from '../hash.mjs';
 import { buildSymbolKey } from '../symbol-keys.mjs';
 
 // ── Shared utilities ───────────────────────────────────────────────
 
-function codeHash(lines, startLine, endLine) {
-  return createHash('sha1').update(lines.slice(startLine - 1, endLine).join('\n')).digest('hex');
+async function codeHash(lines, startLine, endLine) {
+  return hashSymbol(lines.slice(startLine - 1, endLine).join('\n'));
 }
 
 function findBlockEnd(lines, startIdx) {
@@ -19,7 +19,7 @@ function findBlockEnd(lines, startIdx) {
   return startIdx + 1;
 }
 
-function makeSymbol(filePath, language, kind, name, exportScope, lines, startLine, endLine, arity) {
+async function makeSymbol(filePath, language, kind, name, exportScope, lines, startLine, endLine, arity) {
   const symbol = {
     language,
     filePath: filePath.replace(/\\/g, '/'),
@@ -28,16 +28,18 @@ function makeSymbol(filePath, language, kind, name, exportScope, lines, startLin
     exportScope,
     arity,
     range: { startLine, endLine },
-    codeHash: codeHash(lines, startLine, endLine),
+    codeHash: await codeHash(lines, startLine, endLine),
   };
   symbol.symbolKey = buildSymbolKey(symbol);
   return symbol;
 }
 
 // ── Language extractors ────────────────────────────────────────────
+// Each extractor returns an array of Promises (from makeSymbol).
+// extractRegexSymbols resolves them with Promise.all.
 
 function extractPython(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(class)\s+(\w+)/;
   const funcRe = /^(async\s+def|def)\s+(\w+)\s*\(([^)]*)\)/;
   const decoratedFuncRe = /^(async\s+def|def)\s+(\w+)/;
@@ -52,7 +54,7 @@ function extractPython(lines, filePath) {
     if (classMatch) {
       const name = classMatch[2];
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'python', 'class', name, name.startsWith('_') ? 'local' : 'exported', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'python', 'class', name, name.startsWith('_') ? 'local' : 'exported', lines, i + 1, endLine, undefined));
       pendingDecorator = false;
       continue;
     }
@@ -65,18 +67,18 @@ function extractPython(lines, filePath) {
       // Only top-level (not indented)
       if (!lines[i].startsWith(' ') && !lines[i].startsWith('\t')) {
         const endLine = findBlockEnd(lines, i);
-        symbols.push(makeSymbol(filePath, 'python', 'function', name, name.startsWith('_') ? 'local' : 'exported', lines, i + 1, endLine, arity));
+        promises.push(makeSymbol(filePath, 'python', 'function', name, name.startsWith('_') ? 'local' : 'exported', lines, i + 1, endLine, arity));
       }
       pendingDecorator = false;
       continue;
     }
     pendingDecorator = false;
   }
-  return symbols;
+  return promises;
 }
 
 function extractJava(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(?:public\s+)?(?:abstract\s+)?(?:final\s+)?(class|interface|enum|@interface|record)\s+(\w+)/;
   const methodRe = /^\s+(?:@\w+\s+)*(?:public|protected|private|static|final|abstract|synchronized|native|default)[\w\s<>,\[\]]*?\s+(\w+)\s*\(([^)]*)\)/;
 
@@ -88,7 +90,7 @@ function extractJava(lines, filePath) {
       const name = classMatch[2];
       const exported = lines[i].includes('public');
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'java', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'java', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
       continue;
     }
 
@@ -100,14 +102,14 @@ function extractJava(lines, filePath) {
       const arity = params.trim() ? params.split(',').length : 0;
       const exported = lines[i].includes('public');
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'java', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+      promises.push(makeSymbol(filePath, 'java', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractGo(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const funcRe = /^func\s+(?:\([^)]+\)\s+)?(\w+)\s*\(([^)]*)\)/;
   const typeRe = /^type\s+(\w+)\s+(struct|interface|func)/;
 
@@ -119,7 +121,7 @@ function extractGo(lines, filePath) {
       const arity = params.trim() ? params.split(',').length : 0;
       const exported = name[0] === name[0].toUpperCase() && /[A-Z]/.test(name[0]);
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'go', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+      promises.push(makeSymbol(filePath, 'go', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
       continue;
     }
 
@@ -129,14 +131,14 @@ function extractGo(lines, filePath) {
       const kind = typeMatch[2] === 'interface' ? 'interface' : 'class';
       const exported = name[0] === name[0].toUpperCase() && /[A-Z]/.test(name[0]);
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'go', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'go', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractRust(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const patterns = [
     { kind: 'class',     re: /^(?:pub(?:\([^)]+\))?\s+)?struct\s+(\w+)/ },
     { kind: 'class',     re: /^(?:pub(?:\([^)]+\))?\s+)?enum\s+(\w+)/ },
@@ -157,16 +159,16 @@ function extractRust(lines, filePath) {
         const arity = kind === 'function' && params.trim() ? params.split(',').length : undefined;
         const exported = line.trimStart().startsWith('pub');
         const endLine = findBlockEnd(lines, i);
-        symbols.push(makeSymbol(filePath, 'rust', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+        promises.push(makeSymbol(filePath, 'rust', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
         break;
       }
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractRuby(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(?:class|module)\s+([\w:]+)/;
   const methodRe = /^  def\s+(?:self\.)?(\w+)(?:\(([^)]*)\))?/;
 
@@ -181,7 +183,7 @@ function extractRuby(lines, filePath) {
         if (/^(class|module|def|do|if|unless|while|until|for|begin|case)\b/.test(t)) depth++;
         if (/^end\b/.test(t)) { depth--; if (depth === 0) { end = j + 1; break; } }
       }
-      symbols.push(makeSymbol(filePath, 'ruby', 'class', name, 'exported', lines, i + 1, end, undefined));
+      promises.push(makeSymbol(filePath, 'ruby', 'class', name, 'exported', lines, i + 1, end, undefined));
       continue;
     }
     const methodMatch = methodRe.exec(lines[i]);
@@ -189,14 +191,14 @@ function extractRuby(lines, filePath) {
       const name = methodMatch[1];
       const params = methodMatch[2] ?? '';
       const arity = params.trim() ? params.split(',').length : 0;
-      symbols.push(makeSymbol(filePath, 'ruby', 'function', name, 'exported', lines, i + 1, i + 1, arity));
+      promises.push(makeSymbol(filePath, 'ruby', 'function', name, 'exported', lines, i + 1, i + 1, arity));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractPhp(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(?:abstract\s+|final\s+)?(?:class|interface|trait|enum)\s+(\w+)/;
   const funcRe = /^(?:function|(?:public|protected|private|static|abstract|final)[\w\s]*function)\s+(?:&\s*)?(\w+)\s*\(([^)]*)\)/;
 
@@ -208,7 +210,7 @@ function extractPhp(lines, filePath) {
       const keyword = line.match(/^(?:\w+\s+)*(class|interface|trait|enum)/)?.[1] ?? 'class';
       const kind = keyword === 'interface' ? 'interface' : 'class';
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'php', kind, name, 'exported', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'php', kind, name, 'exported', lines, i + 1, endLine, undefined));
       continue;
     }
     const funcMatch = funcRe.exec(line);
@@ -218,14 +220,14 @@ function extractPhp(lines, filePath) {
       const arity = params.trim() ? params.split(',').length : 0;
       const exported = /\bpublic\b/.test(line) || !lines[i].startsWith(' ');
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'php', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+      promises.push(makeSymbol(filePath, 'php', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractKotlin(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(?:(?:public|private|protected|internal|abstract|open|sealed|data|inline|value|enum)\s+)*(?:class|object|interface)\s+(\w+)/;
   const funcRe = /^(?:(?:public|private|protected|internal|override|suspend|inline|operator|infix|tailrec|external)\s+)*fun\s+(?:<[^>]+>\s+)?(?:\w+\s*\.\s*)?(\w+)\s*(?:<[^>]+>)?\s*\(([^)]*)\)/;
 
@@ -238,7 +240,7 @@ function extractKotlin(lines, filePath) {
       const kind = keyword === 'interface' ? 'interface' : 'class';
       const exported = !line.includes('private') && !line.includes('internal');
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'kotlin', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'kotlin', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, undefined));
       continue;
     }
     const funcMatch = funcRe.exec(line.trimStart());
@@ -248,14 +250,14 @@ function extractKotlin(lines, filePath) {
       const arity = params.trim() ? params.split(',').length : 0;
       const exported = !line.includes('private') && !line.includes('internal');
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'kotlin', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+      promises.push(makeSymbol(filePath, 'kotlin', 'function', name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractSwift(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const patterns = [
     { kind: 'class',     re: /^(?:(?:public|private|internal|open|final|fileprivate)\s+)*(?:class|struct|actor|enum)\s+(\w+)/ },
     { kind: 'interface', re: /^(?:(?:public|private|internal|open|fileprivate)\s+)*protocol\s+(\w+)/ },
@@ -274,16 +276,16 @@ function extractSwift(lines, filePath) {
         const arity = kind === 'function' && params.trim() ? params.split(',').length : undefined;
         const exported = /\bpublic\b|\bopen\b/.test(line);
         const endLine = findBlockEnd(lines, i);
-        symbols.push(makeSymbol(filePath, 'swift', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
+        promises.push(makeSymbol(filePath, 'swift', kind, name, exported ? 'exported' : 'local', lines, i + 1, endLine, arity));
         break;
       }
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractCpp(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   const classRe = /^(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(\w+)(?:\s*:\s*[\w\s,:<>]*)?(?:\s*\{|$)/;
   const nsRe = /^namespace\s+(\w+)\s*\{/;
   const funcRe = /^(?:(?:inline|static|virtual|explicit|friend|constexpr|consteval|auto|template\s*<[^>]*>)\s+)*(?:[\w:*&<>\s]+\s+)?(\w+)\s*\(([^)]*)\)\s*(?:const\s*)?(?:noexcept\s*)?(?:override\s*)?(?:\{|;)$/;
@@ -294,7 +296,7 @@ function extractCpp(lines, filePath) {
 
     const nsMatch = nsRe.exec(line.trimStart());
     if (nsMatch) {
-      symbols.push(makeSymbol(filePath, 'cpp', 'class', nsMatch[1], 'exported', lines, i + 1, i + 1, undefined));
+      promises.push(makeSymbol(filePath, 'cpp', 'class', nsMatch[1], 'exported', lines, i + 1, i + 1, undefined));
       continue;
     }
 
@@ -303,7 +305,7 @@ function extractCpp(lines, filePath) {
       const name = classMatch[1];
       if (name === 'override' || name === 'final') continue;
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'cpp', 'class', name, 'exported', lines, i + 1, endLine, undefined));
+      promises.push(makeSymbol(filePath, 'cpp', 'class', name, 'exported', lines, i + 1, endLine, undefined));
       continue;
     }
 
@@ -315,14 +317,14 @@ function extractCpp(lines, filePath) {
       const params = funcMatch[2] ?? '';
       const arity = params.trim() && params.trim() !== 'void' ? params.split(',').length : 0;
       const endLine = findBlockEnd(lines, i);
-      symbols.push(makeSymbol(filePath, 'cpp', 'function', name, 'exported', lines, i + 1, endLine, arity));
+      promises.push(makeSymbol(filePath, 'cpp', 'function', name, 'exported', lines, i + 1, endLine, arity));
     }
   }
-  return symbols;
+  return promises;
 }
 
 function extractCSharp(lines, filePath) {
-  const symbols = [];
+  const promises = [];
   let currentNamespace = 'global';
   let currentContainer = null;
   let containerDepth = null;
@@ -341,20 +343,27 @@ function extractCSharp(lines, filePath) {
       const exported = line.includes('public');
       const startLine = i + 1;
       const endLine = findBlockEnd(lines, i);
-      const symbol = {
-        language: 'csharp',
-        filePath: filePath.replace(/\\/g, '/'),
-        kind,
-        name,
-        exportScope: exported ? 'exported' : 'local',
-        namespace: currentNamespace,
-        containerName: currentContainer?.name ?? 'none',
-        signature: '()',
-        range: { startLine, endLine },
-        codeHash: codeHash(lines, startLine, endLine),
-      };
-      symbol.symbolKey = buildSymbolKey(symbol);
-      symbols.push(symbol);
+      // Capture namespace/container for async symbol construction
+      const ns = currentNamespace;
+      const container = currentContainer;
+      promises.push(
+        codeHash(lines, startLine, endLine).then(hash => {
+          const symbol = {
+            language: 'csharp',
+            filePath: filePath.replace(/\\/g, '/'),
+            kind,
+            name,
+            exportScope: exported ? 'exported' : 'local',
+            namespace: ns,
+            containerName: container?.name ?? 'none',
+            signature: '()',
+            range: { startLine, endLine },
+            codeHash: hash,
+          };
+          symbol.symbolKey = buildSymbolKey(symbol);
+          return symbol;
+        })
+      );
 
       if (['class','interface','record','struct'].includes(rawKind)) {
         currentContainer = { name, kind: rawKind };
@@ -371,21 +380,27 @@ function extractCSharp(lines, filePath) {
         const exported = line.includes('public');
         const startLine = i + 1;
         const endLine = findBlockEnd(lines, i);
-        const symbol = {
-          language: 'csharp',
-          filePath: filePath.replace(/\\/g, '/'),
-          kind: 'method',
-          name,
-          exportScope: exported ? 'exported' : 'local',
-          namespace: currentNamespace,
-          containerName: currentContainer.name,
-          signature: `(${params.split(',').map(p => p.trim().split(' ')[0]).filter(Boolean).join(',')})`,
-          arity,
-          range: { startLine, endLine },
-          codeHash: codeHash(lines, startLine, endLine),
-        };
-        symbol.symbolKey = buildSymbolKey(symbol);
-        symbols.push(symbol);
+        const ns = currentNamespace;
+        const container = currentContainer;
+        promises.push(
+          codeHash(lines, startLine, endLine).then(hash => {
+            const symbol = {
+              language: 'csharp',
+              filePath: filePath.replace(/\\/g, '/'),
+              kind: 'method',
+              name,
+              exportScope: exported ? 'exported' : 'local',
+              namespace: ns,
+              containerName: container.name,
+              signature: `(${params.split(',').map(p => p.trim().split(' ')[0]).filter(Boolean).join(',')})`,
+              arity,
+              range: { startLine, endLine },
+              codeHash: hash,
+            };
+            symbol.symbolKey = buildSymbolKey(symbol);
+            return symbol;
+          })
+        );
       }
     }
 
@@ -398,7 +413,7 @@ function extractCSharp(lines, filePath) {
       containerDepth = null;
     }
   }
-  return symbols;
+  return promises;
 }
 
 // ── Public dispatcher ──────────────────────────────────────────────
@@ -430,10 +445,10 @@ export const EXTENSION_TO_LANGUAGE = new Map([
   ['.cs',   'csharp'],
 ]);
 
-export function extractRegexSymbols({ filePath, content }) {
+export async function extractRegexSymbols({ filePath, content }) {
   const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
   const language = EXTENSION_TO_LANGUAGE.get(ext);
   if (!language) return [];
   const lines = content.split('\n');
-  return LANGUAGE_EXTRACTORS[language](lines, filePath);
+  return Promise.all(LANGUAGE_EXTRACTORS[language](lines, filePath));
 }

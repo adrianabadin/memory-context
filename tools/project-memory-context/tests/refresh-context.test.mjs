@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { HASH_VERSION } from '../src/hash.mjs';
 
 import { refreshContext } from '../cli/refresh-context.mjs';
 
@@ -32,6 +32,7 @@ test('refreshContext detects new file and updates worklist', async () => {
       arity: 2,
       range: { startLine: 1, endLine: 3 },
       codeHash: oldHash,
+      hashVersion: HASH_VERSION, // mark as already migrated so stale detection works normally
       status: 'enriched',
       memoryId: 'mem-old',
       graphNodeId: null,

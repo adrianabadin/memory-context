@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { createHash } from 'node:crypto';
 
 import { getSymbolSource, loadSourceCache, computeCodeHash, clearInProcessCache } from '../src/retrieval/source-cache.mjs';
+import { hashSymbol } from '../src/hash.mjs';
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -16,16 +16,12 @@ async function createFixture() {
   return { projectRoot, enrichmentDir };
 }
 
-function sha1(code) {
-  return createHash('sha1').update(code).digest('hex');
-}
-
 // ── Tests ──────────────────────────────────────────────────────────
 
-test('computeCodeHash uses sha1 matching regex-extractor', () => {
+test('computeCodeHash uses XXH3 matching regex-extractor', async () => {
   const code = 'function foo() { return 1; }';
-  const expected = sha1(code);
-  assert.equal(computeCodeHash(code), expected);
+  const expected = await hashSymbol(code);
+  assert.equal(await computeCodeHash(code), expected);
 });
 
 test('getSymbolSource returns fresh result when hash matches', async () => {
@@ -39,7 +35,7 @@ test('getSymbolSource returns fresh result when hash matches', async () => {
 
   const range = { startLine: 2, endLine: 4 };
   const slice = lines.slice(1, 4).join('\n');
-  const codeHash = sha1(slice);
+  const codeHash = await hashSymbol(slice);
 
   const result = await getSymbolSource({ projectRoot, filePath: srcFile, range, codeHash, enrichmentDir });
 

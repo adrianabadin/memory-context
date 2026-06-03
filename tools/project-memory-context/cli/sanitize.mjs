@@ -2,8 +2,8 @@
 import { resolve, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { hashSymbol } from '../src/hash.mjs';
 
 import { ensureProjectMemoryContextDirs, readJsonArtifact, writeJsonArtifact } from '../src/artifacts.mjs';
 import { extractTopLevelSymbols } from '../src/symbol-extractor.mjs';
@@ -21,7 +21,7 @@ function safeKey(key) {
 }
 
 function codeHash(content) {
-  return createHash('sha256').update(content).digest('hex');
+  return hashSymbol(content);
 }
 
 function getGraphifyExe() {
@@ -89,9 +89,9 @@ async function extractCurrentSymbols(projectRoot, files) {
   for (const file of files) {
     try {
       const content = await readFile(resolve(projectRoot, file), 'utf8');
-      const symbols = extractTopLevelSymbols({ filePath: file, content });
+      const symbols = await extractTopLevelSymbols({ filePath: file, content });
       for (const sym of symbols) {
-        sym.codeHash = codeHash(
+        sym.codeHash = await codeHash(
           content.split('\n').slice(sym.range.startLine - 1, sym.range.endLine).join('\n')
         );
       }

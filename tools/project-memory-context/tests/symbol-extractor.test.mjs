@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { extractTopLevelSymbols } from '../src/symbol-extractor.mjs';
 
-test('extractTopLevelSymbols finds exported TypeScript contracts and functions', () => {
+test('extractTopLevelSymbols finds exported TypeScript contracts and functions', async () => {
   const code = `
 export interface User {
   id: string;
@@ -14,7 +14,7 @@ export function getUser(id: string, includePosts: boolean) {
 }
 `;
 
-  const symbols = extractTopLevelSymbols({ filePath: 'src/user.ts', content: code });
+  const symbols = await extractTopLevelSymbols({ filePath: 'src/user.ts', content: code });
 
   assert.deepEqual(
     symbols.map((symbol) => [symbol.kind, symbol.name, symbol.language]),
@@ -25,7 +25,7 @@ export function getUser(id: string, includePosts: boolean) {
   );
 });
 
-test('extractTopLevelSymbols finds csharp public types and methods', () => {
+test('extractTopLevelSymbols finds csharp public types and methods', async () => {
   const code = `
 namespace MyApp.Services;
 
@@ -38,7 +38,7 @@ public class UserService {
 }
 `;
 
-  const symbols = extractTopLevelSymbols({ filePath: 'Services/UserService.cs', content: code });
+  const symbols = await extractTopLevelSymbols({ filePath: 'Services/UserService.cs', content: code });
 
   assert.deepEqual(
     symbols.map((symbol) => [symbol.kind, symbol.name, symbol.language]),

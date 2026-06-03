@@ -4,7 +4,7 @@ import { buildSymbolKey } from './symbol-keys.mjs';
 
 const JS_TS_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts']);
 
-export function extractTopLevelSymbols({ filePath, content }) {
+export async function extractTopLevelSymbols({ filePath, content }) {
   const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
   if (JS_TS_EXTENSIONS.has(ext)) {
     return extractJsTsSymbols({ filePath, content });

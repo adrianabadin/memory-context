@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { hashFile as hashFileXxh3, HASH_VERSION } from './hash.mjs';
 
 const TRACKED_EXTENSIONS = new Set(['.ts', '.tsx', '.mjs', '.js', '.jsx', '.cs']);
 
@@ -34,18 +34,17 @@ async function walkDir(dir, projectRoot) {
   return files;
 }
 
-async function hashFile(filePath) {
+async function hashFileContent(filePath) {
   const content = await readFile(filePath);
-  return createHash('sha256').update(content).digest('hex');
+  return hashFileXxh3(content);
 }
 
 export async function computeFileHashes(projectRoot) {
   const files = await walkDir(projectRoot, projectRoot);
-  const hashes = {};
-  for (const relPath of files) {
-    hashes[relPath] = await hashFile(join(projectRoot, relPath));
-  }
-  return hashes;
+  const entries = await Promise.all(
+    files.map(async relPath => [relPath, await hashFileContent(join(projectRoot, relPath))])
+  );
+  return Object.fromEntries(entries);
 }
 
 export async function saveHashStore(storePath, hashes) {
@@ -53,7 +52,7 @@ export async function saveHashStore(storePath, hashes) {
   const { dirname } = await import('node:path');
   const { mkdir } = await import('node:fs/promises');
   await mkdir(dirname(storePath), { recursive: true });
-  const payload = { hashes, updatedAt: new Date().toISOString() };
+  const payload = { hashVersion: HASH_VERSION, hashes, updatedAt: new Date().toISOString() };
   await writeFile(storePath, JSON.stringify(payload, null, 2), 'utf-8');
 }
 
@@ -61,6 +60,11 @@ export async function loadHashStore(storePath) {
   try {
     const raw = await readFile(storePath, 'utf-8');
     const parsed = JSON.parse(raw);
+    // If the store was written with a different hash algorithm, discard it.
+    // This forces a full re-hash on next run (acceptable — no re-enrichment storm).
+    if (parsed.hashVersion !== undefined && parsed.hashVersion !== HASH_VERSION) {
+      return {};
+    }
     return parsed.hashes ?? parsed;
   } catch {
     return {};

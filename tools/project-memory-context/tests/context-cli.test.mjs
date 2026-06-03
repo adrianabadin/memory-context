@@ -904,11 +904,7 @@ test('main --refresh with dot target reaches runProjectContext', async () => {
 // --- disk depth / source-cache tests ---
 
 import { clearInProcessCache } from '../src/retrieval/source-cache.mjs';
-import { createHash } from 'node:crypto';
-
-function sha1(code) {
-  return createHash('sha1').update(code).digest('hex');
-}
+import { hashSymbol } from '../src/hash.mjs';
 
 async function createFixtureWithSource({ srcFile, lines, worklist = [] }) {
   const projectRoot = await mkdtemp(join(os.tmpdir(), 'pmc-disk-'));
@@ -928,7 +924,7 @@ test('runTargetContext disk depth emits Source (disk) section with code', async 
   clearInProcessCache();
   const lines = ['function alpha() {', '  return 1;', '}', '// comment'];
   const slice = lines.slice(0, 3).join('\n');
-  const codeHash = sha1(slice);
+  const codeHash = await hashSymbol(slice);
 
   const sk = 'js|src/alpha.mjs||function|alpha|0';
   const worklist = [{

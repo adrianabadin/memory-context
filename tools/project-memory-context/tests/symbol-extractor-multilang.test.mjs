@@ -16,7 +16,7 @@ async function load(name) {
 
 test('TypeScript: extracts interface, class, function, type, arrow fn, enum', async () => {
   const content = await load('sample.ts');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.ts'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.ts'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'interface Greetable');
@@ -45,7 +45,7 @@ test('TypeScript: extracts interface, class, function, type, arrow fn, enum', as
 
 test('Python: extracts classes, public and private functions', async () => {
   const content = await load('sample.py');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.py'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.py'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Animal'), 'class Animal');
@@ -68,7 +68,7 @@ test('Python: extracts classes, public and private functions', async () => {
 
 test('Java: extracts class, interface, enum', async () => {
   const content = await load('sample.java');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.java'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.java'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'interface Greetable');
@@ -83,7 +83,7 @@ test('Java: extracts class, interface, enum', async () => {
 
 test('Go: extracts struct, interface, functions with export scope', async () => {
   const content = await load('sample.go');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.go'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.go'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Animal'), 'struct Animal');
@@ -102,7 +102,7 @@ test('Go: extracts struct, interface, functions with export scope', async () => 
 
 test('Rust: extracts struct, enum, trait, fn, impl', async () => {
   const content = await load('sample.rs');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.rs'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.rs'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Animal'), 'struct Animal');
@@ -121,7 +121,7 @@ test('Rust: extracts struct, enum, trait, fn, impl', async () => {
 
 test('Ruby: extracts class, module, method', async () => {
   const content = await load('sample.rb');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.rb'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.rb'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'module Greetable');
@@ -133,7 +133,7 @@ test('Ruby: extracts class, module, method', async () => {
 
 test('PHP: extracts class, interface, trait, function', async () => {
   const content = await load('sample.php');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.php'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.php'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'interface Greetable');
@@ -147,7 +147,7 @@ test('PHP: extracts class, interface, trait, function', async () => {
 
 test('Kotlin: extracts class, object, interface, fun', async () => {
   const content = await load('sample.kt');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.kt'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.kt'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'interface Greetable');
@@ -160,7 +160,7 @@ test('Kotlin: extracts class, object, interface, fun', async () => {
 
 test('Swift: extracts class, struct, protocol, func, extension', async () => {
   const content = await load('sample.swift');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.swift'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.swift'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Greetable'), 'protocol Greetable');
@@ -173,7 +173,7 @@ test('Swift: extracts class, struct, protocol, func, extension', async () => {
 
 test('C++: extracts namespace, class, struct, function', async () => {
   const content = await load('sample.cpp');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.cpp'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.cpp'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('Animals'), 'namespace Animals');
@@ -185,7 +185,7 @@ test('C++: extracts namespace, class, struct, function', async () => {
 
 test('C#: extracts interface, class, enum, record', async () => {
   const content = await load('sample.cs');
-  const symbols = extractTopLevelSymbols({ filePath: fixture('sample.cs'), content });
+  const symbols = await extractTopLevelSymbols({ filePath: fixture('sample.cs'), content });
 
   const names = symbols.map(s => s.name);
   assert.ok(names.includes('IGreetable'), 'interface IGreetable');
@@ -202,8 +202,8 @@ test('C#: extracts interface, class, enum, record', async () => {
 
 // ── Unknown extension returns empty ────────────────────────────────
 
-test('Unknown extension returns empty array without error', () => {
-  const symbols = extractTopLevelSymbols({ filePath: 'file.unknown', content: 'some content' });
+test('Unknown extension returns empty array without error', async () => {
+  const symbols = await extractTopLevelSymbols({ filePath: 'file.unknown', content: 'some content' });
   assert.deepEqual(symbols, []);
 });
 
@@ -213,7 +213,7 @@ test('All symbols have unique non-empty symbolKeys', async () => {
   const fixtures = ['sample.ts', 'sample.py', 'sample.java', 'sample.go', 'sample.rs'];
   for (const fname of fixtures) {
     const content = await load(fname);
-    const symbols = extractTopLevelSymbols({ filePath: fixture(fname), content });
+    const symbols = await extractTopLevelSymbols({ filePath: fixture(fname), content });
     const keys = symbols.map(s => s.symbolKey);
     const unique = new Set(keys);
     assert.equal(unique.size, keys.length, `Duplicate symbolKeys in ${fname}`);

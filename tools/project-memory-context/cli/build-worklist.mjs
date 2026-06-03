@@ -25,7 +25,7 @@ const symbols = [];
 for (const file of files) {
   const absolute = resolve(projectRoot, file);
   const content = await readFile(absolute, 'utf8');
-  symbols.push(...extractTopLevelSymbols({ filePath: relative(projectRoot, absolute), content }));
+  symbols.push(...await extractTopLevelSymbols({ filePath: relative(projectRoot, absolute), content }));
 }
 
 const resolvedSymbols = attachGraphNodeIds({ symbols, graph });
