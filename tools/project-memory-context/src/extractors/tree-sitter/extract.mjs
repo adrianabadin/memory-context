@@ -24,6 +24,8 @@ const CAPTURE_TO_KIND = {
   function: 'function',
   interface: 'interface',
   type: 'type',
+  record: 'record',
+  method: 'method',
 };
 
 /**
@@ -42,8 +44,16 @@ function isTopLevel(node) {
     parentType === 'source_file' ||
     parentType === 'translation_unit'
   ) return true;
+  // JS/TS: exported declarations are wrapped in export_statement (which is itself top-level)
+  if (parentType === 'export_statement' && node.parent?.parent?.type === 'program') return true;
   // C++: class/struct inside a namespace — parent is declaration_list whose parent is namespace_definition
   if (parentType === 'declaration_list' && node.parent?.parent?.type === 'namespace_definition') return true;
+  // C#: types at the root of a file-scoped or block namespace
+  if (parentType === 'compilation_unit') return true;
+  if (parentType === 'declaration_list' && node.parent?.parent?.type === 'namespace_declaration') return true;
+  // C# methods: inside declaration_list whose parent is a class or struct declaration
+  if (parentType === 'declaration_list' && node.parent?.parent?.type === 'class_declaration') return true;
+  if (parentType === 'declaration_list' && node.parent?.parent?.type === 'struct_declaration') return true;
   return false;
 }
 
@@ -94,6 +104,44 @@ function inferExportScope(language, name, node) {
     default:
       return 'exported';
   }
+}
+
+/**
+ * Count parameters for a symbol node if it's a function/method.
+ * Looks for formal_parameters (JS/TS/Python) or parameter_list (C#/Java).
+ * Returns undefined if not applicable.
+ */
+function countArity(symbolNode, kind) {
+  if (kind !== 'function' && kind !== 'method') return undefined;
+  let funcNode = symbolNode;
+  // If this is a lexical_declaration, find the arrow_function or function_expression child
+  if (symbolNode.type === 'lexical_declaration') {
+    const declarator = symbolNode.children.find(c => c.type === 'variable_declarator');
+    funcNode = declarator?.children.find(c => c.type === 'arrow_function' || c.type === 'function_expression') ?? symbolNode;
+  }
+  // If this is a decorated_definition (Python), descend to the actual function_definition
+  if (symbolNode.type === 'decorated_definition') {
+    funcNode = symbolNode.children.find(c => c.type === 'function_definition' || c.type === 'class_definition') ?? symbolNode;
+  }
+  // Find formal_parameters or parameter_list
+  const paramNode = funcNode.children.find(c =>
+    c.type === 'formal_parameters' || c.type === 'parameter_list' || c.type === 'parameters'
+  );
+  if (!paramNode) return undefined;
+  // Count named parameters (skip punctuation, 'self', 'cls')
+  const skip = new Set(['(', ')', ',', 'self', 'cls']);
+  let count = 0;
+  for (const child of paramNode.children) {
+    if (!child.isNamed) continue;
+    if (skip.has(child.text)) continue;
+    // In Python, skip *args / **kwargs prefixes — count the identifier inside
+    if (child.type === 'list_splat_pattern' || child.type === 'dictionary_splat_pattern') {
+      count++;
+      continue;
+    }
+    count++;
+  }
+  return count;
 }
 
 function normalizeLanguageName(rawLanguage) {
@@ -181,6 +229,7 @@ export async function extractSymbolsForFile({ filePath, content }) {
 
     const exportScope = inferExportScope(rawLanguage, name, symbolNode);
     const codeFragment = lines.slice(startLine - 1, endLine).join('\n');
+    const arity = countArity(symbolNode, kind);
 
     symbolPromises.push(
       hashSymbol(codeFragment).then(codeHash => {
@@ -190,6 +239,7 @@ export async function extractSymbolsForFile({ filePath, content }) {
           kind,
           name,
           exportScope,
+          ...(arity !== undefined && { arity }),
           range: { startLine, endLine },
           codeHash,
         };

@@ -46,6 +46,7 @@
     "tools_project-memory-context_mcp_local-model-server_mjs",
     "tools_project-memory-context_src",
     "retrieval_query_engine_createqueryengine",
-    "tools_project-memory-context_src_retrieval_query-engine_mjs"
+    "tools_project-memory-context_src_retrieval_query-engine_mjs",
+    "src_symbol-extractor_mjs"
   ]
 }

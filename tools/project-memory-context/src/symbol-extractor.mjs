@@ -1,18 +1,20 @@
-import { extractJsTsSymbols } from './extractors/js-ts-extractor.mjs';
+import { extractSymbolsForFile } from './extractors/tree-sitter/extract.mjs';
 import { extractRegexSymbols, EXTENSION_TO_LANGUAGE } from './extractors/regex-extractor.mjs';
-import { buildSymbolKey } from './symbol-keys.mjs';
+import { LANGUAGE_TO_GRAMMAR } from './extractors/tree-sitter/language-map.mjs';
 
-const JS_TS_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx', '.mts', '.cts']);
+// Languages without tree-sitter WASM grammars fall back to the regex extractor
+const REGEX_FALLBACK_EXTS = new Set(
+  [...EXTENSION_TO_LANGUAGE.entries()]
+    .filter(([, lang]) => !LANGUAGE_TO_GRAMMAR[lang])
+    .map(([ext]) => ext)
+);
 
 export async function extractTopLevelSymbols({ filePath, content }) {
   const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase();
-  if (JS_TS_EXTENSIONS.has(ext)) {
-    return extractJsTsSymbols({ filePath, content });
-  }
-  if (EXTENSION_TO_LANGUAGE.has(ext)) {
+  if (REGEX_FALLBACK_EXTS.has(ext)) {
     return extractRegexSymbols({ filePath, content });
   }
-  return [];
+  return extractSymbolsForFile({ filePath, content });
 }
 
 export function buildEnrichmentWorklist({ symbols, symbolIndex }) {
