@@ -43,10 +43,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adamrdrew/agent-memory-mcp.git",
+    "url": "git+https://github.com/adrianabadin/memory-context.git",
     "directory": "tools/project-memory-context"
   },
-  "author": "Adam Drew",
+  "author": "Adrian Abadin",
   "engines": {
     "node": ">=22.5.0"
   },
