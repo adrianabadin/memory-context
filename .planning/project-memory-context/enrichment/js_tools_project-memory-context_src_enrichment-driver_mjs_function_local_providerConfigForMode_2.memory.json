@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `providerConfigForMode` function is responsible for extracting configuration settings based on the specified mode. It provides default empty objects if the mode does not match any predefined case, ensuring a consistent return type regardless of the input mode.\n\n### Primary Inputs\n- **config**: An object containing various configuration settings.\n- **mode**: A string that determines which configuration setting to extract from `config`. Possible values are 'local-model', 'cloud-api', and 'agent-subagent'.\n\n### Output\n- Returns an object based on the specified mode, defaulting to an empty object if the mode does not match any predefined case.\n  - If `mode` is 'local-model', it returns `config?.localModel ?? {}`.\n  - If `mode` is 'cloud-api', it returns `config?.cloudApi ?? {}`.\n  - If `mode` is 'agent-subagent', it returns `config?.agentSubagent ?? {}`.\n  - For any other value of `mode`, it returns an empty object.\n\n### Immediate Dependencies\n- The function directly depends on the existence and structure of properties within the `config` object, specifically `localModel`, `cloudApi`, and `agentSubagent`.\n\n### Role in Module\nThis function serves as a utility to abstract configuration retrieval based on different operational modes. It helps in organizing and managing configurations for various use cases within the module, making it easier to extend or modify these configurations without altering core logic that relies on this abstraction.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-driver.mjs"
+  ]
+}

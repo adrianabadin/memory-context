@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `runProjectContext` function is responsible for executing the project context CLI command, which likely involves setting up and running a query engine to process project-related data.\n\n**Primary Inputs**:\n- `projectRoot`: A string representing the root directory of the project. Defaults to the current working directory (`process.cwd()`).\n- `refresh`: A boolean indicating whether to refresh the context or not.\n\n**Output**: \n- Returns the result of calling `mod.runProjectContextCli` if it exists and is a function; otherwise, returns `null`.\n\n**Immediate Dependencies**:\n- `import('./project-context.mjs')`: Dynamically imports the project context module.\n- Checks for the existence of `runProjectContextCli` in the imported module.\n\n**Role in Module**: \n- Acts as an entry point or wrapper to invoke the CLI command for running the project context, handling dynamic import and function invocation based on the presence of a specific method in the imported module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe responsibility of the `SearchResult` interface is to define the structure of objects that represent the result of a search operation. It encapsulates both the memory data and the score associated with the search, providing a structured way to handle these elements together.\n\n### Primary Inputs\n- **memory**: This is an instance of another interface or type representing the memory data relevant to the search. The specific details of what constitutes \"memory\" would depend on the context in which this interface is used (e.g., it could be a string, a complex object, etc.).\n- **score**: A numerical value that represents how well the search matched the criteria or retrieved relevant information. This is typically a floating-point number but can vary based on implementation.\n\n### Output\nThe output of using this interface would be an instance conforming to `SearchResult`, which could then be used in further operations, such as sorting, filtering, or displaying results based on these properties.\n\n### Immediate Dependencies\nThere are no immediate dependencies mentioned within the provided code snippet. The interface definition does not import any other interfaces or types from the same module or external modules.\n\n### Role in Module\nThe `SearchResult` interface serves as a fundamental building block for organizing and managing search results within the application's memory management system. It ensures that every result contains all necessary data (memory and score) to be processed, analyzed, or displayed according to specific business logic or user requirements. This interface helps maintain consistency and clarity in how different parts of the application handle search outcomes, facilitating easier integration and scalability as more complex features are developed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

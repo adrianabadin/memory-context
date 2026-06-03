@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `renderTemplate` function is responsible for replacing placeholders in a given template string with corresponding values from the provided object. This allows dynamic content insertion into static templates based on specific keys and their associated values.\n\n### Primary Inputs\n1. **content**: A string representing the template that may contain placeholder syntax (e.g., `{{key}}`).\n2. **placeholders**: An object where each key represents a placeholder name in the template, and its value is the content to replace that placeholder.\n\n### Output\n- The output of `renderTemplate` is a string with all placeholders replaced by their corresponding values from the `placeholders` object.\n\n### Immediate Dependencies\n1. **Object.entries**: Converts the `placeholders` object into an array of key-value pairs, which are then processed in the subsequent steps.\n2. **reduce**: Iterates over each key-value pair in the entries, replacing all occurrences of a placeholder (e.g., `{{key}}`) with its value in the template string.\n3. **replaceAll**: Replaces all instances of a substring matching the pattern (`{{key}}`) with the replacement value from the `placeholders` object.\n\n### Role in Module\nThe `renderTemplate` function serves as a utility within the module, facilitating dynamic content generation based on predefined templates and data inputs. It enhances the flexibility and reusability of template usage by decoupling the template structure from its specific content values.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

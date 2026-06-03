@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `resolveCommand` function determines the command to execute based on input arguments, resolves its corresponding module path if valid, and prepares it for execution.\n\n**Primary Inputs**: \n- `argv`: An array of command-line arguments passed to the function. Defaults to an empty array if not provided.\n\n**Output**: \n- An object containing:\n  - `name`: The name of the command.\n  - `modulePath`: The resolved path to the command's module, or null if invalid.\n  - `args`: Remaining arguments after processing the command name.\n  - `valid`: A boolean indicating whether the command is valid.\n\n**Immediate Dependencies**: \n- `COMMANDS`: A map that associates command names with their relative module paths.\n- `PACKAGE_ROOT`: The root directory of the package, used to resolve module paths.\n- Node.js built-in modules: `child_process`, `path`, and `url`.\n\n**Role in Module**: \nThis function acts as a dispatcher for commands within the project-memory-context tool. It validates command inputs, resolves module paths, and prepares data for further execution, ensuring that only valid commands proceed to be run.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/command-dispatch.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `extractCpp` function is responsible for extracting C++ symbols (classes and functions) from a list of lines representing the source code of a file. It identifies classes, structures, namespaces, and functions using regular expressions and then creates symbol objects with relevant metadata such as file path, type, name, etc.\n\n### Primary Inputs\n- `lines`: An array of strings where each string represents a line of code from the C++ source file.\n- `filePath`: A string representing the path to the source file.\n\n### Output\n- An array of objects, each representing a symbol extracted from the input lines. Each object contains metadata about the symbol such as its type (class or function), name, and location in the file.\n\n### Immediate Dependencies\n- `createHash` from 'node:crypto': Used to create unique keys for symbols.\n- `buildSymbolKey` from '../symbol-keys.mjs': To generate a key for each symbol based on its type, name, and other metadata.\n\n### Role in Module\nThis function is part of the extraction logic specific to C++ code, contributing to the overall functionality that allows the module to parse and interpret C++ source files to identify classes and functions, which can then be used or displayed according to user needs or further processed by other parts of the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

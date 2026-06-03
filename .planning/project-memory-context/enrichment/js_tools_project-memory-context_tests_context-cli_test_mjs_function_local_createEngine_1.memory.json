@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createEngine` function is responsible for creating and returning an object that acts as a query engine. This engine can find symbol keys by name or file path, based on the provided input symbols.\n\n### Primary Inputs\n- **symbolsByName**: An object where keys are symbol names and values are arrays of corresponding symbol keys.\n- **symbolsByFilePath**: An object where keys are file paths and values are arrays of corresponding symbol keys.\n\n### Output\nThe function returns an object with two methods:\n- `findSymbolKeyByName(name)`: Returns the array of symbol keys associated with a given name, or an empty array if no such symbols exist.\n- `findSymbolKeysByFilePath(filePath)`: Returns the array of symbol keys associated with a given file path, or an empty array if no such symbols exist.\n\n### Immediate Dependencies\n- **symbolsByName**: The input object that maps symbol names to their corresponding keys.\n- **symbolsByFilePath**: The input object that maps file paths to their corresponding symbol keys.\n\n### Role in Module\nThe `createEngine` function serves as a factory for creating query engines, which are used to retrieve symbols based on given criteria (name or file path). This is crucial for the retrieval and management of symbols within the module, supporting functionalities such as context rendering and target resolution.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/context-cli.test.mjs"
+  ]
+}

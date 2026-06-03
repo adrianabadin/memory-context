@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `summarizeWorklist` function aggregates and categorizes the status of items within a worklist.\n\n**Primary Inputs**: \n- `worklist`: An array of objects, each representing an item with a `status` property indicating its current state (e.g., 'pending', 'stale', 'enriched', 'already_enriched', 'error').\n\n**Output**: \n- An object summarizing the count of items in different status categories: `pending`, `enriched`, and `errors`.\n\n**Immediate Dependencies**: \n- None, as it operates solely on the input `worklist` without external dependencies.\n\n**Role in Module**: \n- This function is part of a CLI tool's status reporting mechanism, providing a quick overview of the worklist's processing state by categorizing items based on their statuses.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

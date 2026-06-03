@@ -1,5 +1,5 @@
 {
-  "content": "Symbol: LanceMemoryStore\nKind: class\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:46-507\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+  "content": "### LanceMemoryStore\n\n**Responsibility:**\nManages memory storage operations using LanceDB, including initialization, schema migration, and data retrieval.\n\n**Primary Inputs:**\n- `dbPath`: Path to the database.\n- `embedder`: An embedder for generating vector representations of content.\n\n**Output:**\n- Manages a connection to a LanceDB database and performs operations like storing, retrieving, and migrating memory records.\n\n**Immediate Dependencies:**\n- `lancedb`: For database operations.\n- `Embedder`: For embedding content into vectors.\n- Custom errors (`ConcurrentUpdateError`, `EmbeddingDimensionMismatchError`, `MemoryNotFoundError`).\n\n**Role in Module:**\nServes as the core class for handling memory storage, ensuring data integrity through schema migrations and efficient retrieval via full-text search indices.",
   "category": "architecture",
   "tags": [
     "symbol",

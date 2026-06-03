@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `printHelp` function is designed to display usage instructions and help information for the PMC CLI tool, specifically for the query command.\n\n**Primary Inputs**: None. It does not take any parameters or arguments.\n\n**Output**: \n- Prints a string to the console detailing how to use the `pmc query` command.\n- Provides a brief description of what the command does.\n- Informs users about the option to format the output as either text or JSON for machine-readable results.\n\n**Immediate Dependencies**: None. The function is self-contained and does not rely on any external variables or functions within its scope.\n\n**Role in Module**: \n- Acts as a utility function to assist users in understanding how to use the query feature of the PMC CLI.\n- Enhances user experience by providing clear guidance on command usage, which can reduce errors and improve productivity.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

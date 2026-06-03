@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of the `main` Function\n\n#### Responsibility\nThe `main` function is the entry point for the application. It sets up and initializes various components required to run the memory management system, including embedding models, memory stores, and server transports.\n\n#### Primary Inputs\n- Environment variables:\n  - `MEMORY_DB_PATH`: Path to the database.\n  - `EMBEDDING_MODEL`: Name of the embedding model (default is 'Xenova/bge-m3').\n  - `EMBEDDING_DIMENSIONS`: Number of dimensions for embeddings (optional).\n  - `EMBEDDING_POOLING`: Pooling method for embeddings (optional).\n  - `EMBEDDING_CACHE_PATH`: Path to the cache directory (optional).\n  - `ENABLE_HARDCOPY`: Flag to enable hardcopy mirroring.\n  - `HARDCOPY_PATH`: Path for hardcopy storage.\n\n#### Output\n- None (`Promise<void>`): The function does not return any value but performs several asynchronous operations to set up and run the system.\n\n#### Immediate Dependencies\n- **EmbeddingCache**: Manages caching of embeddings if a cache path is provided.\n- **TransformersEmbedder**: Handles the embedding process using a specified model.\n- **LanceMemoryStore** or **HardcopyMemoryStore**: Stores memory data, with an option to mirror mutations to a hardcopy location.\n- **StdioServerTransport**: Manages communication between the server and client via standard input/output.\n\n#### Role in Module\nThe `main` function orchestrates the initialization of all necessary components:\n1. **Configuration**: Reads environment variables to configure the system.\n2. **Dependency Composition**: Creates instances of required classes (`EmbeddingCache`, `TransformersEmbedder`, `MemoryStore`).\n3. **Initialization**: Initializes the embedding model and memory store.\n4. **Server Setup**: Sets up a server using the configured transport method.\n\nThis function is crucial for ensuring that all components are correctly initialized and ready to handle requests, making it the central control point of the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/index.ts"
+  ]
+}

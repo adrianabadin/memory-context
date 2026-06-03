@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `isFallbackEligible` is responsible for determining whether a given error type is eligible for fallback handling. This decision is based on predefined criteria that specify which types of errors can be considered for fallback mechanisms.\n\n### Primary Inputs\n- **type**: A string representing the type of error being checked.\n\n### Output\n- The function returns a boolean value: `true` if the error type is one of the specified eligible types (`'auth'`, `'timeout'`, `'network'`, `'rate-limit'`, or `'provider'`), and `false` otherwise.\n\n### Immediate Dependencies\n- **import { classifyEnrichmentError } from './enrichment-errors.mjs';**: This import is necessary for the function to utilize error classification capabilities defined in `enrichment-errors.mjs`.\n\n### Role in Module\nThis function plays a crucial role in the module by providing a clear and concise way to check if an error can be handled with fallback mechanisms, which is essential for robust error handling strategies within the application or service that uses this module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-driver.mjs"
+  ]
+}

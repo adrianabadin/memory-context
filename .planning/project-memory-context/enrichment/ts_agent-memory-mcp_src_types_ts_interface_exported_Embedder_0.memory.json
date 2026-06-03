@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `Embedder` interface defines the contract for an embedder, which is responsible for converting textual data into numerical representations (embeddings). This abstraction allows different implementations to encapsulate various methods of generating embeddings from text.\n\n### Primary Inputs\n1. **Text**: The input string that needs to be converted into an embedding.\n2. **Text Array**: An array of strings, each representing a separate piece of textual data, which are all expected to be converted into their respective embeddings.\n\n### Output\n- **Promise<number[]>**: A promise resolving to an array of numbers representing the embedding vector for the input text.\n- **Promise<number[][]>**: A promise resolving to an array of arrays where each sub-array represents the embedding vector for a corresponding string in the input array.\n- **dimensions(): number**: Returns the dimensionality (length) of the embedding vectors produced by this embedder.\n\n### Immediate Dependencies\n(none specified, assuming no external dependencies are required beyond defining these methods)\n\n### Role in Module\nThe `Embedder` interface serves as a foundational abstraction for any module that needs to handle text embeddings. It ensures consistency and modularity across different implementations of embedding generation by providing a standardized set of operations. This role is crucial for maintaining flexibility and scalability, allowing the module to adapt to various types of embedders without tightly coupling specific implementation details.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

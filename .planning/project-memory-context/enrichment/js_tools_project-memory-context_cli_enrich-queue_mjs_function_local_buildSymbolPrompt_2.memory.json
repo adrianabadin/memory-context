@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `buildSymbolPrompt`\n\n**Responsibility:**\nThe `buildSymbolPrompt` function is responsible for constructing a prompt string based on the content of a specific file and a symbol defined within that file. This prompt is likely used to generate enriched information or context about the symbol.\n\n**Primary Inputs:**\n- `symbol`: An object containing details about the symbol, including its file path and range (start and end lines).\n- `projectRoot`: The root directory of the project where the file is located.\n\n**Output:**\n- A string prompt that includes the relevant section of code from the specified file.\n\n**Immediate Dependencies:**\n- `readFile` from 'node:fs/promises': Used to read the content of the file.\n- `resolve` from 'node:path': Used to construct the absolute path to the file.\n\n**Role in Module:**\nThis function is part of a larger module that deals with project memory context and enrichment. It reads a specific section of code related to a symbol, which can then be used by other functions in the module to generate enriched information or perform other operations based on the code context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

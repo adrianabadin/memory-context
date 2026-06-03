@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `writeQueueState` function is responsible for writing the queue state to a file. It constructs the queue state object and then saves it as a JSON file at the specified path.\n\n### Primary Inputs\n- **input**: An object containing the following properties:\n  - `queueStateFile`: The path where the queue state should be saved.\n\n### Output\n- None explicitly returned, but the function writes the queue state to the specified file.\n\n### Immediate Dependencies\n- **saveJson**: A utility function that takes a file path and data, then writes the data as JSON to the file.\n- **buildQueueState**: A function that constructs the queue state object based on the provided input.\n\n### Role in Module\nThis function is part of the module responsible for managing the project memory context, specifically related to enrichment tasks. It ensures that the current state of the queue (which might include details about ongoing or completed enrichment tasks) is saved to a file so it can be accessed and managed later. This functionality supports the persistence and retrieval of data needed during the execution and maintenance of enrichment processes within the project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `wrapBlock` function is responsible for wrapping a given block of content with specific markers, which are used to identify and manipulate sections within HTML templates. This helps in organizing and managing the structure of the template by allowing external tools or processes to easily locate and modify these sections.\n\n### Primary Inputs\n- **marker**: A string that identifies the purpose or section of the block (e.g., \"header\", \"footer\").\n- **block**: The content that needs to be wrapped, typically a string containing HTML or other text.\n\n### Output\nThe output is a string formatted as follows:\n```html\n<!-- pmc:${marker} -->\n${block}\n<!-- /pmc:${marker} -->\n```\nThis format includes the marker prefixed and suffixed with special comment symbols to indicate that it's part of a managed section.\n\n### Immediate Dependencies\n- **None explicitly listed in the code snippet, but implicitly depends on**:\n  - `String.prototype.replace()`: Used within the function for string interpolation (`${marker}`).\n  - `String.prototype.concat()`: Used to concatenate strings when constructing the final wrapped block.\n\n### Role in Module\nThe `wrapBlock` function serves as a utility that enhances the modularity of the template by providing a standardized way to mark and encapsulate sections, which can be reused across different parts of the codebase or even in other projects where similar functionality is required. This helps in maintaining consistency and making it easier to manage changes to specific sections of the HTML content.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

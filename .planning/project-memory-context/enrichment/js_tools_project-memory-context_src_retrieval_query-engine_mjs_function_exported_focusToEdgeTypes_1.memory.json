@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `focusToEdgeTypes` function is responsible for mapping the focus type to its corresponding edge types. It takes a single input, which is the focus type (e.g., 'dependencies', 'callers', etc.), and returns an array of edge types that are relevant to the given focus. If the focus type does not match any predefined keys in the map, it defaults to returning a specific set of default edge types.\n\n### Primary Input\n- `focus`: A string representing the type of focus for which the corresponding edge types need to be retrieved. This input is used to look up the appropriate array of edge types from the internal map or use a fallback list if no match is found in the map.\n\n### Output\n- An array of strings, where each string represents an edge type that corresponds to the given focus type. If the focus type does not have predefined mappings, it defaults to a specific set of edge types: `['calls', 'imports', 'imports_from', 'contains', 'method']`.\n\n### Immediate Dependencies\n- The internal map object (`map`) which contains key-value pairs where each key is a focus type and the value is an array of corresponding edge types. This map is used to quickly retrieve the appropriate edge types based on the input focus.\n\n### Role in Module\nThe `focusToEdgeTypes` function serves as a utility that helps standardize how different types of relationships (edges) are retrieved from the module's internal data structures, such as dependencies or method calls. This function ensures consistency and flexibility in querying these relationships based on various criteria specified by the user (via the input focus). It enhances modularity and maintainability by abstracting away the details of how specific edge types are determined from the main logic of the application or module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/query-engine.mjs"
+  ]
+}

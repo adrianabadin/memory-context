@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `findProjectRoot` function is responsible for locating the root directory of a project by searching upwards from a specified starting directory. It identifies the project root by checking for the existence of a specific file (`install.json`) within a predefined path structure.\n\n**Primary Inputs**: \n- `startDir`: A string representing the starting directory for the search. Defaults to the current working directory if not provided.\n\n**Output**: \n- Returns the absolute path of the project root directory if the `install.json` file is found.\n- Returns `null` if no such file is found and the search reaches the filesystem's root directory.\n\n**Immediate Dependencies**: \n- `resolve`, `join`, `dirname` from `node:path`: Used to manipulate and navigate directory paths.\n- `fileExists` (assumed to be a helper function, not shown in the provided code): Checks if a file exists at a given path.\n\n**Role in Module**: \nThis function serves as a foundational utility within the module, enabling other parts of the application to determine the project's root directory. It is crucial for operations that require context relative to the project's structure, such as configuration loading or resource management.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

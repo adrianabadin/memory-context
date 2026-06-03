@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `installClaudeCode` is responsible for installing a specific template file, named \"CLAUDE.md\", into the project directory. This involves creating the necessary directories and copying the template from the package to the target location within the project.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project where the file will be installed.\n- **packageRoot**: The root directory of the package containing the template files.\n- **placeholders**: A set of placeholders that might need to be replaced in the template before installation.\n\n### Output\nThis function does not return a value but performs an asynchronous operation which results in the creation or modification of a file named \"CLAUDE.md\" within the project directory.\n\n### Immediate Dependencies\n- **node:fs/promises**: For filesystem operations like reading and writing files.\n- **node:fs**: Specifically `existsSync` for checking if a file exists before attempting to write it.\n- **node:path**: For path manipulation (joining paths).\n- **node:url**: To convert file URLs to local paths (`fileURLToPath`).\n\n### Role in Module\nThis function serves as an installer for a specific template related to \"CLAUDE\" within the project, facilitating its placement and potential modification based on provided placeholders. It is part of the larger functionality that manages and installs templates or boilerplate code into different projects.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

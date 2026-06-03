@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `findMemoriesByKeyTag` is responsible for searching for memories within the ModelContextProtocol SDK by using a specified key tag. It interacts with the client to perform a search operation, retrieves memory objects based on the search results, and returns them as an array of memory objects.\n\n### Primary Inputs\n- **client**: An instance of the `Client` from the @modelcontextprotocol/sdk module, which is used to communicate with the ModelContextProtocol SDK.\n- **keyTag**: A string representing the key tag to search for within the memories. This is the query parameter that defines what to look up in the memory store.\n\n### Output\n- An array of `memory` objects retrieved from the search results based on the provided `keyTag`. If no matches are found, it returns an empty array.\n\n### Immediate Dependencies\n- **@modelcontextprotocol/sdk/client/index.js**: Provides the `Client` class and its method for calling tools.\n- **parseToolResult**: A function that is assumed to be defined elsewhere in the module or imported from another module, responsible for parsing the result of the tool call.\n\n### Role in Module\nThis function serves as a utility within the module for retrieving specific memories based on a given key tag. It abstracts the process of querying and filtering memory objects by providing an easy-to-use interface that accepts a client instance and a keyTag, then returns the relevant memories. This abstraction simplifies the usage of SDK functionalities across different parts of the application where searching by key tags might be necessary.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/sync.mjs"
+  ]
+}

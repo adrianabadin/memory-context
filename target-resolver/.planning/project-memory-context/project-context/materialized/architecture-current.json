@@ -1,0 +1,21 @@
+{
+  "memory_key": "project-context:architecture-current",
+  "title": "Current architecture",
+  "kind": "architecture-current",
+  "source_mode": "detected",
+  "summary": "Pattern: detected-structure. Entry points: none.",
+  "body": "- Pattern: detected-structure\n- Entry points: Not detected",
+  "tags": [
+    "project-context",
+    "project:target-resolver",
+    "architecture",
+    "current-state"
+  ],
+  "source_files": [],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "medium",
+  "content_hash": "4882fe98ac8ac88fd868147a4d7f594d1e76c3b1cd0097e251fbdfd629992272",
+  "updated_at": "2026-05-20T00:04:46.864Z"
+}

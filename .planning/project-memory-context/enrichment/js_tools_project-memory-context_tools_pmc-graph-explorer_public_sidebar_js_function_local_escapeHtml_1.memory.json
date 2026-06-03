@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `escapeHtml` is responsible for sanitizing and escaping HTML content to prevent XSS (Cross-Site Scripting) attacks. It converts the input string into a safe format by rendering it as text within a DOM element, then retrieving its innerHTML. This ensures that any potentially harmful HTML tags or characters are removed or escaped before being displayed in the UI.\n\n### Primary Inputs\n- `str`: A string containing potential HTML content that needs to be sanitized.\n\n### Output\n- The output is the sanitized version of the input string, where all HTML entities have been converted to their corresponding characters and any potentially malicious code has been removed.\n\n### Immediate Dependencies\n- None explicitly listed in the provided code snippet; however, it implicitly depends on a functioning DOM environment since it creates a `div` element and manipulates its text content.\n\n### Role in Module\nThe function `escapeHtml` serves as a utility to ensure that any user input containing HTML is safely rendered as plain text within the application's UI. This helps maintain security by preventing scripts from being executed in the browser, thus mitigating risks associated with XSS attacks.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/sidebar.js"
+  ]
+}

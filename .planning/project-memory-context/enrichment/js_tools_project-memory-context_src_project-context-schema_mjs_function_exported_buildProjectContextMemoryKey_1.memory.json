@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `buildProjectContextMemoryKey` is responsible for creating a unique identifier (key) for storing and retrieving project context data based on the specified kind. This key is used to ensure that different types of project contexts are stored and retrieved correctly from memory.\n\n### Primary Inputs\n- **kind**: A string representing the type of project context, which must be one of the predefined values listed in `PROJECT_CONTEXT_KINDS`.\n\n### Output\n- Returns a string that serves as the unique identifier for storing or retrieving the project context data associated with the given kind. The format is `project-context:<kind>`.\n\n### Immediate Dependencies\n- **createHash**: A function from the 'node:crypto' module, used to generate a hash of the input kind string to ensure uniqueness in the key generation process.\n\n### Role in Module\nThis function plays a crucial role in managing project context data within the application by providing a standardized way to create unique keys for different types of contexts. It ensures that each type of context has its own dedicated storage location, making it easier to manage and retrieve these contexts when needed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/project-context-schema.mjs"
+  ]
+}

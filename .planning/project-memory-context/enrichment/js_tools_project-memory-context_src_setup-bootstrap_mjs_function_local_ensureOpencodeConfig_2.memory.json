@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `ensureOpencodeConfig` function is responsible for ensuring that the project has an `.opencode/opencode.json` configuration file, which includes necessary configurations for the `@aabadin/project-memory-context` plugin. This function sets up and manages the configuration for the specified plugin within the project's directory structure.\n\n### Primary Inputs\n1. **projectRoot**: The root directory of the project where the `.opencode` directory will be created or already exists.\n2. **installState**: An object that contains information about the installation state, which is used to build certain configurations for the plugin.\n\n### Output\n- **configPath**: A string representing the path to the `opencode.json` file within the `.opencode` directory. This file will be created if it does not exist or updated with necessary configurations if it exists.\n\n### Immediate Dependencies\n1. **node:fs/promises**: For filesystem operations like reading from and writing to files.\n2. **node:path**: To handle and manipulate file paths.\n3. **./artifacts.mjs**: Specifically, `ensureProjectMemoryContextDirs` and `writeJsonArtifact`, which are used for managing the directory structure and writing JSON artifacts respectively.\n4. **./enrichment-config.mjs**: Specifically, `PMC_ENRICHMENT_CONFIG_FILE`, which is a constant representing the path to a specific configuration file related to project memory context.\n\n### Role in Module\nThis function plays a crucial role in setting up and maintaining the configuration for the `@aabadin/project-memory-context` plugin within the project. It ensures that the necessary directory structure exists, reads or initializes the configuration, updates it with the required plugins and settings based on the installation state, and writes the updated configuration to a file. This setup is essential for enabling and configuring the plugin's functionality within the project context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/setup-bootstrap.mjs"
+  ]
+}

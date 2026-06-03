@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `installAntigravity` function is responsible for installing and configuring Antigravity skills within a project. It ensures that the necessary skill files are created or updated in both the project's local directory and any global configuration directory, and it also updates the `AGENTS.md` file to include an autostart block if not already present.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project where the Antigravity skills are to be installed.\n- **packageRoot**: The root directory of the package containing the skill templates.\n- **placeholders**: A set of placeholders that will be used to replace variables in the template files.\n- **globalConfigDir** (optional): An optional global configuration directory where skills can also be installed if provided.\n\n### Output\nThe function does not return a value but performs file system operations and updates the project structure as described:\n- Creates directories under `.agents/skills` for each skill.\n- Writes or updates `SKILL.md` files in these directories with content based on templates and placeholders.\n- Updates `AGENTS.md` to include an autostart block if not already present.\n\n### Immediate Dependencies\n- **node:fs/promises**: For file system operations like reading from and writing to the filesystem.\n- **node:fs**: Specifically for checking if files or directories exist using `existsSync`.\n- **node:path**: For path manipulation, including joining paths and extracting directory names.\n- **node:url**: To convert file URLs to file paths when working with modules in Node.js.\n\n### Role in Module\nThis function is a crucial part of the module's functionality related to setting up Antigravity skills. It encapsulates the logic for installing, configuring, and updating skill templates according to the project structure and user preferences defined by `placeholders` and `globalConfigDir`.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

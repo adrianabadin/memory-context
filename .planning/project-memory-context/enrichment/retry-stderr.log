@@ -1,0 +1,128 @@
+
+[retry] ═════════════════════════════════════════════════════
+[retry] Retrying 83 error symbols
+[retry] Provider: ollama | Model: qwen2.5-coder:14b
+[retry] Base URL: http://localhost:11434
+[retry] Concurrency: 1 | Timeout: 300s
+[retry] ═════════════════════════════════════════════════════
+
+  [OK] registerTools (agent-memory-mcp/src/tools.ts:210) — 64s [1/83]
+  [OK] MockEmbedder1024 (agent-memory-mcp/tests/integration.test.ts:8) — 97s [2/83]
+  [OK] MockEmbedder (agent-memory-mcp/tests/mocks.ts:19) — 104s [3/83]
+  [OK] MockMemoryStore (agent-memory-mcp/tests/mocks.ts:54) — 165s [4/83]
+  [OK] parseResult (agent-memory-mcp/tests/tools.test.ts:18) — 74s [5/83]
+  [OK] buildDefaultEnrichmentConfig (tools/project-memory-context/cli/bootstrap.mjs:22) — 81s [6/83]
+  [OK] getTargetDir (tools/project-memory-context/cli/bootstrap.mjs:66) — 85s [7/83]
+  [OK] installGraphify (tools/project-memory-context/cli/bootstrap.mjs:84) — 104s [8/83]
+  [OK] syncToolsToTarget (tools/project-memory-context/cli/bootstrap.mjs:96) — 120s [9/83]
+  [OK] runStageA (tools/project-memory-context/cli/bootstrap.mjs:140) — 130s [10/83]
+  [OK] findFiles (tools/project-memory-context/cli/bootstrap.mjs:182) — 119s [11/83]
+  [OK] runStageB (tools/project-memory-context/cli/bootstrap.mjs:199) — 137s [12/83]
+  [OK] main (tools/project-memory-context/cli/bootstrap.mjs:270) — 149s [13/83]
+  [OK] fileExists (tools/project-memory-context/cli/context.mjs:11) — 82s [14/83]
+  [OK] findProjectRoot (tools/project-memory-context/cli/context.mjs:20) — 122s [15/83]
+  [OK] parseArgs (tools/project-memory-context/cli/context.mjs:38) — 94s [16/83]
+  [OK] loadArtifacts (tools/project-memory-context/cli/context.mjs:87) — 97s [17/83]
+  [OK] groupEdges (tools/project-memory-context/cli/context.mjs:101) — 86s [18/83]
+  [OK] buildRenderInput (tools/project-memory-context/cli/context.mjs:122) — 184s [19/83]
+  [OK] runTargetContext (tools/project-memory-context/cli/context.mjs:193) — 132s [20/83]
+  [OK] runProjectContext (tools/project-memory-context/cli/context.mjs:211) — 97s [21/83]
+  [OK] printHelp (tools/project-memory-context/cli/context.mjs:220) — 127s [22/83]
+  [OK] main (tools/project-memory-context/cli/context.mjs:246) — 127s [23/83]
+  [OK] spawnCheck (tools/project-memory-context/cli/doctor.mjs:6) — 105s [24/83]
+  [OK] loadJson (tools/project-memory-context/cli/enrich-queue.mjs:33) — 90s [25/83]
+  [OK] safeKey (tools/project-memory-context/cli/enrich-queue.mjs:50) — 99s [26/83]
+  [OK] SlotTracker (tools/project-memory-context/cli/enrich-queue.mjs:54) — 127s [27/83]
+  [OK] createAgentSubagentProvider (tools/project-memory-context/cli/enrich-queue.mjs:107) — 124s [28/83]
+  [OK] buildSymbolPrompt (tools/project-memory-context/cli/enrich-queue.mjs:127) — 117s [29/83]
+  [OK] applyAttemptsToEntry (tools/project-memory-context/cli/enrich-queue.mjs:138) — 102s [30/83]
+  [OK] getLastAttemptMode (tools/project-memory-context/cli/enrich-queue.mjs:146) — 91s [31/83]
+  [OK] getLastAttemptError (tools/project-memory-context/cli/enrich-queue.mjs:150) — 84s [32/83]
+  [OK] createQueueEnrichmentError (tools/project-memory-context/cli/enrich-queue.mjs:161) — 98s [33/83]
+  [OK] buildQueueSummary (tools/project-memory-context/cli/enrich-queue.mjs:170) — 90s [34/83]
+  [OK] loadRuntimeEnrichmentConfig (tools/project-memory-context/cli/enrich-queue.mjs:178) — 90s [35/83]
+  [OK] createQueueProviders (tools/project-memory-context/cli/enrich-queue.mjs:184) — 91s [36/83]
+  [OK] runQueueSymbolEnrichment (tools/project-memory-context/cli/enrich-queue.mjs:192) — 172s [37/83]
+  [OK] checkpointSave (tools/project-memory-context/cli/enrich-queue.mjs:323) — 106s [38/83]
+  [OK] main (tools/project-memory-context/cli/enrich-queue.mjs:346) — 159s [39/83]
+  [OK] printHelp (tools/project-memory-context/cli/enrich.mjs:10) — 66s [40/83]
+  [OK] runEnrichQueue (tools/project-memory-context/cli/enrich.mjs:14) — 81s [41/83]
+  [OK] main (tools/project-memory-context/cli/init.mjs:31) — 109s [42/83]
+  [OK] log (tools/project-memory-context/cli/install-pmc.mjs:15) — 46s [43/83]
+  [OK] copyMjsTree (tools/project-memory-context/cli/install-pmc.mjs:19) — 105s [44/83]
+  [OK] copyTemplatesDir (tools/project-memory-context/cli/install-pmc.mjs:44) — 85s [45/83]
+  [OK] installPmcTools (tools/project-memory-context/cli/install-pmc.mjs:59) — 117s [46/83]
+  [OK] main (tools/project-memory-context/cli/new-project.mjs:10) — 86s [47/83]
+  [OK] readText (tools/project-memory-context/cli/project-context.mjs:22) — 106s [48/83]
+  [OK] buildDetectedContext (tools/project-memory-context/cli/project-context.mjs:32) — 92s [49/83]
+  [OK] buildDeclaredContext (tools/project-memory-context/cli/project-context.mjs:40) — 87s [50/83]
+  [OK] writeMemories (tools/project-memory-context/cli/project-context.mjs:49) — 126s [51/83]
+  [OK] computeHashes (tools/project-memory-context/cli/project-context.mjs:60) — 102s [52/83]
+  [OK] runRefresh (tools/project-memory-context/cli/project-context.mjs:108) — 145s [53/83]
+  [OK] markEnrichedSymbolsStale (tools/project-memory-context/cli/project-context.mjs:164) — 123s [54/83]
+  [OK] runProjectContextCli (tools/project-memory-context/cli/project-context.mjs:201) — 95s [55/83]
+  [OK] main (tools/project-memory-context/cli/project-context.mjs:214) — 119s [56/83]
+  [OK] printHelp (tools/project-memory-context/cli/query.mjs:8) — 76s [57/83]
+  [OK] fileExists (tools/project-memory-context/cli/query.mjs:15) — 65s [58/83]
+  [OK] findProjectRoot (tools/project-memory-context/cli/query.mjs:24) — 103s [59/83]
+  [OK] main (tools/project-memory-context/cli/query.mjs:94) — 105s [60/83]
+  [OK] safeKey (tools/project-memory-context/cli/sanitize.mjs:19) — 94s [61/83]
+  [OK] codeHash (tools/project-memory-context/cli/sanitize.mjs:23) — 94s [62/83]
+  [OK] getGraphifyExe (tools/project-memory-context/cli/sanitize.mjs:27) — 107s [63/83]
+  [OK] runGraphifyUpdate (tools/project-memory-context/cli/sanitize.mjs:57) — 131s [64/83]
+  [OK] extractCurrentSymbols (tools/project-memory-context/cli/sanitize.mjs:88) — 102s [65/83]
+  [OK] sanitize (tools/project-memory-context/cli/sanitize.mjs:105) — 151s [66/83]
+  [OK] installGraphify (tools/project-memory-context/cli/setup.mjs:22) — 102s [67/83]
+  [OK] spawnCheck (tools/project-memory-context/cli/setup.mjs:34) — 101s [68/83]
+  [OK] parseArgs (tools/project-memory-context/cli/setup.mjs:39) — 73s [69/83]
+  [OK] summarizeWorklist (tools/project-memory-context/cli/status.mjs:8) — 80s [70/83]
+  [OK] buildStatusReport (tools/project-memory-context/cli/status.mjs:34) — 113s [71/83]
+  [OK] main (tools/project-memory-context/cli/status.mjs:57) — 84s [72/83]
+  [OK] textResult (tools/project-memory-context/mcp/pmc-query-server.mjs:11) — 77s [73/83]
+  [OK] errorResult (tools/project-memory-context/mcp/pmc-query-server.mjs:17) — 93s [74/83]
+  [OK] readInstallState (tools/project-memory-context/plugin/index.mjs:6) — 70s [75/83]
+  [OK] ensureProjectMemoryContextDirs (tools/project-memory-context/src/artifacts.mjs:4) — 89s [76/83]
+  [OK] writeJsonArtifact (tools/project-memory-context/src/artifacts.mjs:25) — 90s [77/83]
+  [OK] writeLine (tools/project-memory-context/src/command-dispatch.mjs:27) — 67s [78/83]
+  [OK] resolveCommand (tools/project-memory-context/src/command-dispatch.mjs:31) — 100s [79/83]
+  [OK] extractKotlin (tools/project-memory-context/src/extractors/regex-extractor.mjs:227) — 131s [80/83]
+  [OK] extractCSharp (tools/project-memory-context/src/extractors/regex-extractor.mjs:324) — 172s [81/83]
+  [OK] buildEnrichmentResult (tools/project-memory-context/src/memory-payload.mjs:45) — 85s [82/83]
+  [OK] persistEnrichmentResult (tools/project-memory-context/src/persist-enrichment-result.mjs:10) — 94s [83/83]
+
+[retry] ═════════════════════════════════════════════════════
+[retry] DONE — 83 succeeded, 0 failed, 0 skipped
+[retry] Report: C:\Users\aabad\Documents\CODE\ia\memory-context\.planning\project-memory-context\enrichment\retry-report.json
+[retry] ═════════════════════════════════════════════════════
+
+
+[retry] ═════════════════════════════════════════════════════
+[retry] Retrying 17 error symbols using full provider chain
+[retry] Local Model: ollama | deepseek-coder-v2:16b-ctx32k @ http://localhost:11434
+[retry] Cloud API: openai-compatible @ 
+[retry] Max iterations: 5 | Timeout: 300s
+[retry] ═════════════════════════════════════════════════════
+
+  [OK] iter 1 | getActiveNodeIds (tools/pmc-graph-explorer/public/app.js:29) — 18s
+  [OK] iter 1 | getEnrichedNodeIds (tools/pmc-graph-explorer/public/app.js:36) — 19s
+  [OK] iter 1 | getWorklistStatusMap (tools/pmc-graph-explorer/public/app.js:41) — 20s
+  [OK] iter 1 | init (tools/pmc-graph-explorer/public/app.js:48) — 20s
+  [OK] iter 1 | loadContext (tools/pmc-graph-explorer/public/context-tracker.js:1) — 20s
+  [OK] iter 1 | markNodesActive (tools/pmc-graph-explorer/public/context-tracker.js:11) — 17s
+  [OK] iter 1 | initFilters (tools/pmc-graph-explorer/public/filters.js:3) — 14s
+  [OK] iter 1 | updateStats (tools/pmc-graph-explorer/public/filters.js:28) — 27s
+  [OK] iter 1 | buildSymbolPrompt (tools/project-memory-context/cli/retry-errors.mjs:39) — 42s
+  [OK] iter 1 | main (tools/project-memory-context/cli/retry-errors.mjs:86) — 46s
+  [OK] iter 1 | toIsoString (tools/project-memory-context/cli/status.mjs:26) — 22s
+  [OK] iter 1 | runTargetContext (tools/project-memory-context/cli/context.mjs:210) — 37s
+  [OK] iter 1 | main (tools/project-memory-context/cli/context.mjs:263) — 40s
+  [OK] iter 1 | main (tools/project-memory-context/cli/enrich-queue.mjs:374) — 54s
+  [OK] iter 1 | buildStatusReport (tools/project-memory-context/cli/status.mjs:82) — 28s
+  [OK] iter 1 | listDirectories (tools/project-memory-context/src/extractors/structure-extractor.mjs:17) — 21s
+  [OK] iter 1 | installOpencode (tools/project-memory-context/src/template-installer.mjs:100) — 28s
+
+[retry] ═════════════════════════════════════════════════════
+[retry] DONE — 17 recovered, 0 still failing in 1 iterations
+[retry] Report: C:\Users\aabad\Documents\CODE\ia\memory-context\.planning\project-memory-context\enrichment\retry-report.json
+[retry] ═════════════════════════════════════════════════════
+

@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `PersonRecord`\n\n**Responsibility:**\nDefines a lightweight data structure for representing a person's information, encapsulating both their name and age. This record is used to transfer or store essential details about an individual efficiently.\n\n**Primary Inputs:**\n- **Name**: A string that represents the person's name.\n- **Age**: An integer that represents the person's age.\n\n**Output:**\nAn instance of `PersonRecord` contains two properties: `Name` and `Age`. This structure is immutable by default, meaning once a `PersonRecord` is created, its values cannot be changed.\n\n**Immediate Dependencies:**\n- The record itself does not directly import or depend on other components or libraries within the same module or project. However, it assumes that string and integer types are available in the environment where this code runs.\n\n**Role in Module:**\nThis `PersonRecord` serves as a fundamental building block for organizing data related to individuals within the system. It is particularly useful in scenarios requiring quick access to name and age information without unnecessary overhead of creating full-fledged classes, especially when immutability and simplicity are priorities.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "csharp",
+    "record",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/fixtures/sample.cs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility:\nThe provided code snippet is responsible for logging the results of a symbol delta analysis, including the number of new symbols, stale symbols, and removed symbols, as well as the number of sync operations and pending enrichment tasks. It also checks if there are any pending enrichments and logs this information. The purpose of this log output is to provide an overview of the changes and status in the project's memory context after a refresh operation.\n\n### Primary Inputs:\n1. **result**: An object containing the following properties:\n   - `newSymbols`: Number representing the count of new symbols.\n   - `staleSymbols`: Number representing the count of stale symbols.\n   - `removedSymbols`: Number representing the count of removed symbols.\n   - `syncOps`: Number representing the count of sync operations.\n   - `pendingEnrichment`: Number representing the count of pending enrichment tasks.\n2. **enrich**: A boolean flag indicating whether to perform enrichment (optional, defaults to false).\n\n### Output:\n- The script logs messages to the console that summarize the results of the symbol delta analysis and the sync operations. It also checks if there are any pending enrichments and logs this information.\n\n### Immediate Dependencies:\n1. **result**: An object containing statistical data about the changes in symbols (new, stale, removed) and sync operations.\n2. **enrich**: A boolean flag that influences whether additional processing or logging related to enrichment occurs.\n\n### Role in Module:\nThis code snippet serves as a reporting mechanism for the state of the project's memory context after a refresh operation. It is part of the CLI tooling responsible for managing and updating the internal representation of the project, which includes handling symbol deltas, sync operations, and potential enrichment tasks. The logging function helps in debugging and understanding the impact of changes on the project's structure or dependencies.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/refresh-context.mjs"
+  ]
+}

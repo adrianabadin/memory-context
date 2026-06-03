@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `resolvePythonBin` Function\n\n#### Responsibility:\nThe function `resolvePythonBin` is responsible for determining the appropriate Python binary to use based on the platform and, optionally, an overridden platform value. It tries to execute a version check command (`--version`) for both 'python' and 'python3' (or their equivalents on Windows) to identify which Python interpreter is available.\n\n#### Primary Inputs:\n- `options`: An object that can contain overrides for the platform and method used to execute the file sync (e.g., `execFileSync`). The inputs include:\n  - `platform`: A string representing the operating system platform, defaulting to `process.platform` if not provided.\n  - `execFileSyncImpl`: A function that behaves like `execFileSync`, used for testing or environment-specific implementations, with a default of `execFileSync`.\n\n#### Output:\nThe output is a string representing the Python binary name ('python', 'python3', or 'py' on Windows) that should be used as the interpreter. If none are found, it defaults to 'python'.\n\n#### Immediate Dependencies:\n- The function directly depends on Node.js built-in modules:\n  - `node:child_process` for spawning child processes (though only `execFileSync` is used here).\n  - `node:fs` for file system operations, indirectly through the existence check of Python binaries.\n  - `node:os`, `node:path`, and their respective methods (`homedir`, `join`, `posix`, `resolve`) are also utilized.\n\n#### Role in Module:\nThis function plays a crucial role in ensuring that the correct Python interpreter is selected based on system configuration, which is essential for tasks requiring Python execution such as script running or dependency management within the application. It provides flexibility through optional parameters to support testing and environment-specific behaviors without hardcoding paths or assumptions about the system setup.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

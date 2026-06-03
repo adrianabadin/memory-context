@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `prepareSemanticJobs` function is responsible for preparing and generating semantic job definitions based on the status of symbols within a project. It reads a worklist from a JSON file, filters out pending symbols, resolves their absolute file paths, reads their contents, and then constructs semantic jobs for each symbol using the `buildSemanticUnit` function. Finally, it writes the generated semantic jobs to an output file and returns information about the output file and the number of jobs created.\n\n### Primary Inputs\n- **projectRoot**: A string representing the root directory of the project. This is used to resolve relative paths for each symbol's file path.\n\n### Output\n- **file**: The absolute path to the output JSON file containing the semantic jobs.\n- **count**: The number of pending symbols that were processed into semantic jobs.\n- **jobs**: An array of objects representing the semantic jobs, each encapsulating a parsed and analyzed symbol from the project.\n\n### Immediate Dependencies\n1. **readFile** from `node:fs/promises`: To read the content of each symbol's file.\n2. **resolve** from `node:path`: To convert relative paths to absolute paths for reading files.\n3. **join** from `node:path**: To construct paths for internal files like the worklist and output JSON files.\n4. **readJsonArtifact** (assumed function): To read the worklist file, which is expected to be in JSON format.\n5. **writeJsonArtifact** (assumed function): To write the generated semantic jobs into a JSON file.\n6. **buildSemanticUnit**: A module function that constructs semantic units based on the symbol and its content.\n\n### Role in Module\nThis function serves as an orchestrator for preparing and generating semantic tasks from project files, facilitating the conversion of raw data (from worklist) into structured jobs suitable for further processing or analysis within the application's workflow.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/prepare-semantic-jobs.mjs"
+  ]
+}

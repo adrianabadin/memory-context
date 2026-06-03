@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `unwrapEnrichmentConfig` is responsible for ensuring that the provided configuration object contains an `enrichment` property, and if not, it returns a default empty object. This helps to handle cases where the configuration might be missing or incomplete by providing a fallback mechanism.\n\n### Primary Inputs\n- **config**: An object representing the enrichment configuration which could potentially be undefined or null.\n\n### Output\n- Returns an object that either contains the `enrichment` property from the input config, if present, or an empty object if the input is falsy (null or undefined) or does not have the `enrichment` property.\n\n### Immediate Dependencies\n- **config**: The primary input which could be a configuration object potentially missing some properties.\n\n### Role in Module\nThis function serves as a utility to ensure that every call to this function receives a valid configuration object, even if it means providing a default empty object when the actual configuration is not available or incomplete. This helps maintain code robustness and avoids potential errors down the line where undefined values are dereferenced.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-config.mjs"
+  ]
+}

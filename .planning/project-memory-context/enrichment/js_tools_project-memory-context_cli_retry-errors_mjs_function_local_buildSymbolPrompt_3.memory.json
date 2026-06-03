@@ -1,0 +1,11 @@
+{
+  "content": " ```json\n{\n  \"responsibility\": \"Generates a detailed prompt for symbol information, including its context and code snippet, tailored for further processing or display.\",\n  \"primary_inputs\": [\n    {\n      \"name\": \"symbol\",\n      \"description\": \"An object containing details about the symbol, such as name, kind, language, file path, and line range.\"\n    },\n    {\n      \"name\": \"projectRoot\",\n      \"description\": \"The root directory of the project where the symbol is located.\"\n    },\n    {\n      \"name\": \"maxCodeLines\",\n      \"description\": \"Optional parameter to limit the number of lines displayed in the code section, defaulting to 80.\"\n    }\n  ],\n  \"output\": \"A string formatted with detailed information about the symbol and its context, including truncated code if necessary.\",\n  \"immediate_dependencies\": [\n    {\n      \"name\": \"node:fs/promises\",\n      \"description\": \"For reading file content.\"\n    },\n    {\n      \"name\": \"node:path\",\n      \"description\": \"For resolving file paths.\"\n    },\n    {\n      \"name\": \"node:url\",\n      \"description\": \"To convert file URLs to file paths.\"\n    }\n  ],\n  \"role_in_module\": \"This function is crucial for providing a structured and informative prompt about symbols within a codebase, aiding in debugging, documentation generation, or other development tasks that require detailed context about specific parts of the code.\"\n}\n```",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

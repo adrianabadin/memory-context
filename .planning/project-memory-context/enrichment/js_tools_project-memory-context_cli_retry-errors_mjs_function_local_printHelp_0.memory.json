@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `printHelp` function is responsible for displaying the usage and options information of the CLI tool, specifically designed to re-enrich symbols that failed using a full provider fallback chain. This function provides users with clear instructions on how to use the script, including available command-line arguments and their default values.\n\n### Primary Inputs\nThe primary input for `printHelp` is not provided through parameters; it simply executes to print the help message when called without any arguments or with `--help`.\n\n### Output\nThe output of `printHelp` is a console log displaying the usage instructions and available options in a formatted manner. This helps users understand how to use the script correctly and what options are available for customization.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: The function uses core Node.js modules (`console`, `process`) which do not need to be imported explicitly as they are part of the environment in which the script runs.\n- **Local Module Functions**: It depends on internal functions from other parts of the module, such as `appendProviderEvent` and others, but these are not listed as immediate dependencies since they are used within the function's scope.\n\n### Role in Module\nThe `printHelp` function serves a critical role in making the CLI tool user-friendly by providing clear documentation on how to operate the script. It is part of the command-line interface (CLI) functionality, enhancing usability and accessibility for users interacting with the module through terminal commands.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

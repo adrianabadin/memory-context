@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for orchestrating the execution of an enrichment process. It serves as an entry point for the script, handling command line arguments and delegating to other functions for specific tasks.\n\n### Primary Inputs\n- `args`: Command line arguments passed to the script, defaulting to `process.argv.slice(2)` if not provided. This allows flexibility in how the script is invoked from the command line.\n\n### Output\n- The function returns a promise that resolves when the enrichment process completes. It either calls another function (`enrichMain`) or performs some operations based on the arguments passed to it.\n\n### Immediate Dependencies\n- `process.argv`: Provides access to the command line arguments passed when the script is run.\n- `resolve` from 'node:path': Used for resolving file paths in a Node.js environment.\n- `fileURLToPath` from 'node:url': Converts a file URL to a local file path, useful for handling module imports and exports.\n- `main as enrichMain` from './enrich.mjs': Imports the main function from another module (`./enrich.mjs`) with an alias (`enrichMain`), indicating that it will be used within this script.\n\n### Role in Module\nThe `main` function acts as a bridge between the command line interface and the core functionality of the module, providing a unified entry point for executing tasks related to enrichment. It also serves as a transitional layer between deprecated usage and updated commands, offering guidance on how to transition from old scripts to new ones.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/enrich-orchestrator.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `usageText` is responsible for generating and returning a usage string that lists the available commands. This helps users understand what commands are supported by the tool and how to use them.\n\n### Primary Inputs\nThere are no primary inputs required for this function as it operates solely based on internal data structures (specifically, the `COMMANDS` object which is assumed to be defined elsewhere in the module).\n\n### Output\nThe output of the `usageText` function is a string that describes how to use the tool. This string includes all the command names available in the `COMMANDS` object, joined by '|' and enclosed in angle brackets (`<...>`).\n\n### Immediate Dependencies\n- **node:path**: The `dirname` and `resolve` functions are used to construct paths relative to the script location.\n- **node:url**: The `fileURLToPath` function is used to convert a file URL to a local path, which helps in resolving module paths correctly.\n\n### Role in Module\nThe `usageText` function plays a crucial role in providing clear and concise instructions for users interacting with the tool. It ensures that users can quickly understand how to use the command-line interface by listing all possible commands supported by the application. This is particularly useful during initial setup or when displaying help information, making it easier for users to navigate and utilize the tool effectively.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/command-dispatch.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `saveJson` function is responsible for saving JSON data to a specified file path. It ensures that the directory structure leading up to the file exists before writing the JSON content, and it formats the JSON with indentation for readability.\n\n### Primary Inputs\n1. **path**: A string representing the file path where the JSON data should be saved.\n2. **data**: The JavaScript object or value that needs to be converted to a JSON string and written to the file.\n\n### Output\n- None explicitly returned, but it performs an asynchronous operation which completes once the JSON data is successfully written to the specified file.\n\n### Immediate Dependencies\n1. **mkdir**: A function from `node:fs/promises` used to create directories recursively if they do not already exist.\n2. **writeFile**: A function from `node:fs/promises` used to write the JSON string to the specified file with UTF-8 encoding and proper formatting.\n3. **dirname**: A function from `node:path` used to extract the directory name from the provided path.\n4. **JSON.stringify**: A method that converts a JavaScript object or value into a JSON string, with optional parameters for indentation and spaces.\n\n### Role in Module\nThe `saveJson` function serves as a utility to facilitate saving JSON data to persistent storage in a structured format. It is used within the module to persist configuration settings, results of operations, or other important data that needs to be saved between runs or retrievable later for debugging or reference purposes. This function ensures that all necessary directory structures are created before writing the file, making it robust against missing parent directories.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

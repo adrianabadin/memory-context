@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `extractJsTsSymbols` is responsible for extracting JavaScript and TypeScript symbols (such as classes, functions, interfaces, types, and enums) from the provided file content. It parses the code using Babel's parser to create an abstract syntax tree (AST), then traverses this AST to identify and extract relevant symbol information based on their node types in the code.\n\n### Primary Inputs\n- `filePath`: The path of the file being processed, used to determine its type (JavaScript or TypeScript).\n- `content`: The content of the file as a string, which will be parsed into an AST for extraction.\n\n### Output\nAn array of objects representing the extracted symbols, each containing detailed information about the symbol's kind, name, location, and other relevant metadata.\n\n### Immediate Dependencies\n- `@babel/parser`: Used to parse the file content into an AST.\n- `node:crypto`: For creating a hash (though not directly used in this function).\n- Custom functions from `../symbol-keys.mjs` for building symbol keys.\n\n### Role in Module\nThis function serves as a core component of the module responsible for transforming raw file content into structured, semantically meaningful data about the code elements contained within it. It is instrumental in providing metadata extraction capabilities that can be used by other parts of the system for various purposes such as linting, documentation generation, or static analysis.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/js-ts-extractor.mjs"
+  ]
+}

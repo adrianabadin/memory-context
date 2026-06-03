@@ -128,7 +128,7 @@ The result: your agent can recall what a file does, how symbols connect, and wha
 
 Used for: converting every memory into a dense vector for semantic similarity search. The ONNX runtime downloads the model once on first run and caches it locally — no network calls during normal operation.
 
-### LLM: `deepseek-coder-v2:16b-ctx32k` (Ollama)
+### LLM: `deepseek-coder-v2:16b-ctx16k` (Ollama)
 
 | Property | Value |
 |---|---|
@@ -143,7 +143,7 @@ Used for: semantic enrichment — reading source code fragments and producing st
 **Alternative models** (configure via `OLLAMA_MODEL` env var):
 - `qwen3-coder:30b` — larger, better reasoning
 - `codellama:13b` — good for code tasks
-- `deepseek-coder-v2:16b-ctx32k` — default, best balance of speed and quality
+- `deepseek-coder-v2:16b-ctx16k` — default, best balance of speed and quality
 
 ---
 
@@ -188,7 +188,7 @@ pmc setup
 
 The interactive prompt asks for:
 1. **Ollama base URL** (default: `http://localhost:11434`)
-2. **Ollama model name** (default: `deepseek-coder-v2:16b-ctx32k`)
+2. **Ollama model name** (default: `deepseek-coder-v2:16b-ctx16k`)
 
 It then:
 1. Installs `graphifyy` via pip
@@ -204,8 +204,12 @@ pmc setup                        # Auto-detects your agent
 pmc setup --opencode             # Force OpenCode
 pmc setup --claude               # Force Claude Code
 pmc setup --cursor               # Force Cursor
+pmc setup --antigravity          # Force Antigravity CLI
 pmc setup --generic              # Generic (writes README-SETUP.md)
 ```
+
+> **Note:** The generated commands invoke `pmc` directly. Make sure the CLI is installed globally:
+> `npm install -g @aabadin/project-memory-context`
 
 ### Multi-agent setup (combinable flags)
 
@@ -213,11 +217,13 @@ pmc setup --generic              # Generic (writes README-SETUP.md)
 pmc setup --opencode --claude                    # OpenCode + Claude Code
 pmc setup --opencode --claude --cursor           # All three
 pmc setup --opencode --cursor                    # OpenCode + Cursor only
+pmc setup --claude --antigravity                 # Claude Code + Antigravity
 ```
 
 Each agent gets its own configuration:
-- **OpenCode**: `.opencode/opencode.json` with `mcp.agent-memory` entry + `AGENTS.md` autostart + global commands/agents
-- **Claude Code**: `.claude/project-memory-context.json` enrichment config + `.mcp.json`
+- **OpenCode**: `.opencode/opencode.json` with `mcp.agent-memory` entry + `AGENTS.md` autostart + global commands/agents/skills
+- **Claude Code**: `.claude/project-memory-context.json` enrichment config + `.mcp.json` + global commands/skills/`agents/enrich.md` subagent
+- **Antigravity**: `AGENTS.md` autostart + `.agents/skills/<cmd>/SKILL.md` (cada comando PMC como skill/slash command) + `.agents/skills/{pmc-skill,enrich}/SKILL.md`. Nota: Antigravity no soporta subagentes por archivo (feature request abierta); `enrich` se instala como skill invocable por el modelo y por slash command `/enrich`.
 - **Cursor**: `.cursor/project-memory-context.json` enrichment config + `.mcp.json`
 - **All agents**: `.mcp.json` at project root (universal fallback)
 
@@ -230,8 +236,9 @@ When run without flags, `pmc setup` detects your agent by checking (in order):
 3. `.claude/` directory → Claude Code
 4. `.cursorrules` file → Cursor
 5. `.cursor/` directory → Cursor
-6. `~/.config/opencode/` exists → OpenCode (global)
-7. Otherwise → Generic
+6. `.agents/` directory → Antigravity
+7. `~/.config/opencode/` exists → OpenCode (global)
+8. Otherwise → Generic
 
 ---
 
@@ -242,7 +249,7 @@ When run without flags, `pmc setup` detects your agent by checking (in order):
 Interactively bootstraps PMC in the current project.
 
 ```bash
-pmc setup [--opencode] [--claude] [--cursor] [--generic]
+pmc setup [--opencode] [--claude] [--cursor] [--antigravity] [--generic]
 ```
 
 | Flag | Description |
@@ -250,6 +257,7 @@ pmc setup [--opencode] [--claude] [--cursor] [--generic]
 | `--opencode` | Install configs for OpenCode |
 | `--claude` | Install configs for Claude Code |
 | `--cursor` | Install configs for Cursor |
+| `--antigravity` | Install configs for Antigravity CLI |
 | `--generic` | Generic setup (README only) |
 | *(no flags)* | Auto-detect agent(s) |
 
@@ -316,7 +324,7 @@ OLLAMA_MODEL=qwen3-coder:30b pmc map-project . --all --enrich
 | Variable | Default | Description |
 |---|---|---|
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama REST endpoint |
-| `OLLAMA_MODEL` | `deepseek-coder-v2:16b-ctx32k` | Ollama model |
+| `OLLAMA_MODEL` | `deepseek-coder-v2:16b-ctx16k` | Ollama model |
 | `PMC_CONCURRENCY` | `8` | Parallel slots for worklist |
 | `PMC_GRAPHIFY_PATH` | *(auto-detect)* | Custom path to graphify executable |
 
@@ -385,7 +393,7 @@ Output:
 ```
 Enrichment config:
   Preferred modes: local-model, cloud-api, agent-subagent
-  Local model: deepseek-coder-v2:16b-ctx32k @ http://localhost:11434
+  Local model: deepseek-coder-v2:16b-ctx16k @ http://localhost:11434
 
 Worklist:
   Total symbols:    314

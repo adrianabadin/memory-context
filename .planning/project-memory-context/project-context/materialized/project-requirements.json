@@ -1,0 +1,22 @@
+{
+  "memory_key": "project-context:project-requirements",
+  "title": "Project requirements",
+  "kind": "project-requirements",
+  "source_mode": "declared",
+  "summary": "",
+  "body": "- No declared requirements.",
+  "tags": [
+    "project-context",
+    "project:memory-context",
+    "requirements"
+  ],
+  "source_files": [
+    ".planning/project-memory-context/project-context/declared/project-requirements.json"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "eada94c27bae1e962716fe2186ed147708de255d0bd515223a696514083db282",
+  "updated_at": "2026-06-02T05:31:53.395Z"
+}

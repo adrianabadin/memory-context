@@ -1,0 +1,11 @@
+{
+  "content": " The `buildMemoryPayload` function is designed to create a structured payload containing detailed information about a software symbol. This function takes an object with properties `projectSlug`, `job`, and `semantic` as input, where:\n\n- `projectSlug` is the identifier for the project.\n- `job` contains details about the job, including its name, kind, language, file path, and range (start and end lines).\n- `semantic` provides additional semantic information about the symbol, including inputs, dependencies, responsibility, and role in the module.\n\nHere's a compact structured explanation of what each part represents:\n\n1. **Responsibility**: This is extracted from the `semantic.responsibility`. It describes the primary function or purpose of the symbol within the software project.\n\n2. **Primary Inputs**: These are derived from the `semantic.inputs` list, which is normalized using the `normalizeList` function. If there are inputs detected, they are formatted as a bullet-point list; otherwise, it states \"None detected\".\n\n3. **Output**: This is directly taken from `semantic.output`, representing what the symbol produces or yields.\n\n4. **Immediate Dependencies**: These are also derived from the `semantic.dependencies` list, similarly normalized and formatted as a bullet-point list if any dependencies are found; otherwise, it states \"None detected\".\n\n5. **Role in Module**: This is taken directly from `semantic.role`, indicating the symbol's role or function within its module or context.\n\nThe function constructs a string (`content`) that includes all these details, formatted with line breaks between each entry for readability. The constructed payload also includes predefined categories and tags to categorize and tag the information according to the type of data it represents (in this case, 'architecture').",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/memory-payload.mjs"
+  ]
+}

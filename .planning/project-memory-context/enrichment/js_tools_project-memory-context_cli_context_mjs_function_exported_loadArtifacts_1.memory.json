@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `loadArtifacts` function is responsible for loading and returning three key artifacts (`graph`, `symbolIndex`, and `worklist`) from a specified project root directory.\n\n**Primary Inputs**: \n- `projectRoot`: A string representing the root directory of the project from which artifacts will be loaded.\n\n**Output**: \n- An object containing the loaded artifacts: `{ graph, symbolIndex, worklist }`.\n\n**Immediate Dependencies**:\n- `readJsonArtifact`: Used to read JSON files asynchronously.\n- File system paths and operations (`join`, `resolve`): To construct paths for artifact files.\n\n**Role in Module**: This function serves as a foundational component within the module, facilitating the retrieval of essential data structures necessary for further processing or analysis. It abstracts the details of file access and parsing, providing a clean interface for other parts of the application to interact with project memory context artifacts.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

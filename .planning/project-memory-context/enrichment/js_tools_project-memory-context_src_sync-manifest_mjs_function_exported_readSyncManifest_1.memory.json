@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `readSyncManifest` function is responsible for reading and parsing the synchronization manifest file from the specified enrichment directory. It attempts to read the manifest file, and if it does not exist (indicated by an error code 'ENOENT'), it returns a default object with an empty entries array. If any other type of error occurs, it rethrows the error.\n\n### Primary Inputs\n- `enrichmentDir`: A string representing the directory where the manifest file is located or should be read from.\n\n### Output\n- An object parsed from the JSON content of the manifest file if successful, otherwise an object with a default structure containing an empty entries array.\n\n### Immediate Dependencies\n- `readFile` from 'node:fs/promises': To read the contents of the manifest file asynchronously.\n- `JSON.parse`: To parse the stringified JSON content into a JavaScript object.\n- `error.code !== 'ENOENT'`: To differentiate between a non-existent file and other potential errors, allowing for a specific handling when the file does not exist.\n\n### Role in Module\nThis function serves as a utility to abstract the process of reading and parsing a JSON manifest file from a specified directory. It ensures that the module can handle cases where the manifest might not be present by providing a default response structure in such scenarios, enhancing robustness and usability of the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

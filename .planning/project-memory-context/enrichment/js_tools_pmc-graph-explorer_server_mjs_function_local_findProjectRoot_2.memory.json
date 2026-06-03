@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `findProjectRoot` function is responsible for determining the root directory of a project by searching up the file system hierarchy. It checks for the presence of a specific marker file (`.planning/project-memory-context`) to identify the project root, and it can stop the search if it encounters a `node_modules` directory unless specified otherwise.\n\n### Primary Inputs\n1. **startPath**: The initial path from which to begin searching for the project root. This is typically the current working directory of the application or script invoking this function.\n2. **stopAtNodeModules**: An optional boolean parameter that defaults to `true`. If set to `false`, the search will continue even if it encounters a `node_modules` directory.\n\n### Output\n- The function returns the path to the project root if it finds the marker file, otherwise it returns `null`.\n\n### Immediate Dependencies\n1. **fs**: Utilized for checking file existence (`existsSync`) and reading/writing files (though not directly in this function).\n2. **path**: Used for resolving relative paths (`resolve` and `dirname` functions).\n3. **url**: Specifically, `fileURLToPath` is used to convert a file URL to a local file path, which helps in handling module paths correctly.\n\n### Role in Module\nThis function serves as a utility to locate the root directory of a project by traversing up the directory tree until it finds the marker file or reaches the filesystem root. It acts as an essential tool for setting up and configuring modules within the project, especially useful during initialization or when needing to access specific resources tied to the project context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/server.mjs"
+  ]
+}

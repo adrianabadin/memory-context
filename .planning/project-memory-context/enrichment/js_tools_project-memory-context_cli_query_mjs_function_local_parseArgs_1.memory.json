@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseArgs` function is responsible for parsing command line arguments to extract the desired format and the main question. It processes flags like `--format` to determine the output type (e.g., 'text' or 'json') and collects all other parts of the input as the main question.\n\n### Primary Inputs\n- `args`: An array of strings representing command line arguments.\n\n### Output\n- An object containing:\n  - `format`: A string indicating the desired output format ('text' or 'json').\n  - `question`: A string combining all non-flag parts of the input, joined by spaces and trimmed for whitespace.\n\n### Immediate Dependencies\n- The function directly uses JavaScript standard library functions:\n  - `args[index + 1]` to fetch the value following `--format`.\n  - `join(' ')` to concatenate question parts into a single string.\n  - `trim()` to remove leading and trailing whitespace from the concatenated question string.\n\n### Role in Module\nThe `parseArgs` function serves as a utility within the CLI module for parsing user inputs related to querying or configuring the application, specifically handling format specifications and assembling the main query content. This setup is crucial for ensuring that the application can dynamically adapt its output based on user preferences and input data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

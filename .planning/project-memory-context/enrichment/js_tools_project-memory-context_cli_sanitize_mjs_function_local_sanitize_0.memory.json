@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `sanitize` function is responsible for maintaining and updating the project's memory context by synchronizing symbols from source files with existing records, identifying changes, and triggering background enrichment processes.\n\n**Primary Inputs**:\n- `PROJECT_ROOT`: The root directory of the project.\n- Existing graph data (`graph.json`) and worklist (`worklist.json`).\n\n**Output**:\n- A structured report detailing the number of new, stale, removed, unchanged symbols, pending enrichments, and sync operations.\n- Launches a background enrichment process if there are pending entries.\n\n**Immediate Dependencies**:\n- File system operations for reading and writing JSON artifacts.\n- Symbol extraction and graph node resolution.\n- Sync manifest management.\n- Background process spawning.\n\n**Role in Module**: The `sanitize` function acts as the core orchestrator within the module, ensuring that the project's memory context is up-to-date by comparing current symbols with existing records, identifying changes, and initiating necessary background processes for enrichment.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/sanitize.mjs"
+  ]
+}

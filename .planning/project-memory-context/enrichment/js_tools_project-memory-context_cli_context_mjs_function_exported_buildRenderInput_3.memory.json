@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildRenderInput` function constructs the input data required for rendering target context based on different resolution modes.\n\n**Primary Inputs**:\n- `engine`: An instance of a query engine used to fetch context.\n- `resolved`: An object containing details about the resolved target, including its mode (e.g., 'symbol', 'file').\n- Options: `{ depth, focus }` specifying the depth of the query and the focus area.\n\n**Output**: \nAn object with structured data for rendering, including:\n- `summary`: A list of summary strings describing the target.\n- `target`: Details about the target (mode, name, filePath).\n- `relevant`: Relevant neighbors or symbols related to the target.\n- `relations`: Grouped edges representing relationships between nodes.\n- `nextReads`: File paths for further reading.\n- `metadata`: Additional metadata like depth and focus.\n\n**Immediate Dependencies**:\n- `focusToEdgeTypes`: Converts focus into edge types for querying.\n- `engine.querySymbolContext`, `engine.queryFileContext`: Methods to fetch context based on symbol or file.\n- `groupEdges`: Groups edges by type (not shown in provided code).\n\n**Role in Module**: This function is crucial for preparing the necessary data for rendering target contexts, handling various resolution modes and ensuring that all required information is structured correctly for downstream processing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

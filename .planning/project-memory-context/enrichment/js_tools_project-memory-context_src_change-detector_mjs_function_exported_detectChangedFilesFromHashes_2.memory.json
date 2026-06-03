@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `detectChangedFilesFromHashes` is responsible for identifying files that have changes based on their respective hashes. It compares the file hashes from two different states (previous and next) to determine which files have been modified or added.\n\n### Primary Inputs\n- **previousHashes**: An object where keys are filenames and values are corresponding hash values. This represents the state of the files at a previous point in time.\n- **nextHashes**: Another object similar to `previousHashes`, representing the current state of the files.\n\n### Output\n- **changed**: An array of filenames that have changed or been added since the last check (i.e., from `previousHashes` to `nextHashes`).\n\n### Immediate Dependencies\n- None explicitly listed in the provided code snippet, but it uses JavaScript's built-in objects and methods (`Object`, `Set`, and `for...of` loop) which are standard library functions.\n\n### Role in Module\nThis function serves as a core utility within the module responsible for tracking changes in file states based on their hashes. It helps maintain or update other parts of the system that depend on knowing which files have been modified, such as triggering rebuilds or updates in dependent processes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/change-detector.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe function `sanitise` is responsible for replacing single quotes (`'`) within a given string with two consecutive single quotes (`''`), effectively escaping the single quotes. This helps to prevent SQL injection and ensures that the string can be safely stored or used in contexts where special characters need to be handled properly.\n\n#### Primary Inputs\n- `value: string`: The input string which may contain single quotes that need to be sanitized.\n\n#### Output\n- `string`: A new string with all instances of a single quote replaced by two consecutive single quotes.\n\n#### Immediate Dependencies\n- None explicitly listed, but the function relies on JavaScript's built-in methods for string manipulation and does not import any external dependencies beyond standard library functions.\n\n#### Role in Module\nThe `sanitise` function is likely used within a larger module or application where data integrity and safety are crucial, particularly when dealing with user inputs that might be interpreted as SQL commands or stored in databases where special characters need to be handled correctly. This function ensures that such issues do not arise by sanitizing the input strings before they are processed further.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

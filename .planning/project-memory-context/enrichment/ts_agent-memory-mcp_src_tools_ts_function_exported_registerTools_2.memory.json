@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `registerTools` function registers various tools on an MCP server, enabling memory storage, retrieval, updating, deletion, and management functionalities.\n\n**Primary Inputs**:\n- `server`: An instance of `McpServer`.\n- `store`: An instance of `MemoryStore`.\n\n**Output**: None (void).\n\n**Immediate Dependencies**:\n- `zod` for schema validation.\n- `@modelcontextprotocol/sdk/server/mcp.js` for `McpServer`.\n- Local schemas (`categorySchema`, `tagsSchema`, `modeSchema`, `filtersSchema`) and handlers (`handleStore`, `handleStoreBatch`, etc.).\n\n**Role in Module**: This function is crucial for setting up the server with essential tools to interact with memory storage, facilitating operations like storing memories, searching, updating, deleting, and managing memory statistics and pruning.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

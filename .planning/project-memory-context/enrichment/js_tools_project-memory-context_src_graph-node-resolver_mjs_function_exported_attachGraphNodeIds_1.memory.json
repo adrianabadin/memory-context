@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `attachGraphNodeIds` is responsible for attaching unique node IDs from a graph to symbols. It ensures that each symbol has an associated graph node ID, either by finding it within the graph or using a fallback mechanism if no match is found initially.\n\n### Primary Inputs\n- **symbols**: An array of objects representing symbols, where each object contains at least a `symbolKey` property and optionally a `graphNodeId`.\n- **graph**: A collection (e.g., an array or map) containing nodes with unique IDs (`id`) and possibly other properties including keys that match the `symbolKey`.\n\n### Output\nAn array of symbol objects, each extended to include a new property `graphNodeId` which is either taken from the graph if found by `symbolKey`, or inherited from the original symbol object if not provided. If neither is available, it defaults to `null`.\n\n### Immediate Dependencies\n- **findBySymbolKey**: A function that searches the graph for a node using the `symbolKey` as the search key.\n- **findByFilePathAndName**: An alternative function (or fallback) that attempts to match the symbol by both file path and name if direct matching by `symbolKey` fails.\n\n### Role in Module\nThis function is crucial for maintaining consistency between local symbols and their corresponding graph node IDs, ensuring seamless integration and data integrity across different parts of the application or module boundaries where graphs and symbols are involved. It enhances the functionality by providing a way to track and manage symbol references within a graphical representation efficiently.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

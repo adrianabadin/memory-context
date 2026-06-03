@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `extractName` is responsible for extracting the name from a list of parts, specifically targeting the second to last element if there are at least five elements. If not, it returns null. This function helps in parsing and retrieving specific information from an array of strings.\n\n### Primary Inputs\n- **parts**: An array of strings representing different segments or components that together form a whole (e.g., parts of a file name, path, etc.).\n\n### Output\n- The output is the second to last element in the `parts` array if there are at least five elements; otherwise, it returns null.\n\n### Immediate Dependencies\nThere are no external dependencies mentioned within the function itself. It operates solely on the input array `parts`.\n\n### Role in Module\nThe role of this function is to provide a utility for extracting specific information from an ordered collection of strings (like parts of a path or file name). This functionality supports other higher-level operations that might require accessing particular segments within such collections, enhancing the module's ability to handle and manipulate structured data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/query-engine.mjs"
+  ]
+}

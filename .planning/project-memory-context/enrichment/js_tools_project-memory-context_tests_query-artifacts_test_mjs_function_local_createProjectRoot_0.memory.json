@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `createProjectRoot` is responsible for creating a temporary directory that will serve as the root of a project for testing purposes. This directory is created using Node.js's `mkdtemp` function, which generates a unique temporary directory name based on a provided template. The template includes a prefix (`pmc-query-artifacts-`) to help identify it as part of this specific test module.\n\n### Primary Inputs\nThe primary input for the function is unspecified, as there are no parameters explicitly passed when calling `createProjectRoot()`. However, typical inputs might include configuration settings or other contextual information that could influence where and how the temporary directory is created.\n\n### Output\nThe output of the function is a Promise that resolves to a string representing the path to the newly created temporary directory. This path can be used as the root for setting up test environments or contexts.\n\n### Immediate Dependencies\n- `mkdtemp` from `node:fs/promises`: This function is directly responsible for creating the temporary directory.\n- `tmpdir()` from `node:os`: Provides a directory where the temporary file can be created, ensuring it's accessible and isolated from other files.\n- `join` from `node:path`: Used to construct the full path of the temporary directory using the template prefix and the system's temporary directory.\n\n### Role in Module\nIn this module, `createProjectRoot()` plays a crucial role in setting up the test environment by providing a clean, isolated directory for testing purposes. This function is used within the context of testing to ensure that tests are run in a controlled and reproducible manner, with no interference from other files or directories outside the scope of the test.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/query-artifacts.test.mjs"
+  ]
+}

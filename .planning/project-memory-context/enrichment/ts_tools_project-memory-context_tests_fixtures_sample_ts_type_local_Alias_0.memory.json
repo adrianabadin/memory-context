@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe responsibility of the code snippet is to define a TypeScript type alias named `Alias` that represents either a `string` or a `number`. This allows for more readable and maintainable code by reducing redundancy when using these types across different parts of the application.\n\n### Primary Inputs\n- The primary input is the TypeScript code defining the type alias: `type Alias = string | number;`\n\n### Output\n- The output is a TypeScript type alias named `Alias`, which can be used wherever either a `string` or a `number` is expected.\n\n### Immediate Dependencies\n- There are no immediate dependencies on other parts of the codebase within this snippet itself, as it stands alone in defining its own type. However, if this type alias were to be used elsewhere in the project, those dependent modules would need access to this file where the type is defined.\n\n### Role in Module\n- This type definition plays a crucial role in encapsulating and reusing the concept of being either a string or a number across different parts of the module or even across multiple modules within the same or other projects. It supports code organization, modularity, and reusability by providing a clear and concise way to define complex types using simple building blocks like `string` and `number`.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "type",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/fixtures/sample.ts"
+  ]
+}

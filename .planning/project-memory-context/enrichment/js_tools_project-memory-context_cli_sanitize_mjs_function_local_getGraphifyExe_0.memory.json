@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `getGraphifyExe` function determines the path to the `graphify.exe` executable, which is used for graph processing tasks.\n\n**Primary Inputs**: None. It relies on environment variables (`process.env.LOCALAPPDATA`, `process.env.APPDATA`) and the operating system platform (`process.platform`).\n\n**Output**: A string representing the absolute path to the `graphify.exe` executable or simply `'graphify'` if running on a non-Windows platform.\n\n**Immediate Dependencies**: \n- `process`: Node.js global object for accessing environment variables and platform information.\n- `resolve`, `dirname`, `basename`, `relative` from `node:path`: For constructing file paths.\n- `fileURLToPath` from `node:url`: Although not used in the provided code snippet, it's part of the context imports.\n\n**Role in Module**: This function is crucial for ensuring that the correct path to the `graphify.exe` executable is obtained, which is necessary for executing graph processing commands. It abstracts away the platform-specific details, making the rest of the module more portable and easier to maintain.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/sanitize.mjs"
+  ]
+}

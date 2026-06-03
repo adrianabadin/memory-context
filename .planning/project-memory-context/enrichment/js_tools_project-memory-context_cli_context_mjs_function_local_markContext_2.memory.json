@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `markContext` function is responsible for managing the active node IDs within a project's memory context. It ensures that the list of active nodes includes all specified node IDs and persists this information to a JSON file, which it creates if it does not already exist.\n\n### Primary Inputs\n- **projectRoot**: A string representing the root directory of the project.\n- **nodeIds**: An array of strings representing the IDs of nodes that are considered active in the context.\n\n### Output\n- The function does not explicitly return a value, but it writes to a file (`context-tracker.json`) which persists the updated list of active node IDs.\n\n### Immediate Dependencies\n- **fs**: Utilized for file system operations like checking if a path exists (`existsSync`), reading from files (`readFileSync`), writing to files (`writeFileSync`), and creating directories (`mkdirSync`).\n- **path**: Used for manipulating filesystem paths, specifically `dirname` to get the directory name of the tracker path and `join` to construct the full path.\n- **url**: Utilized indirectly through `fileURLToPath` to convert a file URL to a file system path, which is necessary for constructing paths in Node.js applications.\n- **../src/artifacts.mjs**: Imports the `readJsonArtifact` function, possibly used for reading or processing artifact files related to the project context.\n- **../src/retrieval/query-engine.mjs** and **../src/retrieval/target-resolver.mjs**: These are likely dependencies if they provide functions that help in resolving or rendering target contexts, which could be involved in managing node IDs within a specific retrieval context.\n\n### Role in Module\nThis function serves as a utility for maintaining project state related to active nodes, ensuring that the latest set of active nodes is always recorded and accessible across different parts of the application or between sessions by writing this information to persistent storage in JSON format.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

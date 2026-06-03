@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 
 const OLLAMA_BASE_URL = (process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434').replace(/\/+$/, '');
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'deepseek-coder-v2:16b-ctx32k';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'deepseek-coder-v2:16b-ctx16k';
 
 async function generateSemanticReport(prompt) {
   const system = [

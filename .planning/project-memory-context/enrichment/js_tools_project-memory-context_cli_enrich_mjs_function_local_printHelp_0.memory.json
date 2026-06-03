@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility**: The `printHelp` function is responsible for displaying usage instructions for the command-line interface (CLI) tool.\n\n**Primary Inputs**: None. It does not take any parameters or arguments.\n\n**Output**: The function outputs a string to the console that provides guidance on how to use the CLI tool, specifically indicating that the correct usage is `pmc enrich`.\n\n**Immediate Dependencies**: \n- `console.log`: Used to print messages to the standard output.\n\n**Role in Module**: This function serves as a helper within the module to provide users with clear instructions on how to properly use the CLI command. It is likely called when the user requests help or when an incorrect usage pattern is detected, ensuring that users understand the expected input format for the `pmc enrich` command.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich.mjs"
+  ]
+}

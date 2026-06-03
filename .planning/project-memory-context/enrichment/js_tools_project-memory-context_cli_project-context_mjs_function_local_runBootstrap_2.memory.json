@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `runBootstrap` function is responsible for initializing and bootstrapping the project context, including detecting and materializing essential components such as detected and declared contexts, creating templates, computing content hashes, and updating sync manifest entries. This function orchestrates the setup of a new or updated project context.\n\n### Primary Inputs\n- `projectRoot`: The root directory of the project where the bootstrap process starts.\n- `dirs`: An object containing necessary directories for file operations such as writing artifacts and state files.\n\n### Output\n- None explicitly returned, but it performs actions that update or create files in the specified directories (`dirs`).\n\n### Immediate Dependencies\n- Import statements from various modules:\n  - `node:path` for path manipulation (e.g., `basename`, `join`).\n  - `node:fs/promises` for file system operations (e.g., reading and writing files).\n  - `node:crypto` for creating hash values (`createHash`).\n  - Custom modules from the project like `../src/artifacts.mjs`, `../src/extractors/*-extractor.mjs`, `../src/declared-intake.mjs`, and `../src/materializer.mjs`.\n\n### Role in Module\nThe `runBootstrap` function serves as the main entry point for initializing a project's context, handling data extraction from various sources (like detected stack, structure, architecture, and rules), creating necessary templates, managing state through hashes and run records, and ensuring that these components are properly documented and synchronized across the development lifecycle.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

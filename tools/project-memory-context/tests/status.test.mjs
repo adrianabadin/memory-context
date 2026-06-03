@@ -19,11 +19,11 @@ test('summarizeWorklist counts pending, stale, and enriched entries', () => {
     { status: 'stale' },
     { status: 'enriched' },
   ]);
-  assert.deepEqual(summary, { pending: 2, enriched: 1, errors: 0 });
+  assert.deepEqual(summary, { pending: 2, enriched: 1, errors: 0, subagentQueued: 0 });
 });
 
 test('summarizeWorklist handles empty worklist', () => {
-  assert.deepEqual(summarizeWorklist([]), { pending: 0, enriched: 0, errors: 0 });
+  assert.deepEqual(summarizeWorklist([]), { pending: 0, enriched: 0, errors: 0, subagentQueued: 0 });
 });
 
 test('summarizeWorklist counts already_enriched as enriched', () => {
@@ -31,7 +31,7 @@ test('summarizeWorklist counts already_enriched as enriched', () => {
     { status: 'already_enriched' },
     { status: 'error' },
   ]);
-  assert.deepEqual(summary, { pending: 0, enriched: 1, errors: 1 });
+  assert.deepEqual(summary, { pending: 0, enriched: 1, errors: 1, subagentQueued: 0 });
 });
 
 test('buildStatusReport returns structured status with config and worklist', async () => {

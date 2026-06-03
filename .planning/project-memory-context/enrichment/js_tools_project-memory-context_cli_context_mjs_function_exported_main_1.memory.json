@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for orchestrating the execution of project memory context retrieval and visualization. It handles command line argument parsing, determines the project root, loads necessary artifacts, resolves the target context, marks relevant nodes, and outputs the result.\n\n### Primary Inputs\n- Command line arguments (`args`), which are parsed to determine operations like `--refresh` or specific modes.\n- `parsed` object containing parsed command line arguments.\n\n### Output\n- Returns an exit code (0 for success, non-zero for failure).\n- Logs the output of the context rendering if successful.\n\n### Immediate Dependencies\n- Node.js file system (`fs`) functions: `existsSync`, `readFileSync`, `writeFileSync`, `mkdirSync`.\n- Path manipulation utilities: `dirname`, `join`, `resolve` from `node:path`.\n- URL parsing utility: `fileURLToPath` from `node:url`.\n- Custom modules for artifact reading (`readJsonArtifact`), query engine creation (`createQueryEngine`), and target resolution (`resolveTarget`).\n- Local module for rendering context (`renderTargetContext`) and marking nodes in the graph.\n\n### Role in Module\nThe `main` function serves as the entry point for command line execution, managing all aspects of retrieving and presenting project memory contexts based on user inputs or default behaviors.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

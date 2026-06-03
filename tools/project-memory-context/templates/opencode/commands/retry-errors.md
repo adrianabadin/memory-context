@@ -14,7 +14,7 @@ Retry enrichment for symbols currently in error status, deduped by symbol, while
 Run:
 
 ```bash
-{{PMC_BIN}} retry-errors . --concurrency 1 --timeout 300000
+{{PMC_BIN}} retry-errors --concurrency 1 --timeout 300000
 ```
 
 The command reads the worklist, retries each unique `symbolKey` through the configured fallback chain (`local-model -> cloud-api -> agent-subagent`), and stops when all symbols recover or 5 iterations complete. A JSON report is saved to `.planning/project-memory-context/enrichment/retry-report.json` with:

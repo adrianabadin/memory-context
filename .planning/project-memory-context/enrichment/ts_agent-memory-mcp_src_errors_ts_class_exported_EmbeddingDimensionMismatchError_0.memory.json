@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `EmbeddingDimensionMismatchError` class is responsible for creating and managing an error specifically tailored to cases where there is a mismatch between the expected dimensions of embeddings stored in a database (LanceDB) and the actual dimensions found. This error serves as a critical alert during runtime, prompting users to rebuild the database if necessary before using the embedding model.\n\n### Primary Inputs\n- `dbPath`: A string representing the path or identifier of the LanceDB instance where the mismatch is detected.\n- `expectedDimensions`: An integer specifying the number of dimensions that were expected in the embeddings.\n- `actualDimensions`: An optional integer representing the actual number of dimensions found in the database, which could be null if not determined.\n\n### Output\nThe error outputs a descriptive message when instantiated and thrown:\n- If `actualDimensions` is null, it informs the user that the dimensions cannot be determined and suggests rebuilding the database.\n- Otherwise, it specifies the mismatch between expected and actual dimensions and also recommends rebuilding the database.\n\n### Immediate Dependencies\nThe error directly inherits from JavaScript's built-in Error class, leveraging its constructor and properties to ensure compatibility with standard error handling mechanisms in TypeScript (TS).\n\n### Role in Module\nThis class plays a pivotal role in maintaining data integrity checks within the LanceDB module. It ensures that any operations involving embeddings are only executed if the database contains embeddings of the correct dimensions as expected by the embedding model, thereby preventing potential runtime failures due to dimension mismatches.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/errors.ts"
+  ]
+}

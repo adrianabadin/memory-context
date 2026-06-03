@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createQueueFixture` function is responsible for setting up a test fixture that simulates the environment required to run queue symbol enrichment. This includes creating a temporary project directory, populating it with necessary files and structures, and preparing the initial state for testing the enrichment process.\n\n### Primary Inputs\n- **None** (The function uses dynamic creation of paths and filesystem operations which are encapsulated within other functions like `mkdtemp`, `mkdir`, and `writeFile`).\n\n### Output\nAn object containing:\n- `projectRoot`: The path to the temporary project directory.\n- `dirs`: An object containing paths to various directories within the project, such as 'enrichment'.\n- `symbol`: A structured representation of a TypeScript function (`getUser`) with metadata about its location and status.\n- `worklist`: An array containing the symbol for testing purposes.\n- `worklistFile` and `symbolIndexFile`: Paths to JSON files where worklist and symbol index are stored, respectively.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `fs/promises`: For filesystem operations like creating directories and writing files.\n  - `path`: To handle and manipulate file paths.\n  - `os`: To use the temporary directory feature (`tmpdir`).\n- **Local Module Functions**:\n  - `ensureProjectMemoryContextDirs`: Ensures necessary project directories exist (though not explicitly called here, it's a dependency for setup).\n  - `writeJsonArtifact`: A utility function to write JSON data to files.\n\n### Role in Module\nThis function serves as a foundational test fixture setup that initializes the environment and prepares essential artifacts needed for subsequent tests involving queue symbol enrichment. It abstracts away the detailed steps of setting up a project, ensuring consistency across different test cases by providing a predictable starting point.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/enrich-queue-driver.test.mjs"
+  ]
+}

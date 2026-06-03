@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `handlePrune` function is responsible for providing an interface to prune memory store entries based on specified conditions. It abstracts the process of pruning entries from the underlying storage mechanism, making it easier to use and configure this functionality across different modules or applications that utilize the MemoryStore.\n\n### Primary Inputs\n- **store**: An instance of `MemoryStore` which is expected to have a method called `prune`. This method accepts an object with optional parameters:\n  - `dryRun`: A boolean indicating whether to perform a dry run (simulation) without actually deleting any data.\n  - `minStrength`: A number representing the minimum strength value below which entries should be pruned.\n  - `maxDormantDays`: A number representing the maximum number of days an entry can remain dormant before being considered for pruning.\n\n### Output\n- The function returns a promise that resolves to an object with success or error messages, depending on whether the prune operation was successful or not. This is encapsulated in a function (`ReturnType<typeof success>`) which typically constructs a response object indicating the result of the operation.\n\n### Immediate Dependencies\n- **zod**: Although not directly imported here, it's worth noting that zod (or any similar schema validation library) might be used internally for input validation or to ensure consistency in data structures across different parts of the application.\n- **@modelcontextprotocol/sdk/server/mcp.js**: This module likely provides the `MemoryStore` interface and its implementation, which is crucial for handling memory storage operations as specified by this function.\n\n### Role in Module\nThis function serves as a bridge between higher-level logic that requires pruning functionality and the actual implementation details of how data is managed within the store. It abstracts away the complexity of interacting with different types of stores (e.g., databases) and provides a standardized way to configure and execute pruning operations, making it easier to maintain and extend this feature across various components of the system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

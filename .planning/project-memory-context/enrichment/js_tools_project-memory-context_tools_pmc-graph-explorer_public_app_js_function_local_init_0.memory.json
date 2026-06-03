@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `init` function is responsible for initializing the application by loading data, setting up communities, and configuring the graph visualization. It orchestrates the setup of filters, updates statistics, and initializes the graph with interactive node click functionality.\n\n### Primary Inputs\n- None explicitly listed in the code snippet provided. However, it implicitly depends on `state` which is expected to be pre-defined or passed into this function.\n\n### Output\n- The output of the `init` function is implicit and includes setting up the application state (`state`) with necessary properties like `enabledCommunities`, `getEnrichedNodeIds`, `getWorklistStatusMap`, and configuring the graph for visualization and interaction.\n\n### Immediate Dependencies\n- **Functions**: \n  - `loadData()`: Loads data required for the application.\n  - `initFilters(state, communities)`: Initializes filters based on the current state and available communities.\n  - `updateStats(state)`: Updates statistical information about the graph nodes.\n  - `createGraph(state, { onNodeClick, getActiveNodeIds, getEnrichedNodeIds })`: Creates a graph visualization with specified interaction handlers (`onNodeClick`, `getActiveNodeIds`, `getEnrichedNodeIds`).\n- **Imports**:\n  - `loadData()`: From `./graph.js`.\n  - `initFilters(state, communities)`, `updateStats(state)`: From `./filters.js`.\n  - `createGraph(state, { onNodeClick, getActiveNodeIds, getEnrichedNodeIds })`: From `./graph.js`.\n\n### Role in Module\nThe `init` function plays a pivotal role in setting up the application's initial state and configuring its interactive components (filters, graph visualization). It ensures that all necessary data is loaded and processed before rendering any visual elements or enabling user interactions. This setup lays the groundwork for subsequent operations such as node selection and interaction within the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/app.js"
+  ]
+}

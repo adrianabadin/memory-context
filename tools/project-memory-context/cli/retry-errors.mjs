@@ -7,11 +7,15 @@ import { fileURLToPath } from 'node:url';
 import { appendProviderEvent } from '../src/enrichment-attempts.mjs';
 import { resolveEnrichmentConfig, PMC_ENRICHMENT_CONFIG_FILE } from '../src/enrichment-config.mjs';
 import { runEnrichmentWithFallback } from '../src/enrichment-driver.mjs';
+import { countPromptTokens, estimateTokens } from '../src/providers/ollama-token-counter.mjs';
 import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
 import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs';
-import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
+import { appendSubagentQueue } from '../src/subagent-queue.mjs';
+import { persistEnrichmentSuccess, saveWorklistMerged, saveSymbolIndexMerged } from './enrich-queue.mjs';
 import { MAX_RETRY_ITERATIONS, runRetryLoop } from '../src/retry-errors-runner.mjs';
 import { homedir } from 'node:os';
+
+const TOKENIZE_TIMEOUT_MS = parseInt(process.env.PMC_TOKENIZE_TIMEOUT_MS || '30000', 10);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -142,6 +146,8 @@ async function main() {
   console.error(`[retry] Max iterations: ${MAX_RETRY_ITERATIONS} | Timeout: ${args.timeoutMs / 1000}s`);
   console.error(`[retry] ═════════════════════════════════════════════════════\n`);
 
+  const threshold = config.subagentTokenThreshold ?? 5000;
+
   const retrySymbol = async (candidate, iteration) => {
     const startTime = Date.now();
     const entry = worklist.find(e => e.symbolKey === candidate.symbolKey);
@@ -152,6 +158,55 @@ async function main() {
     delete entry.failedAt;
 
     try {
+      // 1. Build FULL (untruncated) prompt for accurate token counting.
+      //    The truncated version (maxCodeLines=80) is used only for the Ollama path.
+      const fullPrompt = await buildSymbolPrompt(entry, projectRoot, Infinity);
+
+      // 2. Count tokens with Ollama's real tokenizer; fall back to chars/4.
+      let tokens;
+      try {
+        const counted = await countPromptTokens({
+          baseUrl: config.localModel.baseUrl,
+          model: config.localModel.model,
+          prompt: fullPrompt,
+          timeoutMs: TOKENIZE_TIMEOUT_MS,
+        });
+        tokens = counted !== null ? counted : estimateTokens(fullPrompt);
+      } catch {
+        tokens = estimateTokens(fullPrompt);
+      }
+
+      // 3. Route to subagent queue if symbol exceeds threshold.
+      //    Sending a 10k+ symbol truncated to 80 lines to Ollama produces
+      //    unreliable enrichment — route it to a Claude subagent instead.
+      if (tokens >= threshold) {
+        try {
+          await appendSubagentQueue(enrichmentDir, {
+            symbolKey: entry.symbolKey,
+            name: entry.name,
+            filePath: entry.filePath,
+            language: entry.language,
+            kind: entry.kind,
+            tokenCount: tokens,
+            prompt: fullPrompt,
+            queuedAt: new Date().toISOString(),
+          });
+        } catch (qErr) {
+          console.error(`[retry] WARN: failed to write subagent-queue for ${entry.name}: ${qErr.message}`);
+        }
+
+        entry.status = 'subagent-queued';
+        delete entry.error;
+        delete entry.failedAt;
+        await saveWorklistMerged(worklistFile, worklist, { loadJson, saveJson });
+
+        const elapsed = Date.now() - startTime;
+        console.error(`  [SUBAGENT] iter ${iteration} | ${entry.name} → subagent-queued (${tokens} tokens, ${elapsed}ms)`);
+
+        return { status: 'subagent-queued', elapsedMs: elapsed, tokenCount: tokens };
+      }
+
+      // 4. < threshold: use truncated prompt (80 lines) for Ollama.
       const prompt = await buildSymbolPrompt(entry, projectRoot);
       const result = await runEnrichmentWithFallback({
         request: { prompt, timeoutMs: args.timeoutMs },
@@ -167,79 +222,49 @@ async function main() {
       }
 
       if (result.status === 'succeeded') {
-        const memoryId = `queue-${safeKey(entry.symbolKey)}`;
-        const enrichedAt = new Date().toISOString();
-        const memoryFile = resolve(enrichmentDir, `${safeKey(entry.symbolKey)}.memory.json`);
-
-        await saveJson(memoryFile, {
+        const { memoryId } = await persistEnrichmentSuccess({
+          symbol: entry,
           content: result.content,
-          category: 'architecture',
-          tags: ['symbol', entry.language, entry.kind, `project:${projectSlug}`, `file:${entry.filePath}`],
+          enrichedByTag: 'enriched-by-retry',
+          source: 'retry-errors',
+          enrichmentDir,
+          worklist,
+          worklistFile,
+          symbolIndex,
+          symbolIndexFile,
+          projectSlug,
+          attempts: result.attempts,
         });
-
-        const newAttempts = [...(entry.attempts ?? []), ...(result.attempts ?? [])];
-        Object.assign(entry, {
-          status: 'enriched',
-          memoryId,
-          enrichedAt,
-          error: undefined,
-          failedAt: undefined,
-          attempts: newAttempts,
-        });
-
-        symbolIndex[entry.symbolKey] = {
-          memoryId,
-          graphNodeId: entry.graphNodeId ?? null,
-          codeHash: entry.codeHash,
-          status: 'enriched',
-          lastEnrichedAt: enrichedAt,
-        };
-
-        try {
-          await appendSyncEntry(enrichmentDir, createSyncEntry({
-            action: 'upsert',
-            keyTag: `key:symbol:${safeKey(entry.symbolKey)}`,
-            content: `## ${entry.name}\n\n${result.content}`,
-            category: 'architecture',
-            tags: ['symbol', entry.language, entry.kind, `project:${projectSlug}`, `file:${entry.filePath}`, 'enriched-by-retry'],
-            source: 'retry-errors',
-            symbolKey: entry.symbolKey,
-          }));
-        } catch (syncErr) {
-          console.error(`[retry] WARN: sync append failed for ${entry.name}: ${syncErr.message}`);
-        }
 
         console.error(`  [OK] iter ${iteration} | ${entry.name} (${entry.filePath}:${entry.range.startLine}) — ${Math.round(elapsed / 1000)}s`);
 
-        await saveJson(worklistFile, worklist);
-        await saveJson(symbolIndexFile, symbolIndex);
-
         return { status: 'succeeded', elapsedMs: elapsed, attempts: result.attempts ?? [], memoryId, contentPreview: result.content?.substring(0, 200) };
-      } else {
-        const lastError = result.attempts?.find(a => a.errorMessage)?.errorMessage ?? 'all providers failed';
-        const newAttempts = [...(entry.attempts ?? []), ...(result.attempts ?? [])];
-        Object.assign(entry, {
-          status: 'error',
-          error: lastError,
-          failedAt: new Date().toISOString(),
-          attempts: newAttempts,
-        });
-
-        symbolIndex[entry.symbolKey] = {
-          memoryId: null,
-          graphNodeId: entry.graphNodeId ?? null,
-          codeHash: entry.codeHash,
-          status: 'error',
-          lastEnrichedAt: new Date().toISOString(),
-        };
-
-        console.error(`  [FAIL] iter ${iteration} | ${entry.name} — ${lastError} — ${Math.round(elapsed / 1000)}s`);
-
-        await saveJson(worklistFile, worklist);
-        await saveJson(symbolIndexFile, symbolIndex);
-
-        return { status: 'failed', elapsedMs: elapsed, attempts: result.attempts ?? [], failureReason: lastError };
       }
+
+      const lastError = result.attempts?.find(a => a.errorMessage)?.errorMessage ?? 'all providers failed';
+      const newAttempts = [...(entry.attempts ?? []), ...(result.attempts ?? [])];
+      Object.assign(entry, {
+        status: 'error',
+        error: lastError,
+        failedAt: new Date().toISOString(),
+        attempts: newAttempts,
+      });
+
+      symbolIndex[entry.symbolKey] = {
+        memoryId: null,
+        graphNodeId: entry.graphNodeId ?? null,
+        codeHash: entry.codeHash,
+        status: 'error',
+        lastEnrichedAt: new Date().toISOString(),
+      };
+
+      console.error(`  [FAIL] iter ${iteration} | ${entry.name} — ${lastError} — ${Math.round(elapsed / 1000)}s`);
+
+      await saveWorklistMerged(worklistFile, worklist, { loadJson, saveJson });
+      await saveSymbolIndexMerged(symbolIndexFile, symbolIndex, { loadJson, saveJson });
+
+      return { status: 'failed', elapsedMs: elapsed, attempts: result.attempts ?? [], failureReason: lastError };
+
     } catch (err) {
       const elapsed = Date.now() - startTime;
       entry.status = 'error';
@@ -248,8 +273,8 @@ async function main() {
 
       console.error(`  [ERR] iter ${iteration} | ${entry.name} — ${err.message} — ${Math.round(elapsed / 1000)}s`);
 
-      await saveJson(worklistFile, worklist);
-      await saveJson(symbolIndexFile, symbolIndex);
+      await saveWorklistMerged(worklistFile, worklist, { loadJson, saveJson });
+      await saveSymbolIndexMerged(symbolIndexFile, symbolIndex, { loadJson, saveJson });
 
       return { status: 'failed', elapsedMs: elapsed, attempts: [], failureReason: err.message };
     }
@@ -273,7 +298,10 @@ async function main() {
   });
 
   console.error(`\n[retry] ═════════════════════════════════════════════════════`);
-  console.error(`[retry] DONE — ${result.summary.symbolsRecovered} recovered, ${result.summary.symbolsStillFailing} still failing in ${result.iterations} iterations`);
+  console.error(`[retry] DONE — ${result.summary.symbolsRecovered} recovered, ${result.summary.symbolsSubagentQueued} routed to subagent, ${result.summary.symbolsStillFailing} still failing in ${result.iterations} iterations`);
+  if (result.summary.symbolsSubagentQueued > 0) {
+    console.error(`[retry] ${result.summary.symbolsSubagentQueued} symbol(s) in subagent-queue.json — run /enrich skill to process them.`);
+  }
   console.error(`[retry] Report: ${reportPath}`);
   console.error(`[retry] ═════════════════════════════════════════════════════\n`);
 
@@ -282,6 +310,7 @@ async function main() {
     command: 'retry-errors',
     total: result.summary.symbolsRetried,
     succeeded: result.summary.symbolsRecovered,
+    subagentQueued: result.summary.symbolsSubagentQueued,
     failed: result.summary.symbolsStillFailing,
     iterations: result.iterations,
     maxIterationsReached: result.summary.maxIterationsReached,

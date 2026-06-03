@@ -1,0 +1,22 @@
+{
+  "memory_key": "project-context:known-issues-and-fixes",
+  "title": "Known issues and fixes",
+  "kind": "known-issues-and-fixes",
+  "source_mode": "declared",
+  "summary": "0 known issues recorded.",
+  "body": "- No known issues recorded.",
+  "tags": [
+    "project-context",
+    "project:target-resolver",
+    "issues"
+  ],
+  "source_files": [
+    ".planning/project-memory-context/project-context/declared/known-issues-and-fixes.json"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "a5e196a72a04111d703d049c44b3c75da2271594e9077306600f788ce68b3d06",
+  "updated_at": "2026-05-20T00:04:46.864Z"
+}

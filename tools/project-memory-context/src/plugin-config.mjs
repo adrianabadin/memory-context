@@ -1,25 +1,33 @@
-import { join } from 'node:path';
+export function buildPmcQueryConfig({ installState }) {
+  return {
+    type: 'local',
+    command: ['npx', '--yes', '--package', '@aabadin/project-memory-context', 'pmc-query-server'],
+    enabled: true,
+    environment: {
+      PMC_PROJECT_ROOT: installState.projectRoot,
+    },
+  };
+}
 
-export function buildInjectedPmcConfig({ packageRoot, installState }) {
+export function buildPmcAgentMemoryConfig({ installState }) {
+  return {
+    type: 'local',
+    command: ['npx', '-y', '@aabadin/agent-memory-mcp'],
+    enabled: true,
+    environment: {
+      MEMORY_DB_PATH: installState.memoryDbPath,
+      EMBEDDING_MODEL: 'Xenova/bge-m3',
+      EMBEDDING_DIMENSIONS: '1024',
+      EMBEDDING_POOLING: 'cls',
+    },
+  };
+}
+
+export function buildInjectedPmcConfig({ installState }) {
   return {
     mcp: {
-      'pmc-local-model': {
-        type: 'local',
-        command: ['node', join(packageRoot, 'mcp', 'local-model-server.mjs')],
-        enabled: true,
-        environment: {
-          OLLAMA_BASE_URL: installState.ollamaBaseUrl,
-          OLLAMA_MODEL: installState.ollamaModel,
-        },
-      },
-      'pmc-agent-memory': {
-        type: 'local',
-        command: ['node', join(packageRoot, 'mcp', 'agent-memory-wrapper.mjs')],
-        enabled: true,
-        environment: {
-          MEMORY_DB_PATH: installState.memoryDbPath,
-        },
-      },
+      'pmc-query': buildPmcQueryConfig({ installState }),
+      'pmc-agent-memory': buildPmcAgentMemoryConfig({ installState }),
     },
   };
 }

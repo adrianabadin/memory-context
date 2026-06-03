@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `handleListRecent` function is responsible for creating an asynchronous function that retrieves recent memories from the provided memory store. It takes into account optional parameters for limiting the number of memories retrieved and specifying a category, defaulting to 10 if no limit is specified. The function then returns either a success response with the count and memories or an error response in case of failure.\n\n### Primary Inputs\n- `store`: An instance of `MemoryStore` which is expected to have a method `listRecent` that accepts two parameters: `limit` (number, optional) and `category` (string, optional).\n- `args`: An object containing optional properties `limit` (number) and `category` (string).\n\n### Output\n- A function that returns a promise resolving to an object with keys `count` (number) and `memories` (array of memories), or rejects with an error message.\n\n### Immediate Dependencies\n- The function depends on the existence and correct implementation of `listRecent` method in `MemoryStore`.\n- It uses utility functions `success` and `error` which are not shown here but assumed to be available for generating appropriate responses.\n\n### Role in Module\nThis function serves as a higher-order function, wrapping around the memory store's list functionality to provide a more user-friendly API endpoint that can be easily plugged into larger applications or systems where retrieving recent memories is required. It abstracts away the details of how memories are stored and retrieved, providing a clean interface for clients to interact with the system’s memory management.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

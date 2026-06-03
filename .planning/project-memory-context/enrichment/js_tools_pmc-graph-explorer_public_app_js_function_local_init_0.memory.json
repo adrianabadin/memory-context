@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `init` function is responsible for initializing the application by loading data, setting up communities, and configuring filters and graph visualization.\n\n### Primary Inputs\n- None explicitly passed as parameters; uses internal state (`state`) and methods (`loadData`, `getEnrichedNodeIds`, etc.).\n\n### Output\n- Sets up initial configurations such as enabled communities and assigns functions to `state`.\n- Initializes the graph with callbacks for node click events.\n\n### Immediate Dependencies\n- Imported functions/modules: `createGraph` from \"./graph.js\", `updateSidebar` from \"./sidebar.js\", `initFilters`, `updateStats` from \"./filters.js\", and `loadContext` from \"./context-tracker.js\".\n\n### Role in Module\nThe `init` function serves as the entry point for setting up the application state and user interface, orchestrating data loading and visualization based on internal configurations and interactions.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/app.js"
+  ]
+}

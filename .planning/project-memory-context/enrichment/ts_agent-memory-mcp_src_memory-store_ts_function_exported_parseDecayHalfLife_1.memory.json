@@ -1,5 +1,5 @@
 {
-  "content": "Symbol: parseDecayHalfLife\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:544-551\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+  "content": "### Function: parseDecayHalfLife\n\n**Responsibility:**  \nConverts a string input representing decay half-life into a number, ensuring it adheres to specific constraints.\n\n**Primary Inputs:**  \n- `value`: A string or undefined value representing the decay half-life period.\n\n**Output:**  \n- Returns a number indicating the parsed decay half-life. If invalid, returns 0 (disabled) or defaults to 30 days if input is null/undefined.\n\n**Immediate Dependencies:**  \n- None\n\n**Role in Module:**  \nThis function is used within the `memory-store.ts` module to validate and parse configuration settings related to memory decay half-life, ensuring that the system operates with appropriate time-based parameters for memory management.",
   "category": "architecture",
   "tags": [
     "symbol",

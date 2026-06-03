@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `runStageB` is responsible for running the \"build-worklist\" stage of a project, which involves processing files with specific extensions (like `.ts`, `.mjs`, `.js`, and `.cs`) to generate a worklist. This function ensures that the necessary scripts and environment variables are set up correctly before executing the build process.\n\n### Primary Inputs\n- `projectRoot`: The root directory of the project where the files to be processed reside.\n\n### Output\n- A boolean value: `true` if the stage completes successfully, or `false` otherwise.\n\n### Immediate Dependencies\n- Node.js built-in modules: \n  - `node:path`: For resolving file paths.\n  - `node:url`: To convert file URLs to local paths.\n  - `node:fs/promises`: For file system operations (access, readFile, writeFile, mkdir).\n  - `node:child_process`: For spawning child processes.\n- Custom modules from the project:\n  - `../src/setup-bootstrap.mjs`: Provides functionality for setting up the bootstrap process.\n  - `./install-pmc.mjs`: Handles installation of PMC tools.\n\n### Role in Module\n`runStageB` serves as a critical part of the CLI tool's workflow, ensuring that the build process is executed correctly based on the project structure and configuration settings. It handles file discovery, error handling across different environments (local vs. predefined paths), and logging for user feedback during execution.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": {
+    "f2db5c4e77079ebbe26096a4e349910bf916d528": {
+      "code": "export function computeDecayFactor(updatedAt: string, halfLifeDays: number): number {\r\n  if (halfLifeDays <= 0) return 1;        // decay disabled\r\n  const ageMs = Date.now() - new Date(updatedAt).getTime();\r\n  const ageDays = Math.max(0, ageMs / MS_PER_DAY);\r\n  return Math.pow(0.5, ageDays / halfLifeDays);\r\n}\r",
+      "filePath": "agent-memory-mcp/src/memory-store.ts",
+      "range": {
+        "startLine": 597,
+        "endLine": 602
+      },
+      "cachedAt": "2026-05-30T12:05:59.568Z"
+    }
+  },
+  "updatedAt": "2026-05-30T12:05:59.575Z"
+}

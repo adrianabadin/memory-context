@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**\nThe `markEnrichedSymbolsStale` function marks symbols as stale in the project context worklist if they have been enriched. It updates their status, records the reason for staleness, and logs the changes.\n\n**Primary Inputs:**\n- `dirs`: An object containing directory paths.\n- `projectSlug`: A string representing the project identifier.\n\n**Output:**\n- Updates the worklist file with stale symbols marked.\n- Appends delete entries to the sync manifest for stale symbols.\n\n**Immediate Dependencies:**\n- File system operations (`readFile`, `writeFile`).\n- JSON parsing and stringification.\n- Date manipulation (`toISOString`).\n\n**Role in Module:**\nThis function is part of a larger module responsible for managing project context. It ensures that enriched symbols are marked as stale when changes occur, facilitating the refresh and synchronization of project data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

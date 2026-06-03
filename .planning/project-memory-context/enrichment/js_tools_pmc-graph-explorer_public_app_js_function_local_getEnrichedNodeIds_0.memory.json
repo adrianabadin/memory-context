@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getEnrichedNodeIds` function is responsible for extracting and returning the unique node IDs from the `state.worklistData`. This set of IDs is used to manage and manipulate nodes within the graph, potentially for visualization or further processing.\n\n### Primary Inputs\n- `state.worklistData`: An array containing objects with a property called `graphNodeId`, which represents the ID of a node in the graph.\n\n### Output\n- A new Set containing unique `graphNodeId` values from `state.worklistData`. If `state.worklistData` is not available, it returns an empty set to avoid errors or undefined behavior.\n\n### Immediate Dependencies\n- The function directly depends on the existence and structure of `state.worklistData`, which should be populated with objects having a `graphNodeId` property.\n\n### Role in Module\nThis function serves as a utility to abstract the retrieval of node IDs from application state, facilitating access for other parts of the application that need to interact with these nodes. It supports data manipulation and interaction within modules like visualization or filtering tools.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/app.js"
+  ]
+}

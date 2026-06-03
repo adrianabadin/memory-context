@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `load` function is responsible for reading the contents of a file specified by its name. This function uses Node.js's built-in `fs/promises` module to asynchronously read the file from the filesystem and return its content as a string.\n\n### Primary Inputs\n- **name**: A string representing the name or path of the file to be loaded.\n\n### Output\n- The output is a promise that resolves to a string containing the contents of the specified file.\n\n### Immediate Dependencies\n- `readFile` from `node:fs/promises`: This function is used to read the file content.\n- `fixture(name)`: A placeholder for how you might dynamically generate or reference the path to the fixture based on the filename provided (`name`). The exact implementation of `fixture` isn't shown here, but it would typically involve constructing a full path from the filename using Node.js's `path` module.\n\n### Role in Module\nThe `load` function serves as a utility or helper function within the context of this module, facilitating file reading operations for tests that might require loading fixture files. It abstracts away the details of how and where to read these files, providing a simple interface for accessing data from the filesystem during testing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/symbol-extractor-multilang.test.mjs"
+  ]
+}

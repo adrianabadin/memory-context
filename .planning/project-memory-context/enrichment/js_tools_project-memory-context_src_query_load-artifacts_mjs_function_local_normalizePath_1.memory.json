@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `normalizePath` function is responsible for converting file paths from the Windows format (using backslashes) to a standard Unix format (using forward slashes). This ensures that file paths are consistent and compatible across different operating systems.\n\n### Primary Inputs\n- **filePath**: A string representing the file path which may or may not be in the Windows format.\n\n### Output\n- **normalizedPath**: A string with all backslashes replaced by forward slashes, ensuring the path is in Unix format. If `filePath` is falsy (e.g., null, undefined), it returns an empty string.\n\n### Immediate Dependencies\n- None explicitly listed; this function does not rely on other functions or variables from external modules within its immediate scope.\n\n### Role in Module\nThe `normalizePath` function serves as a utility to maintain path consistency across different environments by standardizing the use of forward slashes, which is particularly useful for Node.js applications that might run on various operating systems including Windows, macOS, and Linux. This helps avoid issues with file system operations where paths are expected in Unix format.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/load-artifacts.mjs"
+  ]
+}

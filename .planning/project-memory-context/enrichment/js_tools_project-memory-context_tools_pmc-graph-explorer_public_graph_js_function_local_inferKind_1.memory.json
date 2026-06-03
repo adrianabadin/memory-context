@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `inferKind` is responsible for determining the kind of an entity based on its label. It does this by checking if the label ends with a file extension (like `.ts`, `.js`, etc.), contains parentheses, or matches any other pattern that could indicate it's either a method or a class.\n\n### Primary Input\n- `label`: A string representing the name or identifier of an entity in the codebase.\n\n### Output\n- The output is a string indicating the kind of the entity: \"file\", \"method\", or \"class\".\n\n### Immediate Dependencies\n- None, as it does not rely on external functions or variables from other modules.\n\n### Role in Module\nThis function serves as a utility to categorize different types of entities within the module or project, helping with organization and navigation through codebase elements based on their type. It is used internally by the `graph.js` file for graph generation or similar purposes where entity classification is necessary.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/graph.js"
+  ]
+}

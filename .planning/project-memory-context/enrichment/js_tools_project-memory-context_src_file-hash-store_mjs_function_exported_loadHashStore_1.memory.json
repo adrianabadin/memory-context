@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadHashStore` function is responsible for loading and parsing a hash store from a file. It reads the contents of the specified file, attempts to parse it as JSON, and returns either the parsed hashes or an empty object if the file does not exist or cannot be parsed.\n\n### Primary Inputs\n- **storePath**: A string representing the path to the file containing the hash store.\n\n### Output\n- **Object**: Returns an object containing the parsed hash store if successful, otherwise returns an empty object `{}`.\n\n### Immediate Dependencies\n- **`node:crypto`:** Used for creating a hash (though not directly in this function).\n- **`node:fs/promises`:** Specifically `readFile` and `stat` are used to read the file contents and check if the file exists.\n- **`node:path`:** Specifically `join` and `relative` are imported but not used in this function.\n\n### Role in Module\nThis function serves as a utility to load and handle the hash store from a specified file path, providing a consistent interface for retrieving stored hashes regardless of whether they exist or need to be initialized. It abstracts away error handling and file reading operations into a single function call, making it easier to use throughout the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/file-hash-store.mjs"
+  ]
+}

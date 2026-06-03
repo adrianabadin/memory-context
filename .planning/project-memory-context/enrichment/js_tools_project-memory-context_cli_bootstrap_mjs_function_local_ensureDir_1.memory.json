@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `ensureDir` function is responsible for checking if a directory exists. If the directory does not exist, it attempts to create it. This function uses Node.js's `fs/promises` module to handle file system operations asynchronously.\n\n### Primary Inputs\n- **dir**: A string representing the path to the directory that needs to be checked or created.\n\n### Output\n- **Boolean**: Returns `true` if the directory exists, otherwise returns `false`. If the directory does not exist and is successfully created, it also returns `true`.\n\n### Immediate Dependencies\n- **Node.js's fs/promises module**: Specifically, the `access`, `constants`, and `mkdir` functions are used to check for the existence of a directory and create it if it doesn't exist.\n\n### Role in Module\nThe `ensureDir` function serves as a utility to ensure that a specific directory exists before proceeding with other operations. This is particularly useful in scenarios where a script needs to perform file system operations based on whether directories are present or not, ensuring that all necessary directories for operation are pre-created.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `nodeRadius` function is responsible for determining the radius of a node in a graph visualization based on its label. This decision is influenced by whether the label ends with certain file extensions (like `.ts`, `.js`, etc.) or contains parentheses, which might indicate different types of nodes.\n\n### Primary Inputs\n- `node`: An object representing a node in the graph, expected to have a property called `label`.\n\n### Output\n- A number that represents the radius for drawing the circle around the node in the graph visualization. This can be either 5, 8, or 12 pixels depending on the conditions specified in the function.\n\n### Immediate Dependencies\nThere are no external dependencies mentioned within the function itself; it operates solely based on the properties of the input `node`.\n\n### Role in Module\nThis function plays a crucial role in visualizing and differentiating nodes in the graph explorer module, helping to visually distinguish between different types of elements (e.g., script files vs. functions defined within them). This aids in better readability and navigation within the visualization.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/graph.js"
+  ]
+}

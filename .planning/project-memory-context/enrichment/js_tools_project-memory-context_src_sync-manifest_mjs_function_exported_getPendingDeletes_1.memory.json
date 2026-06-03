@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getPendingDeletes` function is responsible for extracting from the manifest those entries that have a status of \"pending\" and an action of \"delete\". This function serves as a filter to identify which items need to be deleted based on their current state within the system.\n\n### Primary Inputs\n- **manifest**: An object containing `entries`, where each entry is expected to have at least two properties: `status` (a string) and `action` (also a string).\n\n### Output\n- An array of objects that meet the criteria specified in the function's logic. Each object corresponds to an entry from the manifest that has both its status set to \"pending\" and its action set to \"delete\".\n\n### Immediate Dependencies\n- The function directly depends on the properties `status` and `action` within each entry of the `manifest.entries`.\n\n### Role in Module\nThis function plays a crucial role in managing the lifecycle of entries within the system by identifying which items need to be deleted when their status is no longer needed. It helps maintain the integrity and organization of data by ensuring that only those marked for deletion are removed from further processing or storage.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

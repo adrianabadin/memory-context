@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `tokenize` function is responsible for converting the input string into an array of tokens, where each token consists of lowercase alphanumeric characters and has at least 2 characters. This process involves:\n1. Converting the entire string to lowercase.\n2. Splitting the string by non-alphanumeric characters (excluding letters and numbers).\n3. Trimming any whitespace from individual tokens.\n4. Filtering out tokens that are shorter than 2 characters.\n\n### Primary Inputs\n- `value`: The input string that needs to be tokenized.\n\n### Output\n- An array of strings, where each string is a token meeting the specified criteria (lowercase alphanumeric and at least 2 characters long).\n\n### Immediate Dependencies\n- None explicitly listed in the code snippet provided; however, it assumes `String` and `Array.prototype.filter` are available globally or via import/module setup.\n\n### Role in Module\nThe `tokenize` function serves as a utility to preprocess input data (in this case, strings) by breaking them down into manageable tokens. This is particularly useful for tasks that require further analysis or manipulation of individual words or terms within the text, such as search queries, keyword extraction, or natural language processing tasks.\n\n### Example Usage\n```javascript\nconst value = \"Hello, World! This is a Test.\";\nconst tokens = tokenize(value);\nconsole.log(tokens); // Output: [\"hello\", \"world\", \"this\", \"is\", \"a\", \"test\"]\n```\n\nThis function helps in preparing the input for subsequent processing steps by ensuring that the data is normalized and filtered appropriately, which can improve the accuracy and efficiency of downstream operations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/orchestrator.mjs"
+  ]
+}

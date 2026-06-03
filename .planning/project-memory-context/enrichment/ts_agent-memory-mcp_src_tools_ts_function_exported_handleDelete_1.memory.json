@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `handleDelete` function is responsible for deleting an item from the provided `MemoryStore`.\n\n**Primary Inputs**: \n- `store`: An instance of `MemoryStore`.\n- `args`: An object containing a single property, `id`, which is a string representing the ID of the item to be deleted.\n\n**Output**: \n- Returns a promise that resolves to either a success response indicating the deletion was successful or an error response if the deletion failed.\n\n**Immediate Dependencies**: \n- `store.delete(args.id)`: This method is called on the `MemoryStore` instance to perform the deletion.\n- `success` and `error` functions: These are used to format the response, likely defined elsewhere in the module or imported from another file.\n\n**Role in Module**: \n- Acts as a handler function for delete operations within the application, abstracting the logic for deleting items from the store and returning appropriate responses.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

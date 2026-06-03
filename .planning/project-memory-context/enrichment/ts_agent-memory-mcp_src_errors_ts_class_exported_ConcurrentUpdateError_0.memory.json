@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `ConcurrentUpdateError` class is responsible for creating and managing an error specifically designed to indicate that there has been a conflict due to concurrent updates. This error helps in identifying the memory item, the expected version, and the actual version encountered during the update attempt.\n\n### Primary Inputs\n- **id**: A string representing the unique identifier of the memory item being updated.\n- **expectedVersion**: An integer representing the version that was expected to be present when updating the memory item.\n- **actualVersion**: An optional integer or `null` representing the actual version found on the memory item during the update attempt. If no version is found, it defaults to `null`.\n\n### Output\nWhen an instance of this error is thrown, it provides a clear and concise message detailing the conflict: \"Concurrent update conflict on memory {id}: expected version {expectedVersion}, actual {actualVersion}\". The exact wording varies based on whether the actual version was found (`version ${actualVersion}`) or not (`deleted by another writer`).\n\n### Immediate Dependencies\n- **Error Class**: Inherits from JavaScript's built-in `Error` class, which is used to create errors that can be thrown and caught. This inheritance allows for standard error handling mechanisms in TypeScript (and other languages) to work with custom errors like this one.\n\n### Role in Module\nThis class plays a crucial role in maintaining data integrity within the module by signaling when concurrent updates occur, which could lead to inconsistent or corrupted states if not handled properly. It helps in debugging and improving robustness of applications that manage shared resources using versioning mechanisms.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/errors.ts"
+  ]
+}

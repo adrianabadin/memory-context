@@ -1,0 +1,168 @@
+{
+  "entries": [
+    {
+      "id": "30d8d820-2810-4a17-923f-f8598b53def3",
+      "action": "upsert",
+      "key_tag": "key:project-context:stack-runtime",
+      "content": "# Project stack and runtime\n\nLanguages: . Frameworks: .\n\n- Languages: Not detected\n- Runtimes: node\n- Frameworks: Not detected\n- Package managers: Not detected",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "stack",
+        "key:project-context:stack-runtime"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "111d7295-ebb1-48d7-a1ba-e776e69410f7",
+      "action": "upsert",
+      "key_tag": "key:project-context:dependencies-summary",
+      "content": "# Dependency summary\n\nCritical dependencies: none.\n\n- Critical: Not detected\n- Testing: Not detected",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "dependencies",
+        "key:project-context:dependencies-summary"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "b6325ada-edfe-46cd-b413-4bf2e94dd181",
+      "action": "upsert",
+      "key_tag": "key:project-context:integrations-summary",
+      "content": "# Integration summary\n\nDetected services: none.\n\n- Services: Not detected",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "integrations",
+        "key:project-context:integrations-summary"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "8267f98c-b79d-4530-a002-b0ab12b02cf8",
+      "action": "upsert",
+      "key_tag": "key:project-context:architecture-current",
+      "content": "# Current architecture\n\nPattern: detected-structure. Entry points: none.\n\n- Pattern: detected-structure\n- Entry points: Not detected",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "architecture",
+        "current-state",
+        "key:project-context:architecture-current"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "2defeee9-76e8-4e52-ab8e-31ff3d09ecdf",
+      "action": "upsert",
+      "key_tag": "key:project-context:architecture-target",
+      "content": "# Target architecture\n\nNo target architecture declared.\n\nNo target architecture declared.",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "architecture",
+        "target-state",
+        "key:project-context:architecture-target"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "0e9ab223-475f-47cb-80ea-3db9bd5a31f9",
+      "action": "upsert",
+      "key_tag": "key:project-context:structure-summary",
+      "content": "# Project structure summary\n\nRoot directories: none.\n\n- Root directories: Not detected\n- Key subtrees: Not detected\n- Entry points: Not detected",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "structure",
+        "key:project-context:structure-summary"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "9356a71d-7003-4506-aa74-371f214e8881",
+      "action": "upsert",
+      "key_tag": "key:project-context:technical-rules",
+      "content": "# Technical rules\n\n\n\n",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "rules",
+        "key:project-context:technical-rules"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "6a8a7723-b33a-4ee8-97f9-3e156761cd87",
+      "action": "upsert",
+      "key_tag": "key:project-context:project-requirements",
+      "content": "# Project requirements\n\n\n\n- No declared requirements.",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "requirements",
+        "key:project-context:project-requirements"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    },
+    {
+      "id": "ded79c0e-9b03-4eae-948a-118ab496bb65",
+      "action": "upsert",
+      "key_tag": "key:project-context:known-issues-and-fixes",
+      "content": "# Known issues and fixes\n\n0 known issues recorded.\n\n- No known issues recorded.",
+      "category": "architecture",
+      "tags": [
+        "project-context",
+        "project:target-resolver",
+        "issues",
+        "key:project-context:known-issues-and-fixes"
+      ],
+      "status": "pending",
+      "source": "project-context",
+      "symbolKey": null,
+      "addedAt": "2026-05-20T00:04:46.888Z",
+      "syncedAt": null
+    }
+  ]
+}

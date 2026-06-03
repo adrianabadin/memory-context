@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `resolveTarget` function is responsible for determining the appropriate mode and target path based on the provided input. It supports three modes: 'query', 'file', and 'symbol'. The function uses heuristics to decide which mode to use, preferring 'file' if possible, otherwise falling back to 'query'. If no clear mode can be determined from the inputs, it defaults to 'query'.\n\n### Primary Inputs\n- `engine`: An object that provides methods for symbol resolution and path normalization.\n- `explicitMode`: A string indicating a preferred mode ('query', 'file', or 'symbol'). It is optional and defaults to null.\n- `target`: The target path or identifier to be resolved, which could represent either a file path or a symbol name.\n\n### Output\nThe function returns an object with two properties:\n- `mode`: A string indicating the resolution mode ('query', 'file', or 'symbol').\n- `target`: The normalized target path if in 'file' mode, otherwise the original target input.\n\n### Immediate Dependencies\n- `normalizeTargetPath(target)`: Normalizes the given target path to ensure it is in a consistent format.\n- `resolveSymbolTarget(engine, target)`: Attempts to resolve the target as a symbol using the provided engine.\n- `looksLikePath(target)`, `looksLikeBareFilename(target)`, and `engine.findSymbolKeysByFilePath(normalizedTarget)`: Helper functions used to determine if the target looks like a file path or contains any symbols related to the given file path.\n\n### Role in Module\nThe `resolveTarget` function serves as a central point for resolving targets across different modes within the module, providing a unified interface for handling various types of inputs and ensuring that appropriate resolution strategies are applied based on the input context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/target-resolver.mjs"
+  ]
+}

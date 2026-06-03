@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `spawnCheck` function is responsible for executing a command-line binary (`bin`) with specified arguments (`args`) and capturing its exit code, standard output, and standard error.\n\n**Primary Inputs**:\n- `bin`: The command-line binary to execute.\n- `args`: An array of arguments to pass to the binary.\n\n**Output**: \n- An object containing:\n  - `exitCode`: The exit status of the executed command (defaulting to 1 if undefined).\n  - `stdout`: The standard output from the command (defaulting to an empty string if undefined).\n  - `stderr`: The standard error from the command (defaulting to an empty string if undefined).\n\n**Immediate Dependencies**:\n- `spawnSync` from 'node:child_process': Used to execute the binary synchronously.\n- Default values for `status`, `stdout`, and `stderr` properties of the result object.\n\n**Role in Module**: \nThe `spawnCheck` function serves as a utility within the module, enabling other functions like `runDoctor` to execute external commands and handle their outputs effectively. It abstracts the command execution process, providing a consistent interface for capturing and returning command results.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/doctor.mjs"
+  ]
+}

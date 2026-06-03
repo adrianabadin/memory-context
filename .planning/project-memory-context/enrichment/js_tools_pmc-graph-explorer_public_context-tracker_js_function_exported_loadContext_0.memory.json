@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadContext` function is responsible for fetching and retrieving the context data from an API endpoint. It handles asynchronous HTTP requests to retrieve JSON data, which represents the current state or configuration of a system or application.\n\n### Primary Inputs\n- **None** (explicit inputs are not mentioned in the provided code snippet)\n\n### Output\n- An object containing `activeNodeIds`, which is an array of IDs representing active nodes in the context. If there's an error during the fetch operation, it defaults to returning an empty array (`[]`).\n\n### Immediate Dependencies\n- **fetch**: A global function used for making HTTP requests, part of the browser API or Node.js environment depending on where this code is executed.\n- **res.ok**: Property indicating if the response was successful (status code 200-299).\n- **res.json()**: Method to parse the JSON response from the fetch call.\n\n### Role in Module\nThis function serves as a utility for fetching and managing context data, which can be used by other parts of the application or module where it is imported and utilized to maintain state or provide real-time updates based on dynamic node activities.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/context-tracker.js"
+  ]
+}

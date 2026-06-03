@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `UpdateRequest` interface is responsible for defining the structure of an update request object that can be used to modify or add information to memory within a system. It provides a standardized way to encapsulate data related to content, category, and tags which are essential components for managing and retrieving memories efficiently.\n\n### Primary Inputs\n- `content`: A string representing the textual content of the update request. This could be used to describe or define what is being updated in memory.\n- `category`: An optional enum (`MemoryCategory`) that specifies the category or type of the memory being updated. This helps in organizing and categorizing memories within a system.\n- `tags`: An optional array of strings representing tags associated with the update request. Tags can be used for searching, filtering, or grouping similar memories.\n\n### Output\nThis interface does not define an output explicitly but is intended to be used as a type definition in functions or methods that handle memory updates. It ensures consistency and correctness of data passed into these operations.\n\n### Immediate Dependencies\n- `MemoryCategory`: An enum defined elsewhere, which specifies the possible categories for memories. This dependency exists because the category field in an `UpdateRequest` must be one of the values specified by this enum.\n\n### Role in Module\nThe `UpdateRequest` interface serves as a fundamental data structure within the module responsible for managing memory updates. It ensures that any update operation complies with a standardized format, facilitating easier integration and maintenance across different parts of the system where memory updates might be required.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

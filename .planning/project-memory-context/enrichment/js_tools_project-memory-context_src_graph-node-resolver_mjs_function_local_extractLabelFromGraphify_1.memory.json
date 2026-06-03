@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `extractLabelFromGraphify` is responsible for **cleaning up and normalizing labels** extracted from Graphify data. This involves removing leading dots (`'.'`) and trailing parentheses with a dollar sign (`'$'`), which are common placeholders or markers in the data format used by Graphify.\n\n### Primary Inputs\n- `raw`: A string that represents a label potentially containing leading dots and/or trailing parentheses with a dollar sign.\n\n### Output\n- The function returns a cleaned version of the input string, where any leading dot and any occurrence of `'(}$'` are removed.\n\n### Immediate Dependencies\n- **String Manipulation**: The function relies on JavaScript's `.replace()` method to remove specific patterns from the input string. This involves regular expressions that match the starting character (dot) and a trailing pattern (`'$'`).\n\n### Role in Module\nThis function is part of a larger system designed for handling and processing data extracted from Graphify, likely used within applications or tools where such normalized labels are required for further operations or displays. It ensures consistency and cleanliness of the data by standardizing its format as soon as it enters the pipeline.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

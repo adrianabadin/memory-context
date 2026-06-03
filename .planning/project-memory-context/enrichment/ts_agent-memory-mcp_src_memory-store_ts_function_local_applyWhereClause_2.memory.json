@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**  \nThe `applyWhereClause` function is responsible for constructing and applying a WHERE clause to a search query based on provided filters.\n\n**Primary Inputs:**\n- `search`: An object that has a `where` method, which is used to apply the constructed WHERE clause.\n- `filters`: An object containing optional filter criteria such as `category`, `after`, and `before`.\n\n**Output:**  \nThe function returns the modified search object with the WHERE clause applied.\n\n**Immediate Dependencies:**\n- The function uses a helper function `sanitise` (not shown in the provided code) to sanitize input values before constructing the WHERE clause.\n- It relies on the `where` method of the `search` object, which is expected to accept a string representing the WHERE clause.\n\n**Role in Module:**  \nThis function plays a crucial role in filtering search results by dynamically building and applying a WHERE clause based on user-specified filters. It ensures that only records matching the specified criteria are returned, enhancing the flexibility and utility of the search functionality within the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

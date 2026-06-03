@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `withManifestLock` function is responsible for ensuring that only one operation (specified by the `operation` parameter) can be performed on the manifest file at `enrichmentDir` at a time. It achieves this by using a map (`manifestWriteLocks`) to track ongoing operations and ensure mutual exclusion.\n\n### Primary Inputs\n- **enrichmentDir**: A directory path where the manifest file is located or should be created.\n- **operation**: An asynchronous function that specifies what operation needs to be performed on the manifest file. This could include reading, writing, updating, etc., the manifest file.\n\n### Output\n- The output of `withManifestLock` is the result of the `operation` function if it completes successfully. If the `operation` fails for any reason (e.g., a thrown error), this failure will be caught and ignored, allowing other operations to proceed without being blocked by an unsuccessful operation.\n\n### Immediate Dependencies\n- **node:fs/promises**: For file system operations like reading from and writing to files.\n- **node:path**: To handle and manipulate file paths.\n- **node:crypto**: Specifically `randomUUID` for generating unique identifiers, though it's only used in the final block of code for debugging or logging purposes (not directly related to file operations).\n\n### Role in Module\nThe `withManifestLock` function serves as a utility to manage concurrent access to resources that are being modified by potentially multiple parts of the application. By ensuring that only one operation can be active at a time, it helps prevent race conditions and data corruption when dealing with files or other shared resources. This function is crucial for maintaining the integrity and consistency of operations on the manifest file in the given directory.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

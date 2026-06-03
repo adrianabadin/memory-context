@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `extractRuby` function is responsible for extracting Ruby class and method symbols from a given list of lines representing the source code of a Ruby file. It identifies classes and methods using regular expressions, determines their scope by parsing the structure of the code (e.g., nested blocks like `class`, `def`, etc.), and constructs symbol objects with metadata including the type, name, arity, and location within the file.\n\n### Primary Inputs\n- **lines**: An array of strings where each string represents a line of Ruby source code.\n- **filePath**: A string representing the path to the file from which the lines are extracted.\n\n### Output\n- **symbols**: An array of objects, each representing a symbol (class or method) with details like type, name, arity, and location in the original source code.\n\n### Immediate Dependencies\n- **Regular Expressions**: `classRe` for identifying classes and `methodRe` for identifying methods.\n- **makeSymbol Function**: A helper function to construct the symbol objects.\n\n### Role in Module\nThe `extractRuby` function plays a crucial role in the module responsible for extracting symbols from various programming languages, specifically targeting Ruby. It is part of the larger system designed to parse and analyze source code files, providing metadata about identified elements such as classes, functions, variables, etc., which can be used for further processing or analysis like linting, documentation generation, or refactoring tools.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

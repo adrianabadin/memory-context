@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `PruneResult` interface is responsible for defining the structure of an object that represents the result of a pruning operation. It encapsulates information about how many items were pruned, inspected, and whether it was a dry run or not. Additionally, it contains details about each candidate item being considered for pruning, including its ID, content, strength (presumably indicating relevance), and reason for potential pruning.\n\n### Primary Inputs\n- `pruned`: A number representing the count of items that were successfully pruned.\n- `inspected`: A number representing the count of items that were inspected during the operation.\n- `dryRun`: A boolean indicating whether the pruning was a simulated (dry run) or actual execution.\n- `candidates`: An array of objects, each containing:\n  - `id`: A string identifier for the candidate item.\n  - `content`: The content of the candidate item.\n  - `strength`: A numerical value indicating how strongly the item is considered for pruning (likely relevance).\n  - `reason`: A string explaining why the item was included as a candidate for pruning.\n\n### Output\nThe output of this interface is an object that conforms to the structure defined by `PruneResult`, which can be used across different parts of the application or module where pruning operations are performed, ensuring consistency in data representation and handling.\n\n### Immediate Dependencies\n- None explicitly listed as dependencies within the provided code snippet; however, this interface might be used in conjunction with other types or interfaces that define how to handle and manipulate these candidate items during a pruning operation.\n\n### Role in Module\nThe `PruneResult` interface serves as a crucial part of the module's type definitions related to memory management or data manipulation where selective removal (pruning) of elements based on certain criteria is necessary. It ensures that any function or process which produces a prune result does so in a standardized format, facilitating interoperability and simplifying debugging or maintenance tasks across different components of the system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

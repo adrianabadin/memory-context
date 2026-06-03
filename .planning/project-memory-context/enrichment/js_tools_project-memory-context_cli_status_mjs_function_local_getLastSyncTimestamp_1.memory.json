@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getLastSyncTimestamp` function is responsible for retrieving the last synchronization timestamp from a specified directory. It attempts to read and parse a JSON file named `sync-manifest.json` located within the given enrichment directory. If the file exists, it returns its modification time in ISO format; otherwise, it returns `null`.\n\n### Primary Inputs\n- **enrichmentDir**: A string representing the path to the directory where the synchronization manifest is stored.\n\n### Output\n- Returns a string representing the last synchronization timestamp in ISO 8601 format if the file exists and can be read, otherwise returns `null`.\n\n### Immediate Dependencies\n- **`node:fs/promises`**: For reading file system paths and checking file status.\n- **`node:path`**: To construct the path to the sync manifest file.\n- **`node:url`**: To convert a URL object to a file path string (though not directly used here, it's part of the import context).\n\n### Role in Module\nThis function serves as a utility to fetch synchronization metadata from a specific directory within the application, providing useful information about when the last sync operation occurred. It is particularly useful for debugging and monitoring purposes, allowing users or other modules to check the status of data updates without directly accessing file system details.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

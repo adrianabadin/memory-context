@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for handling command line arguments and orchestrating the retrieval of project status information, including enrichment queue state, worklist counts, configuration location, agent type, and last sync timestamp. It then outputs this information in a structured JSON format.\n\n### Primary Inputs\n- `args`: Command line arguments passed to the script, excluding the first two elements which are typically used by Node.js for its own purposes (e.g., file path). This input is optional and defaults to `process.argv.slice(2)` if not provided.\n\n### Output\n- The function outputs a JSON stringified representation of the status report, including all detailed information about the project's current state as gathered by other functions (`buildStatusReport`).\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `process`: Accesses command line arguments via `process.argv`.\n  - `node:fs/promises`: Used for asynchronous file system operations (though not directly in this function, it's imported for potential future use).\n  - `node:path`: For path manipulation to resolve and join paths safely.\n  - `node:url`: Converts URL objects to file paths for local file system access.\n- **Local Module Functions**:\n  - `buildStatusReport({ projectRoot })`: This function is used to gather all necessary status details about the project, which are then formatted into a JSON object and printed.\n\n### Role in Module\nThe `main` function serves as the entry point for the CLI tool, interpreting user commands (via arguments), performing relevant operations based on those commands, and presenting the results back to the user. It acts as an orchestrator that ties together various functionalities within the module to provide a cohesive command line interface experience.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

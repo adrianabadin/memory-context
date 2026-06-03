@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseSymbol` function is responsible for parsing a symbol key into a structured object containing information about the symbol. This includes extracting details such as the file path, name, graph node ID, memory ID, status, and referencing the semantic summary.\n\n### Primary Inputs\n- **symbolKey**: A string representing the symbol to be parsed.\n- **entry**: An optional object that may contain properties like `graphNodeId`, `memoryId`, and `status`.\n- **semanticSummary**: Another optional parameter which is expected to be an object containing semantic information about the symbol.\n\n### Output\nThe function returns an object with the following properties:\n- **symbolKey**: The original symbol key provided as input.\n- **filePath**: Extracted file path from the symbol key, normalized using `normalizePath`.\n- **name**: The name of the symbol extracted from the symbol key.\n- **graphNodeId**: A value taken from the `entry` object or defaulting to `null` if not available.\n- **memoryId**: Another value from the `entry` object or set to `null` if unavailable.\n- **status**: Yet another value from the `entry` object, defaulting to `null` if absent.\n- **semanticSummary**: The semantic summary provided as input.\n\n### Immediate Dependencies\nThe function directly depends on:\n- **String(symbolKey ?? '')**: To ensure that even a falsy symbol key is treated as a string for splitting.\n- **parts.length >= 2 ? normalizePath(parts[1]) : ''**: Uses the second part of the split result to determine the file path, normalizing it if present.\n- **entry?.graphNodeId ?? null**, **entry?.memoryId ?? null**, and **entry?.status ?? null**: These optional chaining operations ensure that default values are used when `entry` is not provided or does not contain the relevant properties.\n\n### Role in Module\nThe `parseSymbol` function serves as a utility to decode and structure complex symbol keys, making it easier to extract meaningful information from them for further processing within the module or by other parts of the application that might consume this structured data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/load-artifacts.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `runDoctor` function is responsible for running a series of diagnostic checks to ensure the system meets certain requirements or configurations necessary for the application to function correctly. It verifies aspects such as Node.js version, Python installation and configuration, Graphify tool availability, memory management settings, and database paths.\n\n### Primary Inputs\n- `env`: An object representing environment variables (default is `process.env`).\n- `fetchImpl`: A fetch implementation for network requests (default is `globalThis.fetch`).\n- `resolvePythonBin`: A function to resolve the Python binary path.\n- `resolveGraphify`: A function to resolve the Graphify tool path.\n- `spawnCheck`: A function to spawn check processes (optional, default is `null`).\n\n### Output\nThe output is an object containing the results of all diagnostic checks in a structured format. The specific details returned by each check are not detailed here as they would depend on the implementation of those checks.\n\n### Immediate Dependencies\n- **Node.js fs/promises**: For file system operations, used to access and read files or directories.\n- **Node.js os**: Provides `homedir()` for retrieving the home directory path.\n- **JavaScript Promises**: Used in asynchronous operations across multiple checks.\n\n### Role in Module\nThe `runDoctor` function serves as a central entry point for running all diagnostic checks within the module. It orchestrates and aggregates results from various check functions, providing a unified interface to run these checks with optional configurations for environment variables, fetch implementation, Python binary resolution, Graphify tool resolution, and process spawning capabilities. This role is crucial for maintaining consistency in how requirements are verified across different parts of the system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/doctor.mjs"
+  ]
+}

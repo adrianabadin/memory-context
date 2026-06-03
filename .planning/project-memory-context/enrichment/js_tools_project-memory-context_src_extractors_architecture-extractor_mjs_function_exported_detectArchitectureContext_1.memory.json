@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `detectArchitectureContext` is responsible for analyzing the structure of a software project by examining its graph nodes and identifying entry points that are likely to be main application components. This includes detecting files such as `main.[cm]tsx?` or `app.[cm]tsx?`, which are typical names for entry points in many JavaScript/TypeScript projects.\n\n### Primary Inputs\n- **graph**: An object expected to contain a list of nodes, where each node has properties like `label` and `id`. These labels can be file paths or identifiers that might represent the main components of the application.\n\n### Output\nThe function outputs an object containing:\n- **pattern**: A constant string 'detected-structure'.\n- **entryPoints**: An array of strings, each representing a path to a detected entry point (main application component). This is filtered based on whether they match patterns like `main.[cm]tsx?` or `app.[cm]tsx?.\n- **graphRefs**: An array of strings where each string represents a reference to a node in the graph, using the format `node:<label>`.\n\n### Immediate Dependencies\nThe function directly depends on:\n- The structure and properties of the `graph` object. Specifically, it assumes that `graph.nodes` is an array and that each node has at least one property among `label`, `id` which can be used to identify entry points.\n\n### Role in Module\nThis function plays a crucial role in architecture detection by identifying key components of the application based on naming conventions. It helps in defining what are considered main modules or entry points, which is essential for further analysis, visualization, or manipulation within the project context. This information can be used to categorize and prioritize tasks related to code refactoring, testing, or optimization, focusing efforts where they will have the most impact on the application's core functionality.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/architecture-extractor.mjs"
+  ]
+}

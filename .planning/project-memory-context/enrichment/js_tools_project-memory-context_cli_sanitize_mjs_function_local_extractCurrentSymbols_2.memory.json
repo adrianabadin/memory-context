@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `extractCurrentSymbols` function is responsible for extracting top-level symbols from specified files within a project and calculating their code hashes.\n\n**Primary Inputs**:\n- `projectRoot`: The root directory of the project.\n- `files`: An array of file paths relative to the project root from which symbols need to be extracted.\n\n**Output**: \n- Returns an array of symbol objects, each containing details about the symbol and its associated code hash.\n\n**Immediate Dependencies**:\n- `readFile` from 'node:fs/promises' for reading file contents.\n- `extractTopLevelSymbols` from '../src/symbol-extractor.mjs' for extracting symbols from file content.\n- `codeHash` (not explicitly imported but used in the function) for generating code hashes.\n\n**Role in Module**: \nThis function is a crucial part of the module, facilitating the process of symbol extraction and hash calculation, which are essential for maintaining project memory context and ensuring synchronization across different parts of the system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/sanitize.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe code snippet is responsible for setting up the directory path for the current module based on its file URL, which allows it to operate correctly regardless of where it is run from. This setup is crucial for relative paths and imports within the module.\n\n### Primary Inputs\n- `import.meta.url`: A standard JavaScript meta property that provides the URL of the currently executing module.\n\n### Output\n- `__dirname`: The resolved directory name derived from the file URL, which represents the directory where the current module is located.\n\n### Immediate Dependencies\n- **`node:path`**: Provides utilities for handling and transforming file paths. Specifically, it uses `dirname` to get the directory name of the path and `fileURLToPath` to convert a file URL to a file path.\n- **`node:url`**: Converts a Uniform Resource Locator (URL) object to a Node.js file path string.\n\n### Role in Module\nThis code snippet plays a crucial role in ensuring that all relative paths and imports within the module are correctly resolved based on the actual location of the script file, making it portable across different environments and run locations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/refresh-context.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `ensureProjectMemoryContextDirs` function is responsible for ensuring that all necessary directories for the project memory context are created within a specified project root directory. It creates a structured directory hierarchy to support various aspects of project management and state tracking.\n\n**Primary Inputs**: \n- `projectRoot`: A string representing the root directory of the project where the memory context directories will be created.\n\n**Output**: \n- An object containing paths to all created directories, organized by their purpose within the project memory context.\n\n**Immediate Dependencies**: \n- Node.js built-in modules: `fs/promises` for file system operations and `path` for path manipulation.\n\n**Role in Module**: \nThis function serves as a foundational utility within the module, setting up the directory structure required for other components to operate. It ensures that all necessary directories exist before any files are written or read, preventing errors related to missing paths.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/artifacts.mjs"
+  ]
+}

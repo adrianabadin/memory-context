@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**\nThe `applyAttemptsToEntry` function is responsible for updating an entry by incorporating the results of multiple enrichment attempts.\n\n**Primary Inputs:**\n- `entry`: The original entry object that needs to be updated.\n- `attempts`: An array of attempt objects containing the results of previous enrichment operations.\n\n**Output:**\n- Returns a new object (`updated`) which is a copy of the original `entry` with additional information from the attempts applied.\n\n**Immediate Dependencies:**\n- None, as it does not rely on any external functions or modules within its scope.\n\n**Role in Module:**\nThis function plays a crucial role in processing enrichment results by merging them into the original entry data. It ensures that all previous attempts' outcomes are considered when updating the entry, which is essential for maintaining accurate and comprehensive records of enrichment processes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

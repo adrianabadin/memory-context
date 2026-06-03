@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `deriveRuntimeState` function is responsible for analyzing the current state of a task or job represented by `queueState` and determining its runtime status. It assesses whether the task is idle, running, finished, failed, or stalled based on the provided timestamp (`now`) and a configurable stale period (`staleAfterSeconds`).\n\n### Primary Inputs\n- **queueState**: An object containing information about the task's state, including its PID, timestamps for starting, heartbeating, and finishing, and an error message if applicable.\n- **now**: A timestamp representing the current time when the function is called.\n- **staleAfterSeconds** (optional): The number of seconds after which a running task is considered stale. Defaults to `DEFAULT_STALE_AFTER_SECONDS`.\n\n### Output\nThe output is an object with two properties:\n- **state**: A string indicating the current state of the runtime ('idle', 'running', 'finished', 'failed', or 'stalled').\n- **runtime**: An object containing detailed information about the task's runtime, including its PID, start time, last heartbeat time, finish time, and any error message.\n\n### Immediate Dependencies\n- **toIsoString**: A utility function that converts a date to an ISO string format.\n- **heartbeatIsFresh**: A utility function that checks if the last heartbeat is within the stale period defined by `staleAfterSeconds`.\n\n### Role in Module\nThis function plays a crucial role in maintaining and monitoring the status of tasks or jobs, providing clear feedback on their current state and potential issues like staleness or failures. It helps ensure that stakeholders are informed about the progress and health of ongoing processes within the system.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

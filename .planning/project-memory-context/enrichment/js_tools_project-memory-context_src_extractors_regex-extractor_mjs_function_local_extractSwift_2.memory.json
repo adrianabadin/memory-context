@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `extractSwift` function is responsible for extracting Swift language symbols (classes, interfaces, and functions) from a given list of lines representing the source code file. It uses regular expressions to identify these symbols based on their syntactic patterns within the text.\n\n### Primary Inputs\n- **lines**: An array of strings where each string represents a line of code in the Swift file.\n- **filePath**: A string representing the path or identifier of the file from which the lines are extracted.\n\n### Output\n- **symbols**: An array of objects, each representing a symbol (class, interface, or function) with its properties set according to the extraction results and other metadata such as file path, kind, name, exported status, line number, end line, and arity.\n\n### Immediate Dependencies\n- **createHash**: From `node:crypto`, used for generating a hash of each symbol's details.\n- **buildSymbolKey**: A custom function imported from `../symbol-keys.mjs`, likely to create unique keys for each symbol based on its properties.\n\n### Role in Module\nThis function plays a crucial role in the module by providing an interface to extract Swift language constructs programmatically, which can be used for further analysis or integration into larger development tools that might require such metadata from source code files.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

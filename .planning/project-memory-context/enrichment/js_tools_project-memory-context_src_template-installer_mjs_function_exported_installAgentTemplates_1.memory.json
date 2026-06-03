@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `installAgentTemplates` function is responsible for installing templates specific to a given agent (`agent`) within a project directory (`projectRoot`). It ensures that the provided agent is supported, handles optional configuration settings, and orchestrates the installation process based on the type of agent.\n\n### Primary Inputs\n- **projectRoot**: The root directory where the project resides.\n- **agent**: The type of agent for which templates are to be installed (e.g., 'opencode').\n- **packageRoot**: An optional parameter specifying the package root, defaults to resolved from the current module if not provided.\n- **globalConfigDir**: Required when installing templates for the 'opencode' agent; specifies a global configuration directory.\n\n### Output\n- The function does not explicitly return data but rather performs file system operations (creating directories and writing files) based on the template installation logic specific to the agent type.\n\n### Immediate Dependencies\n- **node:fs/promises**: For filesystem operations like reading from or writing to files.\n- **node:fs**: Specifically `existsSync` for checking if a file or directory exists.\n- **node:path**: For path manipulation (joining paths).\n- **node:url**: To convert file URLs to local paths (`fileURLToPath`).\n\n### Role in Module\nThis function serves as an orchestrator and interface between the module's configuration settings and the specific template installation logic for different agent types. It abstracts the process of checking support, handling optional parameters, and executing the appropriate installation routine based on the agent type. This design promotes modularity and flexibility by decoupling the core functionality from detailed implementation details related to each agent's templates.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

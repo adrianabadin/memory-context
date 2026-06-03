@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility**: The `fileExists` function checks whether a specified file exists at the given path.\n\n**Primary Inputs**: \n- `filePath`: A string representing the path to the file.\n\n**Output**: \n- Returns `true` if the file exists, otherwise returns `false`.\n\n**Immediate Dependencies**: \n- `access` from 'node:fs/promises': Used to check file accessibility asynchronously.\n- `fileURLToPath` from 'node:url': Although not directly used in this snippet, it's part of the broader context and might be relevant for path manipulations.\n\n**Role in Module**: \nThis function is a utility within the module, aiding other functions by verifying the existence of files before proceeding with operations that require file presence. It ensures robustness by preventing errors from attempting to access non-existent files.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

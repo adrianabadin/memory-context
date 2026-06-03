@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `resolveConfigDirs` function is responsible for determining the configuration directories for a project and its globally accessible configurations. It does this by searching for predefined directory names within the project root, defaulting to a specific name if no other matches are found, and similarly for global configurations.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project (default is `process.cwd()`).\n- **options**: An object that can override the default behavior for checking file existence (`exists`) and determining the home directory (`homeDir`).\n\n### Output\nThe function returns an object containing:\n- `projectRoot`: The resolved path to the project root.\n- `projectConfig`: The first existing configuration directory found in predefined names relative to the project root, or `.pmc` if none are found.\n- `globalConfig`: The first existing global configuration directory found among specific paths, or `.config/pmc` by default.\n- `projectConfigDir`: Alias for `projectConfig`.\n- `globalConfigDir`: Alias for `globalConfig`.\n\n### Immediate Dependencies\n- **node:child_process**: Used to execute commands (though not directly in this function).\n- **node:fs**: Specifically `existsSync` is used to check if a directory exists.\n- **node:os**: Provides the `homedir()` method for determining the home directory.\n- **node:path**: Handles path manipulations, including joining and resolving paths.\n\n### Role in Module\nThis function serves as a utility to standardize configuration directory resolution for both project-specific and globally accessible configurations. It abstracts away the details of where these directories might be located (e.g., within user home directories or specific project structures) and provides a consistent way to access them, ensuring that at least one configuration directory is always available regardless of its location. This setup supports modularity by decoupling the logic for finding config files from other parts of the application that need these configurations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

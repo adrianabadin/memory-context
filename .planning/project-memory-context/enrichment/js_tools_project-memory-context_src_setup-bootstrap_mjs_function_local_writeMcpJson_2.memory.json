@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `writeMcpJson` function is responsible for creating or updating the `.mcp.json` file within a project directory. This file contains configuration data related to MCP (Managed Configuration Properties) servers, which are merged with any existing configuration in the file, if present. The new configuration includes information derived from the `installState`.\n\n### Primary Inputs\n- **projectRoot**: A string representing the root directory of the project where the `.mcp.json` file will be created or updated.\n- **installState**: An object containing state information about the installation, which is used to build the MCP configuration.\n\n### Output\n- The function returns a promise that resolves to the path of the generated `.mcp.json` file.\n\n### Immediate Dependencies\n- `mkdir`: To ensure the necessary directories exist before writing the file (though not directly called in this implementation).\n- `readFile`, `writeFile`: These are used for reading from and writing to the filesystem, respectively. The custom function `readJson` is assumed to be a utility that reads JSON files, handling potential errors by returning an empty object if the file does not exist or cannot be parsed.\n- `join`: To construct the path for the `.mcp.json` file relative to the project root.\n- `JSON.stringify`: To convert the merged configuration object into a JSON string with pretty-printing (indented and spaced).\n\n### Role in Module\nThe `writeMcpJson` function serves as a utility within the module responsible for managing MCP configurations. It ensures that the `.mcp.json` file is always up-to-date with any changes from the installation state, providing a consistent way to access these settings across different parts of the application. This function supports the broader goal of maintaining and enhancing configurability in the project by allowing dynamic updates to be reflected in the MCP configuration without manual intervention.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/setup-bootstrap.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `createAgentSubagentProvider` function is responsible for creating and configuring an agent-subagent provider, which checks if the agent-subagent is enabled and available within a CLI context.\n\n**Primary Inputs**: \n- `context`: An object containing configuration details, specifically focusing on the `agentSubagent` section.\n\n**Output**: \n- Returns an object with methods to check if configured (`isConfigured`), if available (`isAvailable`), and to perform enrichment (`enrich`). The `isConfigured` method returns a status indicating whether the agent-subagent is enabled, while `isAvailable` indicates unavailability in the CLI context.\n\n**Immediate Dependencies**: \n- Configuration settings from the `context` object.\n- Functions like `appendProviderEvent`, `withRecordedAttempt`, and others imported from various modules for handling enrichment processes and configurations.\n\n**Role in Module**: \n- This function acts as a provider within the module, defining how to interact with an agent-subagent in the context of CLI operations. It ensures that the agent-subagent is properly configured and handles its availability status accordingly.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

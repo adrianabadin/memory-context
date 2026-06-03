@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `runCommand` function is responsible for executing external commands based on the provided arguments. It abstracts the process of spawning child processes and handling their standard input, output, and error streams. The function also provides a way to resolve command names to their respective module paths and handles invalid or missing commands gracefully by providing usage instructions.\n\n### Primary Inputs\n- `argv`: An array representing the command line arguments which includes the command name and its arguments.\n- `options`: An object containing optional settings for the child process, such as `stdio`, `stdout`, and `stderr`.\n\n### Output\n- Returns a promise that resolves to the exit code of the executed command or rejects with an error if something goes wrong (e.g., invalid command, signal termination).\n\n### Immediate Dependencies\n- **`node:child_process`:** Used for spawning new child processes.\n- **`node:path`:** For resolving file paths (`resolve`, `dirname`).\n- **`node:url`:** To convert file URLs to file paths (`fileURLToPath`).\n\n### Role in Module\nThe `runCommand` function serves as a utility for executing commands within the module, providing a consistent interface for handling command execution and error management. It is used throughout the application where external processes need to be invoked or executed based on user input or configuration.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/command-dispatch.mjs"
+  ]
+}

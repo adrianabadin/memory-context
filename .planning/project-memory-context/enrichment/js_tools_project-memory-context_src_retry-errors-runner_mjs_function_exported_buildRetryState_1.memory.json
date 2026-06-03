@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildRetryState` function is responsible for creating a standardized structure (state) that represents the current status and relevant details of a retry operation. This includes information about the process ID (`pid`), project root directory, timestamps for when the operation started and last received heartbeat, as well as the final completion time if applicable, and any errors encountered during the process.\n\n### Primary Inputs\n- `status`: A string that indicates whether the operation is ongoing ('running'), has completed successfully ('success'), or has been aborted due to an error ('error').\n- `pid`: The process ID of the operation.\n- `projectRoot`: The root directory of the project where the retry operation is being performed.\n- `startedAt`: A timestamp indicating when the operation started.\n- `heartbeatAt`: A timestamp indicating the last time a heartbeat (indicating activity) was received from the operation.\n- `finishedAt` (optional): A timestamp indicating when the operation completed, defaults to `null`.\n- `lastError` (optional): The most recent error encountered during the operation, defaults to `null`.\n\n### Output\nThe function outputs an object with keys corresponding to each input parameter:\n```javascript\n{\n  status,\n  pid,\n  projectRoot,\n  startedAt,\n  heartbeatAt,\n  finishedAt,\n  lastError,\n}\n```\nThis structured output is designed to be easily serializable and can be used for logging, debugging, or any other purpose where a standardized representation of retry state is needed.\n\n### Immediate Dependencies\n- None (the function does not import external modules or rely on global variables)\n\n### Role in Module\nThe `buildRetryState` function serves as a utility within the module to ensure that all retry operations are tracked consistently, providing a clear and structured format for their statuses. This consistency is crucial for debugging, monitoring, and maintaining operational transparency across different parts of the system or between different runs/instances of the same operation.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retry-errors-runner.mjs"
+  ]
+}

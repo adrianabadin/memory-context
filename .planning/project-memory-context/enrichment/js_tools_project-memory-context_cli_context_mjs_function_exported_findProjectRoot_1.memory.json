@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `findProjectRoot` function is responsible for determining the root directory of a project by searching upwards from a given starting directory (`startDir`) until it finds a directory containing a specific installation file (`install.json`). This file is typically part of a predefined structure that indicates the presence of a project context managed by the module or tool using this function.\n\n### Primary Inputs\n- `startDir`: The initial directory from which to begin searching for the project root. By default, it uses the current working directory (`process.cwd()`).\n\n### Output\n- Returns the path to the project root directory if the installation file is found, or `null` if the search reaches the filesystem's root directory without finding the file.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `fs`: For checking file and directory existence (`existsSync`), reading files (`readFileSync`), writing files (`writeFileSync`), and creating directories (`mkdirSync`).\n  - `path`: For resolving, joining paths (`join`) and getting the parent directory of a path (`dirname`).\n  - `url`: To convert URL objects to file paths (`fileURLToPath`).\n- **Local Module**:\n  - `../src/artifacts.mjs`: Assumed to be used for reading JSON artifacts, though not directly imported here.\n  - `../src/retrieval/query-engine.mjs`, `../src/retrieval/target-resolver.mjs`, and `../src/retrieval/context-renderer-v1.mjs`: These are assumed to be part of a larger retrieval or rendering system, possibly related to project data but not directly imported here.\n\n### Role in Module\nThis function serves as a utility within the module for locating specific project configurations that might dictate how the rest of the tool operates on that project. It is crucial for setting up and managing context-specific behaviors without hardcoding paths or assuming fixed project structures, making it adaptable to various project setups across different directories.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

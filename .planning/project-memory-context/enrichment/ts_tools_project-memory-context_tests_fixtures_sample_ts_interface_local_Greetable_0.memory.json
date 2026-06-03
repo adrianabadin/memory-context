@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `Greetable` interface defines a contract for objects that can provide a greeting message. It ensures that any class implementing this interface must have a method to return a string representing the greeting.\n\n### Primary Inputs\nThere are no specific inputs defined for the `Greetable` interface as it only specifies an output behavior through its method.\n\n### Output\n- **Output**: The `greet()` method returns a string, which is expected to be a greeting message.\n\n### Immediate Dependencies\nThe `Greetable` interface does not have any immediate dependencies other than the TypeScript standard library for defining interfaces and methods.\n\n### Role in Module\nThe `Greetable` interface serves as a contract that can be implemented by various classes within the module, allowing those classes to provide consistent greeting functionality across different parts of the application or tests. This promotes code reusability and adherence to a specific pattern throughout the project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/fixtures/sample.ts"
+  ]
+}

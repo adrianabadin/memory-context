@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `copyTemplate` function is responsible for copying a template file from the package's templates directory to the project root, replacing placeholders (like `__PMC_PACKAGE_ROOT__`) with the actual package root path. This helps in setting up or customizing projects based on predefined templates.\n\n### Primary Inputs\n- **packageRoot**: The root directory of the package containing the template files.\n- **templateName**: The name of the template file to be copied.\n- **projectRoot**: The root directory where the template will be copied and potentially modified.\n\n### Output\n- **target**: The path to the newly created or overwritten file in the project root, which contains the content from the template with placeholders replaced by the actual package root.\n\n### Immediate Dependencies\n- `join` from `node:path`: Used to construct paths for both source and target files.\n- `readFile` and `writeFile` from `node:fs/promises`: Used for reading from and writing to the template file.\n- `replaceAll`: A method used to replace all occurrences of a placeholder in the template content with the actual package root path.\n\n### Role in Module\nThis function serves as a utility within the module, facilitating the setup process by automating the copying and customization of templates according to specific project requirements. It is particularly useful for initializing new projects or customizing existing ones based on predefined configurations or structures provided through templates.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/setup-bootstrap.mjs"
+  ]
+}

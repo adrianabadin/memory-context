@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `heartbeatIsFresh` function is responsible for determining if a given heartbeat timestamp (`heartbeatAt`) is considered \"fresh\" based on the current time (`now`), and a configurable stale period defined by `staleAfterSeconds`. It checks whether the difference between the current time and the heartbeat timestamp is within the allowed stale duration.\n\n### Primary Inputs\n- **heartbeatAt**: A timestamp representing when the last heartbeat was recorded.\n- **now**: The current timestamp, used to compare against the heartbeat timestamp.\n- **staleAfterSeconds** (optional): An optional parameter that defaults to a predefined value (`DEFAULT_STALE_AFTER_SECONDS`). This parameter defines how many seconds are considered acceptable before considering the heartbeat stale.\n\n### Output\nThe function returns a boolean value:\n- `true`: If the heartbeat is within the allowed stale period relative to the current time.\n- `false`: If the heartbeat is outside the allowed stale period.\n\n### Immediate Dependencies\n- **Date**: Used to create date objects from timestamp strings for comparison.\n- **Number.isFinite**: Checks if a value is a finite number, ensuring that both timestamps are valid and can be compared numerically.\n\n### Role in Module\nThis function serves as a utility within the module, providing a straightforward method to assess the freshness of heartbeat data based on configurable parameters. It helps ensure that operations relying on up-to-date heartbeats can operate under the assumption that the data is recent enough for their needs.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

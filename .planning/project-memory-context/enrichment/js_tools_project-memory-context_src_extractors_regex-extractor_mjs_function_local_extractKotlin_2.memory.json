@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `extractKotlin` function is responsible for extracting Kotlin class and function declarations from a given set of lines, identifying their properties such as name, kind (class or function), visibility (exported or local), and other metadata.\n\n**Primary Inputs**:\n- `lines`: An array of strings representing the lines of Kotlin code.\n- `filePath`: A string indicating the path to the file being processed.\n\n**Output**: \n- An array of symbol objects containing details about each extracted class or function, including its name, kind, visibility, and other relevant metadata.\n\n**Immediate Dependencies**:\n- Regular expressions (`classRe` and `funcRe`) for matching Kotlin class and function declarations.\n- The `findBlockEnd` function to determine the end line of a block (e.g., class or function body).\n- The `makeSymbol` function to create symbol objects with extracted information.\n\n**Role in Module**: \nThe `extractKotlin` function plays a crucial role in the module by parsing Kotlin code and extracting meaningful symbols, which are then used for further analysis or indexing purposes within the project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

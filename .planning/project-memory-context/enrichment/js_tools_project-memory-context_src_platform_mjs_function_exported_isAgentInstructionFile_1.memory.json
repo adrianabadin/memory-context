@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `isAgentInstructionFile` function is responsible for determining whether a given file path corresponds to one of the predefined instruction files. It does this by normalizing the provided file path and checking if its last segment (basename) exists in a set of predefined instruction file names (`INSTRUCTION_FILES`).\n\n### Primary Inputs\n- `filePath`: A string representing the path to the file being checked.\n\n### Output\n- A boolean value: `true` if the file is an instruction file, `false` otherwise.\n\n### Immediate Dependencies\n- The function relies on a set of predefined instruction file names (`INSTRUCTION_FILES`) which are used for comparison. This set must be defined and maintained elsewhere in the module or imported from another module where it is defined.\n\n### Role in Module\nThis function serves as a utility to check the type of files based on their paths, specifically designed for identifying if a file is an instruction file according to predefined criteria. It helps in organizing and managing file types within the module by providing a way to filter or categorize files based on specific properties like their names.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

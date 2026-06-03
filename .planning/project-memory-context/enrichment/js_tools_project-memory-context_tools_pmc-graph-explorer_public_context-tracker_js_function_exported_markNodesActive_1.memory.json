@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `markNodesActive` Function\n\n#### Responsibility\nThe function `markNodesActive` is responsible for marking nodes as active by making an asynchronous HTTP POST request to a specified API endpoint and then dispatching a custom event to signal that the context has changed.\n\n#### Primary Inputs\n- **nodeIds**: An array of node IDs which are intended to be marked as active. This input is passed directly to the `body` of the fetch request for adding these nodes.\n\n#### Output\nThe function does not return any explicit output but performs an asynchronous operation that triggers a side effect, specifically dispatching a custom event named \"context-changed\" on the document object.\n\n#### Immediate Dependencies\n- **fetch**: The `fetch` API is used to make an HTTP POST request to the endpoint `/api/context`. This function requires the environment to support the fetch API.\n- **JSON**: JSON.stringify is used to convert the `nodeIds` array into a JSON string, which is then sent as the body of the POST request.\n- **document.dispatchEvent**: This method is used to create and dispatch a custom event named \"context-changed\" on the document object whenever the nodes are successfully marked as active.\n\n#### Role in Module\nThe `markNodesActive` function serves as an interface between the application logic (which needs to mark certain nodes as active) and the backend service responsible for managing node states. It acts as a bridge by encapsulating the details of how data is sent and events are triggered, ensuring that changes in node status can be communicated effectively across different parts of the system. This function is crucial for maintaining real-time awareness of which nodes are active within the application context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/context-tracker.js"
+  ]
+}

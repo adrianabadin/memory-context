@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe function `checkNodeVersion` is responsible for checking the version of Node.js that the current process is running on and determining if it meets a minimum required version (18). It provides feedback on whether the node version is acceptable or requires an upgrade, along with a message indicating the result.\n\n#### Primary Inputs\n- `process.version`: A string representing the version of Node.js that the current process is running on.\n\n#### Output\nThe function returns an object containing:\n- `name`: A constant string 'node-version'.\n- `status`: Either 'ok' if the node version is 18 or higher, or 'fail' otherwise.\n- `message`: A descriptive message indicating the Node.js version and whether it meets the requirement or suggests an upgrade.\n\n#### Immediate Dependencies\n- `process`: A global object provided by Node.js that contains information about the current Node.js process.\n- `parseInt` and `slice` methods: Built-in JavaScript functions used to extract the major version number from the Node.js version string.\n\n#### Role in Module\nThis function is part of a module or tool designed for diagnosing or checking system configurations, specifically focusing on the Node.js environment setup. It contributes to ensuring that the application runs under an appropriate version of Node.js by providing clear feedback based on the current configuration.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/doctor.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `finalizeEnrichment` function is responsible for finalizing the enrichment process by persisting the result and updating the worklist entry. It ensures that the enriched data is stored appropriately and the worklist reflects the completion of the enrichment task.\n\n### Primary Inputs\n- **projectRoot**: A string representing the root directory of the project where the memory context is managed.\n- **result**: An object containing the results of the enrichment process, including status, memoryId, graphNodeId, enrichedAt, and symbolKey.\n\n### Output\nThe function returns an object containing:\n- `persisted`: The result of persisting the enrichment result.\n- `worklistFile`: A string representing the path to the worklist file.\n- `worklist`: An array representing the updated worklist after incorporating the enrichment results.\n\n### Immediate Dependencies\n- **persistEnrichmentResult**: This function is used to persist the enrichment result to a storage location specified by `projectRoot`.\n- **ensureProjectMemoryContextDirs**: This function ensures that the necessary directories for managing memory context are present under `projectRoot`.\n- **readJsonArtifact**: This function reads the existing worklist from the file system.\n- **updateWorklistEntry**: This function updates the worklist entry with the enrichment results.\n- **writeJsonArtifact**: This function writes the updated worklist back to the file system.\n\n### Role in Module\nThis function plays a crucial role in the project's data management and workflow, ensuring that all parts of the memory context are correctly updated and persisted after an enrichment process is completed. It integrates with other modules for reading, updating, and writing data related to the project's memory context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/finalize-enrichment.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createEmptyRefreshState` function is responsible for creating an initial state object that represents the empty refresh state of a project. This includes tracking files, memory hashes, and the timestamp when it was last updated.\n\n### Primary Inputs\nThere are no primary inputs to this function as it does not take any external parameters or dependencies. It simply returns a predefined structure.\n\n### Output\nThe output is an object with three properties:\n- `trackedFiles`: An empty object that will be populated later with file paths and their corresponding memory hashes.\n- `memoryHashes`: Another empty object where the actual content of files (in terms of memory hashes) can be stored.\n- `updatedAt`: A property set to `null` initially, indicating that no update has occurred yet.\n\n### Immediate Dependencies\nThis function does not have any immediate dependencies as it only returns a static structure without involving other functions or external data sources.\n\n### Role in Module\nThe `createEmptyRefreshState` function serves as a utility to provide a consistent and empty state object whenever the application needs to initialize its refresh state, ensuring that all parts of the system are aware of this initial state for proper functioning and synchronization across different components of the project memory context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/refresh-state.mjs"
+  ]
+}

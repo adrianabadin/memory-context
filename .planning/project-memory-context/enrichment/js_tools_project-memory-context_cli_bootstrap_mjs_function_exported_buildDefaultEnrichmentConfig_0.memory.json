@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildDefaultEnrichmentConfig` function is responsible for creating and returning a default configuration object used for project enrichment.\n\n**Primary Inputs**: None. It does not take any parameters or inputs directly.\n\n**Output**: Returns an object containing the default configuration settings for different modes of operation (`local-model`, `cloud-api`, `agent-subagent`).\n\n**Immediate Dependencies**: \n- Environment variables: `OLLAMA_URL`, `OLLAMA_MODEL`\n- Constants and values defined within the module\n\n**Role in Module**: This function serves as a foundational component, providing essential configuration defaults that other parts of the application can utilize to set up and manage project enrichment processes. It is likely called during initialization or setup phases to ensure consistent configuration across different execution contexts.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `log` function is responsible for logging messages to the console, prefixed with \"[bootstrap]\" and using `console.error` for error-level logging. This helps in debugging and providing feedback during the execution of a Node.js application or script by indicating what stage or operation it is currently processing.\n\n### Primary Inputs\n- **msg**: A string that represents the message to be logged. This is the only required input for this function.\n\n### Output\n- The output is the side effect of printing the log message prefixed with \"[bootstrap]\" using `console.error`. There is no explicit return value from the function.\n\n### Immediate Dependencies\n- **console**: A global object provided by Node.js that provides access to the console module, which includes methods for logging messages at different levels (e.g., log, error, warn).\n\n### Role in Module\nThe `log` function serves as a utility for debugging and informational purposes within the module or script where it is used. It helps in tracking the flow of execution and provides feedback on what operations are being performed during runtime. This can be particularly useful during development to understand the state of the application at different stages, especially when dealing with complex workflows or asynchronous processes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

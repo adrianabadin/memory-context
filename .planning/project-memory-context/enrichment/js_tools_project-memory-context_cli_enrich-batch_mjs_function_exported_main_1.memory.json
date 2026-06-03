@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for handling the command line interface (CLI) execution of an enrichment script. It serves as the entry point for the CLI command, providing a deprecation warning and directing users to use an alternative command (`pmc enrich .`) instead of the deprecated hardcoded Ollama usage.\n\n### Primary Inputs\n- `args`: An optional array representing command line arguments. This defaults to `process.argv.slice(2)`, which captures any additional arguments passed after the script name in a Node.js environment.\n\n### Output\nThe function outputs the result of calling the `enrichMain` function, which is expected to process and enrich data based on the provided arguments or default values.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `process`: Accesses command line arguments (`process.argv`).\n- **External Libraries**:\n  - `node:path`: Used for resolving file paths (`resolve` function).\n  - `node:url`: Converts file URLs to file paths (`fileURLToPath` function).\n- **Local Module**:\n  - `./enrich.mjs`: Imports the main enrichment logic (`enrichMain` function) and uses it within the CLI command execution.\n\n### Role in Module\nThe `main` function plays a crucial role in providing a smooth transition path for users from an older script that hardcodes Ollama to a newer, recommended command. It acts as a bridge between the deprecated functionality and the supported current practices, ensuring user engagement with updated information and commands.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/enrich-batch.mjs"
+  ]
+}

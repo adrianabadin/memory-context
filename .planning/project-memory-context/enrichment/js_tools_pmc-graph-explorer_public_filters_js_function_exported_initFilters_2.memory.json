@@ -1,0 +1,11 @@
+{
+  "content": " The `initFilters` function is responsible for creating and rendering community filters on the web page. It takes two main inputs: `state`, which contains information about enabled communities, and `communities`, a list of available community identifiers. The function outputs nothing but directly modifies the DOM by adding filter elements to an HTML container element with id \"filters\". Immediate dependencies include standard JavaScript/DOM manipulation methods and events. This module plays a crucial role in allowing users to interactively enable or disable specific communities, which affects graph updates and statistics accordingly.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/filters.js"
+  ]
+}

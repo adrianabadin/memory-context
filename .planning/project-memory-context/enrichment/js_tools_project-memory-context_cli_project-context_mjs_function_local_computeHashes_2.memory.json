@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `computeHashes` function calculates SHA-256 hashes for specified files within a project directory.\n\n**Primary Inputs**:\n- `projectRoot`: The root directory of the project.\n- `files`: An array of file paths relative to the project root.\n\n**Output**: \n- A JavaScript object where keys are file paths and values are their corresponding SHA-256 hash strings.\n\n**Immediate Dependencies**:\n- `readFile` from 'node:fs/promises' for reading file contents.\n- `createHash` from 'node:crypto' for generating SHA-256 hashes.\n\n**Role in Module**: \nThis function is crucial for detecting changes in project files by comparing current hashes with previously stored ones. It supports other modules like `detectChangedFilesFromHashes` and `detectInvalidatedProjectContextKinds` by providing up-to-date file hashes, enabling efficient change detection and context invalidation processes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

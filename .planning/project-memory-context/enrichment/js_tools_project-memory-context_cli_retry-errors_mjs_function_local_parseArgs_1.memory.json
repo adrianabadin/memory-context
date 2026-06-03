@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseArgs` function is responsible for parsing command line arguments passed to the script. It converts these arguments into an object that can be easily used by other parts of the application. This includes handling specific flags like `--timeout`, `--model`, `--base-url`, `--report`, and `--limit`, as well as providing a help flag (`--help` or `-h`) for displaying usage information.\n\n### Primary Inputs\nThe primary input is:\n- `argv`: An array of command line arguments passed to the script, where the first two elements are typically the path to the Node.js executable and the path to the script itself.\n\n### Output\nThe output is an object (`args`) containing parsed values for each argument:\n- `timeoutMs` (number): The timeout duration in milliseconds.\n- `model` (string or null): The model identifier.\n- `baseUrl` (string or null): The base URL for API requests.\n- `reportFile` (string or null): The file path where the report will be saved.\n- `limit` (number or null): The maximum number of retry iterations.\n- `help` (boolean): Indicates whether help information should be displayed.\n\n### Immediate Dependencies\nThe function directly depends on:\n- Importing necessary Node.js modules from the filesystem (`fs/promises`), path manipulation (`path`), and URL parsing (`url`).\n- Importing custom functions for specific functionalities like enrichment configuration and retry logic from other parts of the module.\n\n### Role in Module\nThe `parseArgs` function serves as a utility to facilitate command line argument parsing, making it easier for the main script or any calling scripts to access and use these arguments consistently across different environments where the script might be run. This setup is crucial for providing flexibility and configurability when running the application from the command line.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

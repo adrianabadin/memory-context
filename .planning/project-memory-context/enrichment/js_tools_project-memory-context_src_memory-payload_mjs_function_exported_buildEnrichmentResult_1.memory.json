@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildEnrichmentResult` function constructs and returns an object representing the result of an enrichment process.\n\n**Primary Inputs**:\n- `job`: An object containing properties like `symbolKey`, `graphNodeId`, and `codeHash`.\n- `memoryId`: A unique identifier for the memory.\n- `semanticSummary`: A summary of the semantic content.\n- `status`: The status of the enrichment process.\n- `enrichedAt`: Timestamp indicating when the enrichment was completed.\n\n**Output**: An object with properties `symbolKey`, `graphNodeId`, `memoryId`, `codeHash`, `semanticSummary`, `status`, and `enrichedAt`.\n\n**Immediate Dependencies**: None, as it does not rely on any external imports or functions.\n\n**Role in Module**: This function is crucial for preparing the structured data that represents the outcome of an enrichment operation, which can then be used elsewhere in the application for further processing or storage.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/memory-payload.mjs"
+  ]
+}

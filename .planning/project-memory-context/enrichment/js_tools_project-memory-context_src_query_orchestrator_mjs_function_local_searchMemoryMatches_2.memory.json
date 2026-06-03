@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `searchMemoryMatches` function is responsible for evaluating the relevance of memories based on provided tokens and returning them sorted by their relevance score. It calculates a match score for each memory by comparing its title, summary, body, and tags with the given tokens using the `countMatches` function. The memories are then filtered to include only those with a positive match score, and finally sorted in descending order of their scores.\n\n### Primary Inputs\n- **memories**: An array of objects representing memory entries, each containing at least `title`, `summary`, `body`, and optionally `tags` fields.\n- **tokens**: An array of strings that are used to search within the memories' title, summary, body, and tags.\n\n### Output\nAn array of memory objects sorted by their relevance scores in descending order. Each object includes an additional `score` field indicating its match score with the tokens.\n\n### Immediate Dependencies\n- **countMatches**: A function that counts how many times each token appears in a given text (title, summary, body, or tags). This is used to calculate the relevance score for each memory.\n\n### Role in Module\nThe `searchMemoryMatches` function serves as a core component of the query orchestration within the project-memory-context module. It facilitates the retrieval and evaluation of memories based on user queries, providing an ordered list of relevant memories that can be used by other parts of the application for further processing or display.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/orchestrator.mjs"
+  ]
+}

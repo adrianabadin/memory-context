@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `computeFileHashes` function is responsible for computing the SHA-256 hash of each file within a given project directory. It does this by walking through all files and directories starting from the provided `projectRoot`, reading the content of each file, and storing its relative path along with its corresponding SHA-256 hash in an object.\n\n### Primary Inputs\n- **`projectRoot`**: A string representing the root directory of the project whose files' hashes are to be computed.\n\n### Output\n- **`hashes`**: An object where each key is a relative path (from `projectRoot`) and each value is the SHA-256 hash of the corresponding file.\n\n### Immediate Dependencies\n- **`createHash` from 'node:crypto'**: Used to generate SHA-256 hashes for files.\n- **`readdir`, `readFile`, `stat` from 'node:fs/promises'**: Used to read directory contents, file content, and get file stats respectively.\n- **`join` and `relative` from 'node:path'**: Used to construct paths relative to the project root for both reading files and storing their hashes.\n\n### Role in Module\nThis function serves as a utility within the module to facilitate the computation of SHA-256 file hashes, which can be used for various purposes such as version control, integrity checking, or indexing. It encapsulates the logic required to traverse directories, read files, and compute their cryptographic hashes efficiently using Node.js's built-in modules.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/file-hash-store.mjs"
+  ]
+}

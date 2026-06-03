@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `updateWorklistEntry` function is responsible for updating an entry in the worklist based on a given symbol key. It ensures that only the specific entry corresponding to the provided symbol key is modified, while all other entries remain unchanged.\n\n### Primary Inputs\n- **worklist**: An array of objects representing the current state of the worklist. Each object contains at least a `symbolKey` property.\n- **symbolKey**: A string that uniquely identifies the entry to be updated within the worklist.\n- **updates**: An object containing properties and values that will update the identified entry in the worklist.\n\n### Output\nThe function returns a new array where only the entry with the matching `symbolKey` is updated according to the provided `updates`. If no entry matches the `symbolKey`, the original worklist is returned unchanged.\n\n### Immediate Dependencies\n- **map**: The JavaScript Array method used to create a new array by applying a function to each element of the original array.\n\n### Role in Module\nThe `updateWorklistEntry` function serves as a utility for managing and updating entries within a worklist, which is crucial for maintaining the state and integrity of data structures that track or manipulate project-related information. This function enhances the module's ability to handle complex updates without directly modifying the original data, adhering to principles of immutability and encapsulation.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/worklist-state.mjs"
+  ]
+}

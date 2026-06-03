@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `uniqueTags` function is responsible for ensuring that the list of tags contains only unique values, including the specified `keyTag`. It does this by combining the existing tags and the keyTag into a single array, filtering out any falsy values (like empty strings or null), and then creating a new Set to remove duplicates. Finally, it returns an array of unique tags.\n\n### Primary Inputs\n- **tags**: An array of string tags that may include duplicates. This is optional and defaults to an empty array if not provided.\n- **keyTag**: A single string tag that might be added to the list of tags to ensure uniqueness.\n\n### Output\n- Returns a new array containing unique tags, including the `keyTag` if it's present.\n\n### Immediate Dependencies\n- The function does not directly import or use any other functions from within its module or external modules. It relies solely on JavaScript built-in methods and ES6+ features like `Set`, `filter`, and spread operator (`...`) for array manipulation.\n\n### Role in Module\nThe `uniqueTags` function serves as a utility to maintain the integrity of tag lists by ensuring that each list contains only unique values, which can be particularly useful when tags are dynamically added or manipulated within the application context where this module is used.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/sync.mjs"
+  ]
+}

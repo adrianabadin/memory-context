@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `runTargetContext` function is responsible for orchestrating the retrieval and rendering of target context within a project. It involves resolving the target, building input for context rendering, querying the engine, and finally rendering the context.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project.\n- **target**: Specifies which part of the project to focus on (e.g., specific files or directories).\n- **explicitMode**: A flag indicating whether to use explicit mode for more detailed analysis.\n- **depth**: How far into the dependency tree to traverse.\n- **focus**: Specific symbols or areas to focus on within the target.\n- **artifacts**: Preloaded artifacts, if provided; otherwise, loaded dynamically.\n\n### Output\nAn object containing:\n- `output`: The rendered context of the target.\n- `resolved`: The resolved target information.\n- `input`: The input data used for rendering.\n- `artifacts`: The artifacts used during execution (either provided or loaded).\n\n### Immediate Dependencies\n- **`loadArtifacts(projectRoot)`**: Loads necessary artifacts from the project root.\n- **`createQueryEngine({ ... })`**: Initializes a query engine with provided graph, symbol index, worklist, and enrichment directory.\n- **`resolveTarget({ engine, explicitMode, target })`**: Resolves the target based on the engine's capabilities.\n- **`buildRenderInput(engine, resolved, { depth, focus })`**: Constructs input for rendering context based on query engine results and specified parameters.\n- **`renderTargetContext(input)`**: Renders the context using the provided input.\n\n### Role in Module\nThis function serves as a central orchestrator within the module, handling data retrieval and transformation to provide detailed contextual information about the project's components as per the specified target and focus.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

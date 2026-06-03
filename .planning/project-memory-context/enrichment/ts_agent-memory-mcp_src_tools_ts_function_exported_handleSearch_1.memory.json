@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `handleSearch` function is responsible for encapsulating the logic to perform a search operation on a memory store. It abstracts the process of querying and formatting the results, providing a standardized way to execute searches with various parameters such as query, mode, category, tags, time constraints (after/before), and limit.\n\n### Primary Inputs\n- `store`: An instance of `MemoryStore` which is expected to have a method `search` that can take in multiple search parameters including the query string, search mode, category, tags, and temporal constraints.\n- `args`: An object containing various search parameters:\n  - `query`: The text or keyword used for searching within the memory store.\n  - `mode`: Specifies the type of search to perform (optional, defaults to 'hybrid').\n  - `category`: Filters results by a specific category (optional).\n  - `tags`: An array of tags that further refine the search results (optional).\n  - `after` and `before`: Timestamp constraints for temporal data retrieval.\n  - `limit`: The maximum number of results to return, controlling the size of the output set.\n\n### Output\n- A function that returns a promise resolving to an object containing:\n  - `count`: The total number of search results.\n  - `results`: An array of objects representing the found items according to the search parameters.\n  - If there's an error during the search, it returns an object with a message indicating the failure.\n\n### Immediate Dependencies\n- `zod` for schema validation (though not explicitly imported here, typical in similar setups).\n- Types from `@modelcontextprotocol/sdk/server/mcp.js` which are used to define expected types for `store`, `args`, and possibly other internal types within the function's scope.\n\n### Role in Module\nThis function serves as a higher-order function that returns another asynchronous function capable of handling search requests based on provided parameters, abstracting the underlying data retrieval logic into a reusable component. It ensures that any errors encountered during the search process are gracefully handled and communicated back to the caller.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

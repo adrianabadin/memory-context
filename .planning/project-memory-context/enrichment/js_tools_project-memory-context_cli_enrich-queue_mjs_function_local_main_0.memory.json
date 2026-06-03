@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for orchestrating the enrichment process of a project's memory context. It manages file operations, configuration loading, and state management to ensure that the enrichment queue is processed correctly.\n\n### Primary Inputs\n1. **worklistFile**: Path to the worklist JSON file containing tasks to be enriched.\n2. **symbolIndexFile**: Path to the symbol index JSON file used for indexing symbols.\n3. **PROJECT_ROOT**: Root directory of the project, used for path resolution.\n4. **process.env**: Environment variables passed to the script for configuration.\n\n### Output\n- Updates the status of each entry in `worklist` based on whether they are already enriched or not.\n- Generates a summary of the queue state including counts and elapsed times for pending, errors, and total results.\n- Logs structured information about the enrichment process to the console.\n\n### Immediate Dependencies\n1. **fs/promises**: For file system operations like reading from and writing to files.\n2. **path**: To resolve and manipulate file paths.\n3. **os**: To get the home directory for path resolution.\n4. **url**: To convert file URLs to local paths.\n5. **child_process**: To spawn subprocesses if needed (though not used in this function).\n6. Custom modules: `enrichment-attempts`, `enrichment-config`, `enrichment-driver`, and `sync-manifest` for specific functionalities.\n\n### Role in Module\nThe `main` function serves as the entry point for the enrichment process, handling file operations, configuration loading, and state management to ensure that the queue is processed efficiently and correctly. It interacts with other modules to perform its tasks, providing a clear interface for managing the project's memory context enrichment.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

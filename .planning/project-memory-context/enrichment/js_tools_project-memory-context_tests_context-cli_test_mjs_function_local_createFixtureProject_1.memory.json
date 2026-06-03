@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `createFixtureProject` is responsible for setting up a mock project directory structure and initializing it with predefined data, such as symbol index, graph representation, and worklist. This setup is essential for testing the CLI tools related to project memory context without affecting actual projects or systems.\n\n### Primary Inputs\n- **symbolIndex**: An object representing the indexed symbols in the project (default: empty object).\n- **graph**: A structured representation of the graph data, including nodes and links (default: an empty graph).\n- **worklist**: A list of items to be processed or tracked within the worklist (default: an empty array).\n\n### Output\nThe function returns the path to the created temporary project directory which can be used for testing purposes.\n\n### Immediate Dependencies\n- `mkdtemp` from `node:fs/promises`: Used to create a unique temporary directory.\n- `mkdir` and `writeFile` from `node:fs/promises`: To create directories and write files within the project structure.\n- `join`, `os`, and `resolve` from `node:path`, `node:os`, and `node:path` respectively: For path manipulation and system operations.\n- `JSON.stringify`: To convert input objects into JSON strings for storage in files.\n\n### Role in Module\nThis function serves as a utility to bootstrap test environments by creating a mock project directory with predefined data structures, which is crucial for unit testing the CLI tools related to managing project memory contexts. It abstracts away the setup of temporary directories and file creation, making it easier to focus on testing the core functionalities without worrying about infrastructure setup.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/context-cli.test.mjs"
+  ]
+}

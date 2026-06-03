@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `writeJsonArtifact` function is responsible for writing JSON data to a specified file path.\n\n**Primary Inputs**:\n- `filePath`: A string representing the destination file path where the JSON data will be written.\n- `value`: The data to be serialized as JSON and written to the file. This can be any JavaScript object or value that is serializable to JSON.\n\n**Output**: None, but it writes a JSON-formatted string to the specified file path.\n\n**Immediate Dependencies**:\n- `mkdir` from 'node:fs/promises': Used to create directories recursively if they do not exist.\n- `writeFile` from 'node:fs/promises': Used to write data to the file.\n- `dirname` and `join` from 'node:path': Used to construct the directory path for creating directories.\n\n**Role in Module**: This function is part of a module that deals with artifacts, likely used for storing or persisting structured data in JSON format. It ensures that the directory structure exists before writing the file, making it robust against errors related to missing directories.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/artifacts.mjs"
+  ]
+}

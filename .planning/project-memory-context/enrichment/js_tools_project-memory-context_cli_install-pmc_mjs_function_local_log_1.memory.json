@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `log` function is responsible for logging error messages to the console, prefixed with `[install-pmc]`.\n\n**Primary Inputs**: \n- `msg`: A string message that needs to be logged.\n\n**Output**: \n- Logs a formatted error message to the console.\n\n**Immediate Dependencies**: \n- None directly; it uses built-in `console.error` method.\n\n**Role in Module**: \n- Provides a consistent logging mechanism for errors within the module, aiding in debugging and maintaining clear output.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/install-pmc.mjs"
+  ]
+}

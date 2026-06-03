@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `withRecordedAttempt` function is responsible for updating an entry object to include a new attempt. This involves appending the new attempt to the existing attempts array, and optionally setting or updating the last mode used if provided by the new attempt.\n\n### Primary Inputs\n- **entry**: An object representing the current state of some data with potential previous attempts already recorded.\n- **attempt**: An object containing details of a new attempt to be added. This includes properties like `mode`, among others, depending on what information is relevant for an attempt.\n\n### Output\nThe function returns a modified version of the input `entry` where:\n- The `attempts` array is updated by appending the new `attempt`. If `entry.attempts` does not exist (is undefined), it initializes it as an empty array before appending.\n- The `lastModeUsed` property is set to the value from `attempt`, or defaults to the current `lastModeUsed` of `entry` if not provided by `attempt`, defaulting to `null` if `entry` also does not have this information.\n\n### Immediate Dependencies\n- **node:fs/promises**: Used for potential future file system operations related to recording or managing attempts, although in the current implementation, it is only used to handle the array manipulation within the function.\n- **node:path**: Although imported but not directly used in this specific function, this module might be utilized elsewhere in a larger application where path manipulations are necessary.\n\n### Role in Module\nThis function serves as a utility for managing and enriching data structures related to attempts or operations. It ensures that every call to `withRecordedAttempt` results in an updated entry with the latest attempt recorded, maintaining flexibility regarding which properties of the attempt object should be carried over to the enriched entry. This is particularly useful in scenarios where tracking multiple modes or states across different attempts is important.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-attempts.mjs"
+  ]
+}

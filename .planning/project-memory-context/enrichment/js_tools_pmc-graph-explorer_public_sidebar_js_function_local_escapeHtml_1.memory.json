@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `escapeHtml` is responsible for sanitizing and converting potentially unsafe HTML characters within a string to their safe equivalents, ensuring that the resulting string can be safely embedded into HTML without causing security issues such as XSS (Cross-Site Scripting).\n\n### Primary Inputs\n- **str**: A JavaScript string which may contain HTML or other characters that need to be escaped for safety when being included in an HTML context.\n\n### Output\n- The output is a string where all potentially harmful characters have been converted to their safe equivalents, typically by replacing them with corresponding entities (e.g., `<` becomes `&lt;`, `>` becomes `&gt;`, etc.).\n\n### Immediate Dependencies\n- **document**: Accessed via `document.createElement(\"div\")`. This is a browser API that provides access to the DOM and allows dynamic creation of HTML elements.\n\n### Role in Module\nIn the module where this function resides (`tools/pmc-graph-explorer/public/sidebar.js`), `escapeHtml` serves as a utility function used to ensure data integrity by sanitizing potentially dangerous input strings before they are rendered or embedded into HTML. This helps maintain security and prevent injection of malicious content that could disrupt the application's functionality or expose sensitive information.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/sidebar.js"
+  ]
+}

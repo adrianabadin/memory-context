@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `loadRuntimeEnrichmentConfig` function is responsible for loading the runtime enrichment configuration for a given project and environment.\n\n**Primary Inputs**:\n- `projectRoot`: A string representing the root directory of the project.\n- `env`: An object representing the environment configuration.\n\n**Output**:\n- Returns an enriched configuration object that includes details about the pending worklist entries.\n\n**Immediate Dependencies**:\n- `resolveEnrichmentConfig` from `../src/enrichment-config.mjs`: Used to resolve the enrichment configuration file path.\n- `readFile` from 'node:fs/promises': Utilized to read the contents of the enrichment configuration file.\n\n**Role in Module**:\nThis function is crucial for initializing and configuring the runtime environment by loading necessary settings and worklist statuses, which are essential for subsequent operations within the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

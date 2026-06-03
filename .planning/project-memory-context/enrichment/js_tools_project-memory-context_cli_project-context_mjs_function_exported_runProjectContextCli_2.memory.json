@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `runProjectContextCli` function orchestrates the execution of project context operations based on whether a refresh is required or not.\n\n**Primary Inputs**:\n- `projectRoot`: The root directory of the project.\n- `options`: An optional object that can include a `refresh` flag to determine if the operation should refresh existing data.\n\n**Output**: None, but it manages side effects such as file system operations and logging.\n\n**Immediate Dependencies**:\n- `ensureProjectMemoryContextDirs`: Ensures necessary directories exist for storing project context.\n- `runRefresh` or `runBootstrap`: Functions that handle specific tasks based on the refresh flag.\n\n**Role in Module**: This function acts as the entry point for CLI operations related to project context, deciding between a refresh operation and a bootstrap operation based on the provided options.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getPendingUpserts` function is responsible for filtering the entries in a manifest to find those that have a status of 'pending' and an action of 'upsert'. This function helps in identifying which entries need to be processed further for potential updates or creations in a data store.\n\n### Primary Inputs\n- `manifest`: An object containing metadata about various entries, including their status and action. The structure is not explicitly detailed in the provided code snippet but can be inferred from the context that it operates on manifest objects typically used in synchronization tasks.\n\n### Output\n- Returns an array of objects where each object represents an entry from the `manifest` that has a status of 'pending' and an action of 'upsert'. This filtered list is crucial for further processing or reporting to understand what updates or creations are pending.\n\n### Immediate Dependencies\n- The function directly uses JavaScript Array methods: `.filter()` which is used to create a new array with all elements that pass the test implemented by the provided function.\n\n### Role in Module\nThis function serves as a utility within the module, providing a specific way to extract and work with data related to pending upsert operations from the manifest. It supports the overall goal of ensuring that only relevant entries are processed for synchronization, which is likely part of a larger system responsible for maintaining or updating records in a database or other storage systems based on metadata.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

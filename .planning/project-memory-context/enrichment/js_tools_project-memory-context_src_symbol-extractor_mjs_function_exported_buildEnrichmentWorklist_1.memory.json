@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildEnrichmentWorklist` function is responsible for creating a worklist of symbols that need to be enriched. It takes the list of symbols and their associated index, then returns a new list where each symbol has an additional status indicating whether it's already been processed ('enriched') or needs processing ('pending'). Additionally, it includes memoryId and graphNodeId from the prior data if available, otherwise defaults to null.\n\n### Primary Inputs\n- `symbols`: An array of objects representing symbols, each with a `symbolKey` and potentially other properties like `codeHash`, `graphNodeId`.\n- `symbolIndex`: A dictionary where keys are symbol keys and values are objects containing metadata about the symbols, including `codeHash` and optionally `memoryId` and `graphNodeId`.\n\n### Output\nAn array of objects similar to the input `symbols`, but each object includes an additional property `status` indicating its processing status (`enriched` or `pending`), as well as properties for `memoryId` and `graphNodeId` if available.\n\n### Immediate Dependencies\n- The function directly uses:\n  - `symbolIndex[symbol.symbolKey]` to check the prior metadata of each symbol.\n  - Properties from the input symbols (`symbol.symbolKey`, `symbol.codeHash`, `symbol.graphNodeId`).\n\n### Role in Module\nThis function serves as a utility for managing and enriching the list of symbols during processing, ensuring that subsequent steps have all necessary information about which symbols are ready to be processed or have already been processed. It helps maintain a clear workflow by marking symbols appropriately based on their current state.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-extractor.mjs"
+  ]
+}

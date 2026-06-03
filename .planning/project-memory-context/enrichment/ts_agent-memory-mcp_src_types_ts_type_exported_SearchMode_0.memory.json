@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe responsibility of the `SearchMode` type is to define a set of possible values that represent different modes for searching within an application or system. This type ensures consistency and predictability when specifying how search operations should be conducted, whether through hybrid methods, keyword searches, or semantic analysis.\n\n### Primary Inputs\n- **None** (The type definition does not take any inputs directly.)\n\n### Output\n- **SearchMode**: A string literal union type that can have one of three values: 'hybrid', 'keyword', or 'semantic'. This output is used to ensure that only valid search modes are assigned or expected in various parts of the application where this type might be utilized.\n\n### Immediate Dependencies\n- **None** (The definition does not depend on other types, interfaces, or classes from within the same module.)\n\n### Role in Module\nIn the context of the `agent-memory-mcp` module, the `SearchMode` type serves as a fundamental building block for defining and enforcing consistent search behaviors across different parts of the system. This helps maintain clarity and coherence in how data is retrieved or manipulated based on specific search criteria, enhancing overall functionality and user experience by ensuring predictable outcomes from various search operations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "type",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

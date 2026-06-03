@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `extractCSharp` function is responsible for parsing C# code to extract symbol information such as classes, interfaces, records, structs, and methods.\n\n**Primary Inputs**:\n- `lines`: An array of strings representing the lines of C# code.\n- `filePath`: A string representing the file path of the C# source file.\n\n**Output**: \n- An array of objects, each representing a symbol extracted from the C# code. Each object contains details like language, kind (class, interface, record, struct, method), name, export scope, namespace, container name, signature, arity, range, and a unique symbol key.\n\n**Immediate Dependencies**:\n- `createHash` from 'node:crypto': Used to generate a hash of the code block.\n- `buildSymbolKey` from '../symbol-keys.mjs': Generates a unique key for each symbol based on its properties.\n\n**Role in Module**: \nThis function is part of a larger module designed to extract symbols from various programming languages. It specifically handles C# by parsing lines of code to identify and structure relevant symbol information, which can then be used for indexing, analysis, or documentation purposes within the project-memory-context tool.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

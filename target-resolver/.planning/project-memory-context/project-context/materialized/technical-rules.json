@@ -1,0 +1,22 @@
+{
+  "memory_key": "project-context:technical-rules",
+  "title": "Technical rules",
+  "kind": "technical-rules",
+  "source_mode": "merged",
+  "summary": "",
+  "body": "",
+  "tags": [
+    "project-context",
+    "project:target-resolver",
+    "rules"
+  ],
+  "source_files": [
+    "README.md"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "medium",
+  "content_hash": "487cf16a5abb003efa7c2d49d0c7745f79dcbd33ea5db74d8c3fd972fb9c4897",
+  "updated_at": "2026-05-20T00:04:46.864Z"
+}

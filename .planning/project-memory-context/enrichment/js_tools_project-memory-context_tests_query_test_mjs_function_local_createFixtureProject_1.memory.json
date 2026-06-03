@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `createFixtureProject` is responsible for creating a mock project directory structure and initializing it with necessary files to simulate a project setup used by the Planning Memory Context (PMC) tool. This includes setting up directories, writing configuration files, and populating them with predefined data based on provided inputs.\n\n### Primary Inputs\n- `{ memories = [], symbolIndex = {}, graph = { nodes: [], edges: [] } }`: An object that can contain arrays of memory objects (each with a filename and content) and an initial graph representation containing nodes and edges. These are used to populate the project's structure files like JSON files in specific directories for later use by the PMC tool or other modules.\n\n### Output\n- `projectRoot`: A string representing the path to the newly created temporary directory that serves as the root of the mock project setup. This directory includes subdirectories and files configured according to the inputs, simulating a real project environment.\n\n### Immediate Dependencies\n- Node.js built-in modules: \n  - `os`: For generating temporary directory paths.\n  - `fs/promises`: For file system operations like creating directories, writing files, and reading files (used here for JSON manipulation).\n  - `path`: For managing and transforming file paths.\n  - `url`: To convert file URLs to local paths.\n- External modules:\n  - `@modelcontextprotocol/sdk/client/index.js` and `@modelcontextprotocol/sdk/client/stdio.js`: These are likely part of a larger SDK used for specific protocol functionalities, though their exact role in this function is unclear without more context.\n\n### Role in Module\nThis function plays a crucial role in the module by providing a way to set up and initialize a mock project environment that mimics real PMC tool setups. It abstracts away the details of file system operations and path manipulations, making it easier to test or simulate different configurations for unit tests or other development purposes where an actual project setup might be impractical or unnecessary.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/query.test.mjs"
+  ]
+}

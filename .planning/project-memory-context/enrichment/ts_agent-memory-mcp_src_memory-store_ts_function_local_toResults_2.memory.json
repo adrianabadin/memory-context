@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility**: The `toResults` function processes query results from a database and transforms them into a sorted list of search results, limited by a specified number.\n\n**Primary Inputs**:\n- `rows`: An array of records (`Record<string, unknown>[]`) fetched from the database.\n- `limit`: A number indicating the maximum number of results to return.\n\n**Output**: \n- An array of `SearchResult` objects, sorted by descending score and limited in length by the specified `limit`.\n\n**Immediate Dependencies**:\n- `resultToSearchResult`: A function that converts a database row into a `SearchResult`.\n- The `sort` method for ordering results by score.\n- The `slice` method to limit the number of results.\n\n**Role in Module**: \n- This function is crucial for post-processing query results, ensuring they are formatted correctly and presented in a user-friendly manner. It acts as a bridge between raw database output and the application's search result interface.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

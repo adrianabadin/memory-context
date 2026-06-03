@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `launchRetryProcess` function is responsible for launching a retry process to handle the enrichment or processing of data related to a project. It ensures that the retry process runs independently from the main application, with its own standard input/output streams and execution context.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project where the script should be executed.\n- **scriptPath**: The path to the script that needs to be run for enrichment or processing.\n- **stdoutPath**: The file path where the standard output (stdout) of the retry process will be redirected.\n- **stderrPath**: The file path where the standard error (stderr) of the retry process will be redirected.\n\n### Output\nThis function does not explicitly return a value but initiates an independent process that runs the script specified by `scriptPath`.\n\n### Immediate Dependencies\n- **node:fs/promises**: For handling file operations like opening files for appending output (`open`).\n- **node:child_process**: To spawn a new child process using Node.js's built-in `spawn` function, which allows the execution of external scripts or commands.\n- **node:path**: For resolving and manipulating filesystem paths.\n- **node:url**: To convert file URLs to local paths (`fileURLToPath`).\n\n### Role in Module\nThis function plays a crucial role in handling background tasks such as retries for enrichment processes, ensuring that the main application is not blocked by these operations. It abstracts away the details of process management and I/O redirection, providing a clean interface for starting retry processes from within the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

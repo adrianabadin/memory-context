@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createDepthConfig` function is responsible for generating a configuration object based on the specified depth. It uses predefined depth presets from `DEPTH_PRESETS` to construct the configuration, defaulting to the \"compact\" preset if an invalid depth is provided.\n\n### Primary Inputs\n- **depth**: This parameter specifies the desired depth level for the configuration. It should be a valid key in the `DEPTH_PRESETS` object.\n\n### Output\nThe function outputs a new object that is a combination of the selected preset from `DEPTH_PRESETS` and any additional properties it might have, as specified by the preset.\n\n### Immediate Dependencies\n- **DEPTH_PRESETS**: This predefined set of configurations used to construct the output based on the depth level.\n\n### Role in Module\nThe `createDepthConfig` function serves as a utility within the module for generating configuration objects tailored to different levels of detail or complexity, making it easier to manage and apply specific settings across various parts of the application that require varying degrees of information granularity.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/query-engine.mjs"
+  ]
+}

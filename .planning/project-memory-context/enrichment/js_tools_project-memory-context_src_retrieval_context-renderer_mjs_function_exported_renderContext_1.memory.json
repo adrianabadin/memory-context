@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `renderContext` function is responsible for generating a detailed textual representation of the context around a specific target node within a software project. This includes information about the project base, target details, neighbors (including their relations and communities), and potentially source code if the depth level allows it. The goal is to provide a comprehensive overview that can be used for debugging, documentation, or other analytical purposes.\n\n### Primary Inputs\nThe function accepts an object containing several properties:\n- `target`: Details about the target node (name, kind, file path, etc.).\n- `neighbors`: An array of nodes that are considered neighbors to the target.\n- `edges`: Connections between the target and its neighbors.\n- `depth`: A string indicating the depth level for context retrieval ('compact', 'extended', 'deep', or 'disk').\n- `depthReached`: Indicates whether the maximum depth has been reached.\n- `projectBase`: Basic information about the project setup (stack, architecture).\n- `memoryContents`: A map of memory IDs to their corresponding content.\n- `sourceCode`: The source code directly related to the target node.\n\n### Output\nThe output is a string formatted as markdown that includes sections delineating various aspects of the context:\n- Project base details.\n- Target node information.\n- Neighbors with relations and communities if applicable.\n- Source code snippet if depth allows it.\n\n### Immediate Dependencies\n- `createDepthConfig` from './query-engine.mjs': This function is used to generate configuration settings based on the specified depth level.\n\n### Role in Module\nThe `renderContext` function serves as a crucial utility within the module, providing a structured and detailed output for different levels of context retrieval. It helps in visualizing complex relationships between nodes and provides valuable insights into the project structure and dependencies at various granularities.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/context-renderer.mjs"
+  ]
+}

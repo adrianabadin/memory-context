@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**  \nThe `isEvergreen` function determines if a given row of data is marked as \"evergreen\" by checking for specific tags.\n\n**Primary Inputs:**  \n- `row`: A record (object) containing various fields, one of which is expected to be `tags`.\n\n**Output:**  \n- Returns a boolean value: `true` if the row contains any tag that is considered \"evergreen\", otherwise `false`.\n\n**Immediate Dependencies:**  \n- `JSON.parse`: Used to parse the `tags` field from a string into an array.\n- `EVERGREEN_TAGS`: A set of tags that are considered \"evergreen\".\n\n**Role in Module:**  \nThis function is used within the memory store module to filter or categorize data based on its evergreen status, which could be crucial for managing and retrieving specific types of information efficiently.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

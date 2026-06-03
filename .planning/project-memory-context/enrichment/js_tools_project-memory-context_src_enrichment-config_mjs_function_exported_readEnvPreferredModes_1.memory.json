@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `readEnvPreferredModes` is responsible for extracting and processing the preferred modes from an environment variable. It reads the value of `PMC_ENRICHMENT_PREFERRED_MODES`, splits it by commas to get individual mode strings, trims any extra whitespace, filters out empty strings, and returns the resulting array of non-empty mode strings or `null` if no valid modes are found.\n\n### Primary Inputs\n- **env**: An object that is expected to have a property `PMC_ENRICHMENT_PREFERRED_MODES`. This could be an environment variable set in the environment where this code runs, or it could be passed as part of some configuration settings.\n\n### Output\n- The output is an array of strings representing the preferred modes, or `null` if no valid modes are found. Each string in the array has been trimmed of any leading or trailing whitespace.\n\n### Immediate Dependencies\n- **node:path**: Imported via `import { join } from 'node:path';`, but not directly used within this function. This module is typically used for file path manipulations, which are not applicable here.\n- **resolveConfigDirs** from `./platform.mjs**: This function is imported to potentially resolve configuration directories, but it's usage in the context of this function isn't explicitly shown. It might be involved in setting up or accessing environment configurations depending on how the module is used.\n\n### Role in Module\nThis function serves as a utility to extract and clean specific environmental settings that are relevant to enrichment modes within the project management context. It ensures that any provided modes are correctly parsed and filtered, which can be crucial for configuring or managing certain aspects of the application based on these preferred modes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-config.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `failSpawn` function is responsible for simulating a failed process spawn using Node.js's built-in `child_process` module, which typically handles spawning child processes. However, instead of actually spawning a child process, it returns a predefined object representing the failure scenario with an exit code of 1 and error messages in stderr.\n\n### Primary Inputs\nThe primary input for this function is:\n- **None**: The function does not take any external inputs directly; it simply returns a hardcoded failed spawn result.\n\n### Output\nThe output of `failSpawn` is an object representing the failure scenario:\n```javascript\n{ exitCode: 1, stdout: '', stderr: 'error' }\n```\nThis object indicates that the process spawned by this function did not complete successfully, with an error message contained in the `stderr`.\n\n### Immediate Dependencies\nThe immediate dependencies of `failSpawn` are:\n- **Node.js built-in modules**: Specifically, it uses parts of the `child_process` module to simulate process spawning and handling.\n\n### Role in Module\nIn the context of the module where this function is used (`tools/project-memory-context/tests/doctor.test.mjs`), `failSpawn` serves as a utility function for testing purposes. It provides a controlled way to test how error scenarios are handled by other parts of the system, such as in the `runDoctor` function which likely relies on this function during its execution or tests. This setup helps ensure that errors resulting from failed spawns can be properly tested and managed within the application's logic.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/doctor.test.mjs"
+  ]
+}

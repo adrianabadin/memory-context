@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**\nThe `main` function is the entry point for initializing project memory context by setting up agent templates based on user input or auto-detection.\n\n**Primary Inputs:**\n- Command-line arguments (`args`) passed to the script, defaulting to `process.argv.slice(2)` if none are provided.\n\n**Output:**\n- Returns an exit code (`0`), indicating successful execution.\n- Logs messages to the console regarding detected agents and template installation status.\n\n**Immediate Dependencies:**\n- `printHelp`: Function to display help information if `--help` or `-h` is specified.\n- `parseArgs`: Parses command-line arguments to extract the requested agent type.\n- `detectAgentType`: Detects the agent type if not explicitly provided.\n- `resolveConfigDirs`: Resolves configuration directories for the project.\n- `installAgentTemplates`: Installs templates based on the detected or specified agent.\n\n**Role in Module:**\nThe `main` function orchestrates the initialization process by handling user input, detecting necessary configurations, and installing appropriate templates. It serves as the central controller for the module's functionality, ensuring that all required steps are executed in sequence.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/init.mjs"
+  ]
+}

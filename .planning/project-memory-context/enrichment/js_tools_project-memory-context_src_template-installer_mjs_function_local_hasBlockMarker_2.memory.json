@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `hasBlockMarker` is responsible for checking if a given string (`content`) contains a specific marker (e.g., template name) within a block comment formatted as `<!-- pmc:{marker} -->`. This helps in identifying whether the content includes a particular placeholder or section marked by the specified marker.\n\n### Primary Inputs\n- **content**: A string that represents the text to be searched for the marker.\n- **marker**: A string identifier used within the block comment to mark specific sections of the content.\n\n### Output\n- The function returns a boolean value (`true` or `false`):\n  - `true`: If the marker is found within the content.\n  - `false`: If the marker is not found in the content.\n\n### Immediate Dependencies\n- **String Methods**: Specifically, the `.includes()` method is used to check if the string contains the specified substring.\n\n### Role in Module\nThis function serves as a utility within the module for template installation and management tasks. It helps in determining whether certain placeholders or sections are present in the content files (e.g., configuration templates) that might need special handling during installation or other operations. This is particularly useful for automated scripts where dynamic detection of specific markers is required to perform subsequent actions based on their presence or absence.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `installPmcTools` function is responsible for setting up the necessary directory structure and files required for the project memory context tools to be installed at the target root. It ensures that all necessary subdirectories are created under `.planning/project-memory-context`, and it generates an `install.json` file containing metadata about the installation, such as the version and paths to important directories like the memory database.\n\n### Primary Inputs\n- **sourceRoot**: The path where the source code for the project is located.\n- **targetRoot**: The path where the installed tools should be placed.\n\n### Output\n- An object containing counts of CLI, source, and template files (though these are hardcoded to 0 in the current implementation).\n\n### Immediate Dependencies\n- `resolve` from `node:path`: Used for resolving file paths.\n- `fileURLToPath` from `node:url`: Converts a file URL to a path.\n- `mkdirSync` and `writeFileSync` from `node:fs`: Synchronous filesystem operations used for creating directories and writing files.\n- `existsSync` from `node:fs`: Checks if a directory exists before creating it.\n\n### Role in Module\nThis function plays a crucial role in the initialization process of the project memory context tools, ensuring that all necessary setup is done before any further actions are taken or data processed by these tools. It provides a structured way to manage and access configuration settings for subsequent operations within the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/install-pmc.mjs"
+  ]
+}

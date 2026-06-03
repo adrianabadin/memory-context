@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getActiveNodeIds` function is responsible for retrieving the set of active node IDs from the application's state. It checks if the `state.contextData` and its `activeNodeIds` property are valid, ensuring they exist and are an array before returning them as a new Set.\n\n### Primary Inputs\n- `state`: The current state object which contains `contextData`.\n  - `contextData`: An object that might contain the `activeNodeIds` array.\n    - `activeNodeIds`: An array of node IDs that are considered active.\n\n### Output\n- A new Set containing the `activeNodeIds` if they exist and are an array, otherwise an empty set.\n\n### Immediate Dependencies\n- The function directly depends on the existence and structure of `state.contextData` and its properties.\n\n### Role in Module\nThis function serves as a utility to access specific data from the application state, ensuring that it is returned correctly formatted for further use within the module or by other parts of the application where active node IDs are needed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/app.js"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `runCli` is responsible for running a CLI command and capturing its standard output (`stdout`) and standard error (`stderr`). It abstracts the process of spawning a child process to execute a binary, handling both success and failure scenarios.\n\n### Primary Inputs\n- **args**: An array of arguments that will be passed to the CLI command.\n- **cwd** (optional): The working directory in which the CLI should run. If not provided, it defaults to `process.cwd()`.\n\n### Output\nThe function returns a promise that resolves to an object containing:\n- `code`: The exit code of the CLI process.\n- `stdout`: A string containing the standard output from the CLI.\n- `stderr`: A string containing the standard error from the CLI.\n\n### Immediate Dependencies\n- **spawn**: From the `node:child_process` module, used to spawn a new child process that runs the CLI command.\n- **EventEmitter**: Inherited by the spawned child process, allowing for event handling (e.g., 'data', 'error', 'exit').\n\n### Role in Module\nIn this specific module or context, `runCli` serves as a utility function to facilitate testing and interaction with CLI commands. It is used within test cases to simulate running CLI tools and assert expected outputs or behaviors. This abstraction helps maintainability and testability of the code by decoupling the actual command execution from the tests themselves.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/query.test.mjs"
+  ]
+}

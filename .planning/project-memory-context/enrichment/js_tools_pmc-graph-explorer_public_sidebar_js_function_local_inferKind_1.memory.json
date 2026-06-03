@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n**Responsibility:**\nThe function `inferKind` is responsible for determining the kind of an entity based on its label. It does this by checking the file extension and whether the label contains parentheses, which are indicative of methods or classes.\n\n**Primary Inputs:**\n- `label`: A string representing the name or description of the entity (e.g., a filename or a method signature).\n\n**Output:**\n- A string indicating the kind of the entity: \"file\", \"method\", or \"class\".\n\n**Immediate Dependencies:**\n- The function relies on regular expressions and string manipulation methods (`includes` and `test`) to analyze the input label.\n\n**Role in Module:**\nThe function is part of a larger module, likely related to code exploration or visualization tools, where it helps categorize different elements (files, methods, classes) for easier navigation or display purposes within the user interface.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/sidebar.js"
+  ]
+}

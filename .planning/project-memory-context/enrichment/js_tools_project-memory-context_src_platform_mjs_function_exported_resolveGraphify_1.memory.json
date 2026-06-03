@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `resolveGraphify` function is responsible for resolving the path to the `graphify` executable based on several factors, including environment variables and system platform. It aims to find where the `graphify` binary is located so that it can be executed or used programmatically within a Node.js application.\n\n### Primary Inputs\n- **options**: An object containing optional parameters such as environment (`env`), platform (`platform`), and custom implementations for functions like `execFileSync`.\n  - **env**: Environment variables, defaults to `process.env` if not provided.\n  - **platform**: The operating system platform, defaults to `process.platform` if not provided.\n  - **execFileSyncImpl**: A custom implementation of the `execFileSync` function, useful for testing or environment-specific implementations.\n\n### Output\n- **String**: The path to the `graphify` executable.\n\n### Immediate Dependencies\n- **node:child_process**: For executing a command (`finder`) to locate the binary.\n- **node:fs**: Specifically, `existsSync`, indirectly through its use in checking if the binary exists after attempting to find it.\n- **node:os**: To determine the platform for OS-specific commands (like finder).\n- **node:path**: For path manipulations and resolution within the module's context.\n\n### Role in Module\nThis function serves as a utility to abstract away the method of locating the `graphify` executable, making it easier to integrate into other parts of the application or for testing purposes with mock implementations. It handles environment-specific commands based on whether the system is Windows (`where`) or Unix-like (`which`), and gracefully fails if the binary cannot be located, providing clear instructions for installation or manual configuration.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

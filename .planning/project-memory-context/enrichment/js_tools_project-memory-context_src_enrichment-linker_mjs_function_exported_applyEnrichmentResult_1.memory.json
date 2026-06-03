@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `applyEnrichmentResult` function is responsible for updating the graph and symbol index based on the enrichment result. It takes the current state of the graph, the symbol index, and a result object containing details about the enrichment. The goal is to update these data structures with new information from the enrichment process.\n\n### Primary Inputs\n- `graph`: The current state of the graph which needs to be updated based on the enrichment result.\n- `symbolIndex`: The current state of the symbol index which needs to be updated based on the enrichment result.\n- `result`: An object containing various details about the enrichment, including `symbolKey`, `graphNodeId`, `memoryId`, `semanticSummary`, `codeHash`, `enrichedAt`, and `status`.\n\n### Output\n- An object containing two properties:\n  - `graph`: The updated graph after incorporating the new information from the enrichment result.\n  - `symbolIndex`: The updated symbol index after incorporating the new information from the enrichment result.\n\n### Immediate Dependencies\n- `backfillGraphNode` function from `./graph-backfill.mjs`: This function is used to update the graph based on the enrichment result.\n- `upsertSymbolIndexEntry` function from `./symbol-index.mjs`: This function is used to update or insert an entry in the symbol index based on the enrichment result.\n\n### Role in Module\nThis function serves as a central hub for integrating new data (from enrichment) into both the graph and the symbol index within the module. It ensures that any changes made during enrichment are correctly reflected in these core data structures, maintaining the integrity and usefulness of the data for further processing or querying.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-linker.mjs"
+  ]
+}

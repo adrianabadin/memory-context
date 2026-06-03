@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `appendSyncEntry` function is responsible for appending a new synchronization entry to the existing manifest file within the specified enrichment directory. It ensures that the operation is atomic by using a lock mechanism (`withManifestLock`) to prevent concurrent modifications to the manifest.\n\n### Primary Inputs\n- **enrichmentDir**: A string representing the path to the directory where the sync manifest is stored.\n- **entry**: The new entry object to be appended to the manifest. This typically includes details such as a unique identifier and other metadata necessary for synchronization.\n\n### Output\n- Returns a promise that resolves to the newly added `entry` upon successful appending.\n\n### Immediate Dependencies\n- **readFile, writeFile, mkdir** from 'node:fs/promises': These functions are used to read from, write to, and create files in the filesystem asynchronously.\n- **dirname, join** from 'node:path': These utilities help construct file paths for reading and writing manifest files.\n- **randomUUID** from 'node:crypto': This is used to generate a unique identifier for each entry, ensuring that entries are uniquely identifiable even if their content is the same.\n\n### Role in Module\nThe `appendSyncEntry` function serves as an interface for adding new synchronization entries to the manifest file within the given enrichment directory. It encapsulates the logic required to read the current state of the manifest, append a new entry, and write the updated manifest back to disk, all while ensuring thread safety using the provided lock mechanism. This role is crucial for maintaining and extending the functionality related to synchronization metadata in the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

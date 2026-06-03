@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `extractPhp` function is responsible for extracting PHP class and function symbols from an array of lines representing the source code. It identifies classes, interfaces, traits, enums, and functions using regular expressions and constructs corresponding symbol objects with metadata such as file path, kind (class or function), name, exported status, line number, end line, and arity.\n\n### Primary Inputs\n- `lines`: An array of strings where each string represents a line of PHP code.\n- `filePath`: A string representing the file path from which the lines are extracted.\n\n### Output\n- `symbols`: An array of objects, each representing a symbol (class or function) with metadata detailing its type, name, exported status, and location in the source code.\n\n### Immediate Dependencies\n- **Regular Expressions**: \n  - `classRe` for identifying class, interface, trait, and enum declarations.\n  - `funcRe` for identifying function declarations.\n- **Helper Functions**:\n  - `findBlockEnd`: A utility function to determine the end of a block (class or function) based on its scope in the code.\n  - `makeSymbol`: A helper function to create and populate symbol objects with necessary metadata.\n\n### Role in Module\nThe `extractPhp` function serves as a core component in the module responsible for parsing PHP source code into structured symbols, which are crucial for various downstream operations such as indexing, linting, or visualization within an integrated development environment (IDE). This function is instrumental in providing semantic information about the PHP codebase to other tools and applications that interact with it.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

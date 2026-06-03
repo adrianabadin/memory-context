@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `printTextResult` function is responsible for printing the result of a query, specifically formatted to be human-readable. It takes an object containing the results of a query and outputs them in a structured format that includes the answer, sources (with formatting), and tokens saved.\n\n### Primary Inputs\n- **result**: An object expected to have at least the following properties:\n  - `answer`: A string representing the result of the query.\n  - `sources`: An array of objects, each describing a source related to the query.\n  - `tokens_saved`: A number indicating how many tokens were saved in the process.\n\n### Output\n- The function outputs formatted text to the console:\n  - The answer is printed directly.\n  - If there are sources, they are listed with their formatted details.\n  - The total tokens saved is printed at the end.\n\n### Immediate Dependencies\n- **console**: Used for logging output to the terminal or command line interface.\n- **formatSource(source)**: A function that formats each source object into a string representation, which is assumed to be defined elsewhere in the module but not shown here. This dependency is immediate within the context of `printTextResult`.\n\n### Role in Module\nThe `printTextResult` function serves as an interface for presenting query results in a user-friendly manner, making it easier for users or other modules to understand and interact with the output from the query orchestrator without needing to know the internal details of how the result is structured.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

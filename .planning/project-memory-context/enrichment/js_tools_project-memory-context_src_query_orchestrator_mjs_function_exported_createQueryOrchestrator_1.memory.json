@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createQueryOrchestrator` function is responsible for creating an orchestrator that can handle various types of queries related to symbols and memories within a project. It provides methods to search for symbol matches, query answers from both memory and symbol data, and retrieve related symbols based on their keys and directions (inbound or outbound).\n\n### Primary Inputs\n- `{ projectRoot, loadArtifacts = loadQueryArtifacts }`: An object containing the root directory of the project (`projectRoot`) and an optional function for loading artifacts (`loadArtifacts`). The default is set to `loadQueryArtifacts`.\n\n### Output\nThe output of this function is an object with methods:\n- `query(question)`: Takes a query string, processes it, retrieves relevant data from the project's symbols and memories, and constructs an answer based on that data.\n- `searchSymbols(query, fileFilter)`: Searches for symbol matches based on a given query string and optionally filters by file path.\n- `getDependents(symbolKey)`: Retrieves all dependent symbols of a specified symbol key.\n- `getDependencies(symbolKey)`: Retrieves all dependency symbols of a specified symbol key.\n\n### Immediate Dependencies\nThe function relies on the following immediate dependencies:\n- `loadQueryArtifacts` (or any other implementation provided for `loadArtifacts`), which is responsible for loading necessary artifacts such as symbols and memories from the project root directory.\n\n### Role in Module\nThis function serves as a central hub for querying and managing data related to symbols and memories within a software project. It abstracts the process of fetching, filtering, and combining data from different sources (symbols and memories) into a unified interface that can be used by higher-level modules or applications to interact with the project's knowledge base.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/orchestrator.mjs"
+  ]
+}

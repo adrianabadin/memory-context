@@ -1,0 +1,23 @@
+{
+  "memory_key": "project-context:architecture-target",
+  "title": "Target architecture",
+  "kind": "architecture-target",
+  "source_mode": "declared",
+  "summary": "No target architecture declared.",
+  "body": "No target architecture declared.",
+  "tags": [
+    "project-context",
+    "project:memory-context",
+    "architecture",
+    "target-state"
+  ],
+  "source_files": [
+    ".planning/project-memory-context/project-context/declared/architecture-target.json"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "7bc86522660d7653fb1b04dd6f5b20420c362f043e45eb095c8d83c72d59e4d5",
+  "updated_at": "2026-06-02T05:31:53.395Z"
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `detectServicesFromSrc` is responsible for detecting the presence of specific libraries or services within the source code files located in the 'src' directory of a project. It uses file system operations to read and analyze each file, looking for certain library names that indicate the use of particular services (e.g., '@supabase/supabase-js', 'stripe', 'aws-sdk').\n\n### Primary Inputs\n- `projectRoot`: A string representing the root directory of the project where the 'src' directory is located.\n\n### Output\n- An array of strings, each representing a detected service ('supabase', 'stripe', or 'aws'). If no services are detected, it returns an empty array.\n\n### Immediate Dependencies\n- `readdir` from 'node:fs/promises': Used to list all entries (files and directories) in the 'src' directory recursively.\n- `join` from 'node:path': Used to construct file paths for reading files.\n- `readFile` from 'node:fs/promises': Used to read the content of each source code file.\n\n### Role in Module\nThis function is part of a larger module that likely involves other functionalities related to project management, such as dependency tracking or environment configuration. It plays a crucial role in automatically identifying and categorizing dependencies within the project's codebase, which can be used for various purposes like licensing checks, runtime environment setup, or third-party service integration.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/stack-extractor.mjs"
+  ]
+}

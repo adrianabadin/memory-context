@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `handleRecall` Function\n\n**Responsibility:**  \nThe `handleRecall` function is responsible for retrieving memory data from a store based on specified topics and recent entries. It aggregates search results by topic and lists the most recent entries.\n\n**Primary Inputs:**\n- `store`: An instance of `MemoryStore` used to interact with the memory storage.\n- `args`: An object containing:\n  - `topics`: An array of strings representing the topics to search for.\n  - `include_recent`: Optional number specifying how many recent entries to include (default is 5).\n  - `limit_per_topic`: Optional number specifying the limit of results per topic (default is 5).\n\n**Output:**  \nReturns a promise that resolves to an object with:\n- `byTopic`: A record where each key is a topic and the value is an array of search results.\n- `recent`: An array of recent entries.\n\n**Immediate Dependencies:**\n- `MemoryStore`: Used for searching topics and listing recent entries.\n- `success` and `error` functions (not shown in the snippet): Likely used to format successful responses and error messages.\n\n**Role in Module:**  \nThis function serves as a tool within the module, providing a structured way to recall memory data based on user-defined criteria. It is designed to be asynchronous and handle potential errors gracefully by returning an appropriate error message.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildQueueSummary` function calculates and returns a summary of the enrichment status for entries in a worklist.\n\n**Primary Inputs**: \n- `worklist`: An array of objects, each representing an entry with a `status` property indicating its current state (e.g., 'enriched', 'already_enriched').\n\n**Output**: \n- An object summarizing the number of enriched entries in the worklist.\n\n**Immediate Dependencies**: \n- None explicitly listed within the provided code snippet, but relies on the structure and properties of the `worklist` entries.\n\n**Role in Module**: \n- This function is part of a larger module responsible for managing and enriching project data. It provides a quick overview of how many entries have been successfully enriched or are already marked as such, aiding in monitoring and decision-making processes within the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

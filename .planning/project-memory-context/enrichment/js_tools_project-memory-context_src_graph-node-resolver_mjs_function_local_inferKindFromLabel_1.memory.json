@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `inferKindFromLabel` is responsible for determining the kind of a symbol based on its label. It does this by checking if the label starts with a dot (indicating it might be a method) or matches a specific pattern indicating it is a method (ending with parentheses). If neither condition is met, it returns `null`.\n\n### Primary Inputs\n- **raw**: A string representing the label of the symbol.\n\n### Output\n- The output is either 'function' if the label starts with a dot, 'method' if it matches the specific pattern ending with parentheses, or `null` if neither condition is met.\n\n### Immediate Dependencies\nThere are no external dependencies listed in the provided code snippet; all logic is contained within the function itself.\n\n### Role in Module\nThis function plays a crucial role in the module by providing a way to categorize symbols as either functions or methods based on their labels, which can be used for further processing or visualization within the tool that uses this function.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

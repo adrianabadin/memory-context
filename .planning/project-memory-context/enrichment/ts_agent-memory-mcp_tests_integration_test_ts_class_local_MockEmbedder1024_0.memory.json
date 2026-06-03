@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of MockEmbedder1024\n\n**Responsibility:**\n`MockEmbedder1024` is a mock class extending `MockEmbedder`, designed to simulate an embedding service with specific dimensions and behavior for testing purposes.\n\n**Primary Inputs:**\n- `text`: A string input for single text embedding.\n- `texts`: An array of strings for batch text embedding.\n\n**Output:**\n- Returns embeddings as arrays of numbers. For a single text, it appends 640 zeros to the base embedding. For a batch, it processes each text individually and returns an array of embeddings.\n\n**Immediate Dependencies:**\n- Inherits from `MockEmbedder`.\n- Uses methods from `MockEmbedder` for base embedding logic.\n\n**Role in Module:**\nServes as a specialized mock for integration tests, ensuring consistent behavior with specific dimensions (1024) and additional padding (640 zeros), facilitating reliable testing of components that depend on embedding services.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:.",
+    "file:agent-memory-mcp/tests/integration.test.ts"
+  ]
+}

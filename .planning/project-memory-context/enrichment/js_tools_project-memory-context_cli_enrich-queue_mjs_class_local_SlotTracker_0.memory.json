@@ -1,0 +1,11 @@
+{
+  "content": "**SlotTracker Class**\n\n- **Responsibility**: Manages a pool of slots to track the allocation, completion, and failure of tasks. It ensures that no more than a specified number of slots are active at any time.\n  \n- **Primary Inputs**: \n  - `maxSlots`: The maximum number of concurrent slots allowed.\n  - Methods like `allocate`, `complete`, and `fail` take additional parameters such as `symbol`, `slotIdx`, `result`, and `error`.\n\n- **Output**:\n  - Returns slot indices for allocation, detailed completion or failure information including elapsed time, and boolean status checks.\n\n- **Immediate Dependencies**: \n  - None specific; operates independently with basic JavaScript data structures like `Map`.\n\n- **Role in Module**: Acts as a resource manager within the enrichment process, ensuring that tasks are processed without exceeding concurrency limits. It tracks metrics such as completed tasks, errors, and total processed items to facilitate monitoring and optimization of the task queue.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "class",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

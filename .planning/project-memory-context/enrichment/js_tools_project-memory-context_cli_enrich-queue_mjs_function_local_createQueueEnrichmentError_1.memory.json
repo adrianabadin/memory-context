@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `createQueueEnrichmentError` function is responsible for creating and returning an error object when all enrichment providers fail.\n\n**Primary Inputs**: \n- `result`: An object containing details about the failed enrichment process, including:\n  - `error`: A string describing the error.\n  - `symbolKey`: A key associated with the symbol that caused the error.\n  - `attempts`: An array of recorded attempts made during the enrichment process.\n\n**Output**: \n- Returns an `Error` object enhanced with additional properties: `symbolKey` and `attempts`.\n\n**Immediate Dependencies**: \n- The function uses the `Error` constructor from the standard JavaScript library to create error objects.\n\n**Role in Module**: \n- This function is part of a larger module that handles enrichment processes. It plays a crucial role in error handling by providing detailed information about failed attempts, which can be used for debugging and logging purposes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

@@ -1,36 +1,29 @@
 <!-- pmc:autostart -->
-On EVERY session start, BEFORE responding to the user, execute these steps IN ORDER:
+## PMC Session Autostart
 
-1. **Check enrichment status**: Read `.planning/project-memory-context/enrichment/worklist.json`.
-   Count entries with `status: "pending"` or `status: "stale"`. **Report the count to the user**
-   (e.g. "PMC: 12 symbols pending enrichment").
-   If count > 0, launch background enrichment via the **Bash tool with `run_in_background: true`**:
+Session initialization is handled automatically by the `{{PMC_BIN}} session-start` hook
+(installed by `pmc setup`). The hook runs **outside the model context window**, costs zero
+tokens, and injects a compact status + project context summary as `additionalContext`.
 
-   ```bash
-   {{PMC_BIN}} enrich .
-   ```
+**If your harness does NOT have a SessionStart hook configured**, run this once per session:
 
-   ⚠️ Do NOT use PowerShell `Start-Process -WindowStyle Hidden` — the hidden process inherits a
-   restricted PATH, crashes silently, and leaves a stalled queue-state that blocks restart for ~90 s.
+```bash
+{{PMC_BIN}} session-start .
+```
 
-   After launching, run the **Still-Alive watchdog** (cap: 3 auto-relaunches):
-   - Periodically run `{{PMC_BIN}} enrich-status` and check `.state`.
-   - `running` → alive, keep waiting.
-   - `finished` → done, report completion summary.
-   - `stalled` or `failed` AND `.worklist.pending > 0` → crashed; relaunch (Bash
-     `run_in_background: true`), report "PMC enrichment crashed — relaunched (attempt N/3)".
-   - After 3 failed relaunches: tell the user to run `/doctor`.
+This command handles everything deterministic in one shot:
+- Checks enrichment status; launches background enrich + watchdog if needed
+- Reports pending sync operations (run `/sync-context` to apply)
+- Loads project context from materialized disk artifacts (no MCP round-trip)
+- Reports if LLM subagent drain is needed
 
-2. **Check sync-manifest**: Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If `entries` contains any element with `status: "pending"`, surface: "PMC has N pending sync operations. Run `/sync-context` to apply them."
-
-3. **Recall base context**: Call `agent-memory_search` with `query: "project context overview"` and `tags: ["project-context"]`. Present a brief summary (~500 tokens) to establish session context.
-
-4. **Remind**: "Use `/get-context <target>` for structural deep-dive BEFORE reading files."
+**If the session summary reports `subagentQueue.pending > 0`**, dispatch the `enrich` subagent
+to drain those entries — that is the only step that requires LLM involvement.
 
 ## Mandatory PMC Workflow (ENFORCED)
 
-- **BEFORE reading any source file**: Run `pmc get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.
-- **AFTER implementing code changes**: Run `pmc refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `pmc sync-context` to persist new memories.
+- **BEFORE reading any source file**: Run `{{PMC_BIN}} get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.
+- **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `{{PMC_BIN}} sync-context` to persist new memories.
 - **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
 - **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
 
@@ -38,11 +31,11 @@ On EVERY session start, BEFORE responding to the user, execute these steps IN OR
 
 | Situation | Command | Depth |
 |-----------|---------|-------|
-| About to read a file | `pmc get-context <file>` | compact |
-| Working on a specific symbol | `pmc get-context <symbol>` | compact |
-| Need dependency information | `pmc get-context <symbol> extended dependencies` | extended |
-| Debugging complex issues | `pmc get-context <symbol> deep all` | deep |
-| Need raw source code | `pmc get-context <symbol> disk` | disk |
+| About to read a file | `{{PMC_BIN}} get-context <file>` | compact |
+| Working on a specific symbol | `{{PMC_BIN}} get-context <symbol>` | compact |
+| Need dependency information | `{{PMC_BIN}} get-context <symbol> extended dependencies` | extended |
+| Debugging complex issues | `{{PMC_BIN}} get-context <symbol> deep all` | deep |
+| Need raw source code | `{{PMC_BIN}} get-context <symbol> disk` | disk |
 | Quick project overview | `agent-memory_search "project context overview"` | — |
-| After code changes | `pmc refresh-context --enrich` then `pmc sync-context` | — |
+| After code changes | `{{PMC_BIN}} refresh-context --enrich` then `{{PMC_BIN}} sync-context` | — |
 <!-- /pmc:autostart -->

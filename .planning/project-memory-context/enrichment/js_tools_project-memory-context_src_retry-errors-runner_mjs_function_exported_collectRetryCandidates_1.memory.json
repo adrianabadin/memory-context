@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `collectRetryCandidates` function is responsible for collecting and organizing entries that have encountered errors, particularly those related to retrying operations. It filters out non-error entries and aggregates information about previous error occurrences across different symbols. This helps in identifying candidates for retry based on the number of attempts and previous error history.\n\n### Primary Inputs\n- `worklist`: An array of objects where each object represents an entry with properties such as `status`, `symbolKey`, `attempts`, etc.\n\n### Output\n- Returns an array of objects, each representing a candidate for retry. These candidates are filtered from the input `worklist` and include detailed error history for each symbol key.\n\n### Immediate Dependencies\n- **collectPreviousErrors(entry)**: A helper function that collects previous errors specific to the given entry. This is used to update or initialize the list of previous errors for each candidate retry entry.\n\n### Role in Module\nThis function serves as a crucial part of the error handling and management within the module, particularly in scenarios where retrying operations based on historical error data is necessary. It helps in maintaining a record of all symbols that have encountered errors across multiple attempts, which can be used to decide if further retries should be attempted for these specific symbols.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retry-errors-runner.mjs"
+  ]
+}

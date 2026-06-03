@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `shouldRefreshProjectContext` function is responsible for determining whether the project context should be refreshed based on changes to specific file paths and their associated hashes. This helps in managing and updating the state of the project context efficiently by only refreshing when necessary, thus optimizing performance and resource usage.\n\n### Primary Inputs\n- **state**: An object representing the current state of the project context. It contains a property `trackedFiles` which is a dictionary mapping file paths to their corresponding hashes.\n- **filePath**: A string representing the path of the file whose hash needs to be compared with its stored value in the state.\n- **nextHash**: A string representing the latest computed hash for the given file path.\n\n### Output\n- A boolean value: `true` if the file's hash has changed (indicating that the project context should be refreshed), and `false` otherwise.\n\n### Immediate Dependencies\n- None explicitly listed in the provided code snippet, but it assumes that `state` is a well-defined object containing `trackedFiles`.\n\n### Role in Module\nThis function plays a crucial role in managing dynamic updates to the project context by ensuring that only files with changed states trigger a refresh. It acts as an essential check before performing potentially expensive operations like recomputing or updating parts of the project context, thereby enhancing performance and responsiveness.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/refresh-state.mjs"
+  ]
+}

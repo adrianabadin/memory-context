@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `rowToMemory` Function\n\n**Responsibility:**\nThe `rowToMemory` function is responsible for converting a database row into a structured `Memory` object. This transformation involves type casting and parsing specific fields from the input row to ensure they conform to the expected types.\n\n**Primary Inputs:**\n- `row`: A record (object) containing various properties that represent a memory entry in the database.\n\n**Output:**\n- Returns a `Memory` object with structured data, including:\n  - `id`: The unique identifier of the memory.\n  - `content`: The content or text associated with the memory.\n  - `category`: The category to which the memory belongs.\n  - `tags`: An array of tags parsed from a JSON string.\n  - `createdAt`: The timestamp when the memory was created.\n  - `updatedAt`: The timestamp when the memory was last updated.\n  - `version`: The version number of the memory, defaulting to 1 if not provided.\n\n**Immediate Dependencies:**\n- Type definitions and error classes imported from './errors.js'.\n- JSON parsing for converting tag strings into arrays.\n\n**Role in Module:**\nThis function plays a crucial role in the module by facilitating the conversion of raw database rows into usable `Memory` objects. It ensures that data integrity is maintained during this transformation process, which is essential for subsequent operations such as querying and updating memories within the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

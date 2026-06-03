@@ -1,0 +1,23 @@
+{
+  "memory_key": "project-context:stack-runtime",
+  "title": "Project stack and runtime",
+  "kind": "stack-runtime",
+  "source_mode": "detected",
+  "summary": "Languages: . Frameworks: .",
+  "body": "- Languages: Not detected\n- Runtimes: node\n- Frameworks: Not detected\n- Package managers: Not detected",
+  "tags": [
+    "project-context",
+    "project:memory-context",
+    "stack"
+  ],
+  "source_files": [
+    "package.json",
+    "tsconfig.json"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "7a0df4ada55555f7d3110343f5865c189f796d491ef6cd03c76a9b1a6e2b682f",
+  "updated_at": "2026-06-02T05:31:53.395Z"
+}

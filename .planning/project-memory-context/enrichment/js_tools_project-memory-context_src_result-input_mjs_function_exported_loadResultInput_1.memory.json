@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadResultInput` function is responsible for loading and parsing an input string, which can either be a JSON string prefixed with an \"@\" symbol (indicating it should be read from a file) or directly provided as plain text. It handles the conversion of these inputs to JavaScript objects using JSON parsing.\n\n### Primary Inputs\n- `rawInput`: This is the raw input string that could represent either a file path prefixed with \"@\" or direct JSON content.\n\n### Output\n- The output is a parsed JavaScript object, which can be an array, object, string, number, etc., depending on the contents of the input string.\n\n### Immediate Dependencies\n- `String()`: To ensure the raw input is treated as a string.\n- `trim()`: To remove any leading or trailing whitespace from the input string.\n- `readFile` from `node:fs/promises`: If the input starts with an \"@\" symbol, this function reads the file specified by the path after the \"@\" symbol and returns its content as a UTF-8 encoded string.\n- `JSON.parse()`: To convert the JSON string (if provided directly) or the read file content into a JavaScript object.\n\n### Role in Module\nThis function serves as a utility to abstract the process of reading from either a direct input or a file, and then parsing it as JSON. It encapsulates these operations within an asynchronous function that can be used throughout the module for consistent handling of result inputs.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/result-input.mjs"
+  ]
+}

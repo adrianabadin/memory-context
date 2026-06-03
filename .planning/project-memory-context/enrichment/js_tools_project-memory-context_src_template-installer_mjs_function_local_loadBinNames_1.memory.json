@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadBinNames` function is responsible for loading and returning the names of binary files (PMC_BIN) from a package's JSON configuration file (`package.json`), located at `packageRoot`. If no specific bin name is found, it defaults to 'pmc'. Additionally, it provides a default command for agent memory commands using `npx -y @aabadin/agent-memory-mcp`.\n\n### Primary Inputs\n- **packageRoot**: A string representing the root directory of the package where the `package.json` file is located.\n\n### Output\n- An object containing:\n  - `PMC_BIN`: The name of the binary from `package.json`, or 'pmc' if not found.\n  - `AGENT_MEMORY_CMD`: A default command for agent memory commands, currently set to `npx -y @aabadin/agent-memory-mcp`.\n\n### Immediate Dependencies\n- **Node.js built-in modules**:\n  - `node:fs/promises` for file system operations (reading the package.json file).\n  - `node:path` for path manipulation (joining paths).\n  - `node:url` to convert file URLs to file paths.\n\n### Role in Module\nThis function is crucial for initializing or configuring parts of the application that depend on binary names from a specific package's configuration, providing flexibility and robustness through default settings when necessary.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `extractGo` Function\n\n#### Responsibility\nThe `extractGo` function is responsible for extracting Go language symbols (functions and types) from a given list of lines of code. It identifies functions and type declarations using regular expressions, determines their exported status based on capitalization, and constructs symbol objects with relevant metadata such as file path, kind, name, scope, line number, end line, and arity if applicable.\n\n#### Primary Inputs\n- `lines`: An array of strings where each string represents a line of code from the source file.\n- `filePath`: A string representing the file path of the source file being processed.\n\n#### Output\n- `symbols`: An array of objects, each representing a symbol extracted from the input lines. Each object contains metadata about the symbol such as its type (function or class), name, scope (exported or local), and other contextual details like line numbers and arity.\n\n#### Immediate Dependencies\n- Regular Expressions (`funcRe` and `typeRe`) for pattern matching in the code lines.\n- Helper function `findBlockEnd` to determine the end of a block of code, which is used to identify the scope of functions and types.\n- Helper function `makeSymbol` to construct symbol objects with necessary metadata.\n\n#### Role in Module\nThe `extractGo` function plays a crucial role in the module by providing a mechanism to extract meaningful symbols from Go source files. This functionality is essential for tools or environments that need to understand and interact with the structure of Go code, such as static analysis, IDEs, or documentation generators. It contributes to the overall utility of the module by enabling users to programmatically query and navigate through the symbol hierarchy defined in Go source code.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

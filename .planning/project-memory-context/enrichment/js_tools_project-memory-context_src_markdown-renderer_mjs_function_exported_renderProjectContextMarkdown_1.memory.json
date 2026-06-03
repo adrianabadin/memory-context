@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `renderProjectContextMarkdown` function is responsible for converting the project memory context, which includes details about source files and graph references, into a markdown formatted string. This function takes the `memory` object as input and constructs a markdown document that summarizes and lists various aspects of the project's context.\n\n### Primary Inputs\n- **memory**: An object containing information about the project, including:\n  - `title`: A string representing the title of the project.\n  - `kind`: A string indicating the kind of the project (e.g., \"analysis\", \"report\").\n  - `updated_at`: A date or timestamp when the project was last updated.\n  - `summary`: A brief summary of the project.\n  - `body`: Detailed description of the project.\n  - `source_files` (optional): An array of file paths related to the project.\n  - `graph_refs` (optional): References or identifiers for graphs associated with the project.\n\n### Output\n- A markdown formatted string that includes:\n  - The title of the project.\n  - Kind, updated date, and summary as specified in the input.\n  - Detailed body description.\n  - List of source files (if available), otherwise indicating \"None\".\n  - List of graph references (if available), otherwise indicating \"None\".\n\n### Immediate Dependencies\n- None explicitly listed; however, it assumes that `memory` contains all necessary data fields (`title`, `kind`, `updated_at`, `summary`, `body`, `source_files`, and `graph_refs`).\n\n### Role in Module\nThis function serves as a utility to format project context information into a human-readable markdown format, which can be used for documentation, reporting, or other presentation purposes. It ensures that the key details of the project are clearly presented in a structured way suitable for consumption by tools and users who prefer or require this format.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/markdown-renderer.mjs"
+  ]
+}

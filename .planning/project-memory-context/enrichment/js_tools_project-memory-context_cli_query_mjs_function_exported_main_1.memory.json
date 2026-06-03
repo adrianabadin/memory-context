@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `main` Function\n\n**Responsibility:**\nThe `main` function serves as the entry point for executing queries within a PMC-enabled project. It handles argument parsing, checks for valid input, locates the project root, and orchestrates the query execution.\n\n**Primary Inputs:**\n- Command-line arguments (`args`), defaulting to `process.argv.slice(2)` if not provided.\n\n**Output:**\n- Returns an exit code (`0` for success, `1` for error).\n- Prints the result of the query in either text or JSON format to the console.\n\n**Immediate Dependencies:**\n- `access`, `dirname`, `join`, `resolve`, `fileURLToPath` from Node.js modules.\n- `createQueryOrchestrator` from `../src/query/orchestrator.mjs`.\n\n**Role in Module:**\nThe `main` function is crucial for integrating the CLI functionality, ensuring that queries are executed correctly based on user input and project context. It acts as a bridge between the command-line interface and the underlying query processing logic.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

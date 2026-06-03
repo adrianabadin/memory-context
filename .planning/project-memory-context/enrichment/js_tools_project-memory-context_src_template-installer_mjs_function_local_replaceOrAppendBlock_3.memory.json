@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `replaceOrAppendBlock` function is responsible for inserting or replacing a block of content within a larger string, identified by a specific marker. This is useful for templating and injecting dynamic content into predefined sections of a file.\n\n### Primary Inputs\n1. **content**: A string where the block needs to be inserted or replaced.\n2. **marker**: A unique identifier that defines where the block should be inserted or replaced within the content.\n3. **block**: The actual block of text that will replace the existing block identified by the marker, or append if no such block exists.\n\n### Output\n- If a block with the specified marker already exists in the content, it replaces this block with the new `block`.\n- If no such block exists, it appends the new `block` to the end of the content.\n\n### Immediate Dependencies\n1. **RegExp**: Used for pattern matching and replacing the identified block markers.\n2. **String.prototype.replace()**: To replace or insert the block if a match is found.\n3. **String.prototype.concat():** When appending new content if no marker is found.\n\n### Role in Module\nThis function serves as a utility to manage and manipulate template-like content by inserting or replacing predefined blocks identified by markers. It enhances the flexibility of injecting dynamic content without manually editing large sections of text, making it easier to maintain and update templates.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

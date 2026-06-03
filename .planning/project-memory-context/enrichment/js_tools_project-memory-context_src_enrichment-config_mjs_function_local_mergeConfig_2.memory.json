@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `mergeConfig` function is responsible for merging two configuration objects (`base` and `override`) deeply. It ensures that any nested properties (like `localModel`, `cloudApi`, and `agentSubagent`) are also merged recursively, preserving the structure of the original configurations while overriding values from the `override` object where applicable.\n\n### Primary Inputs\n- **base**: An object representing the base configuration settings.\n- **override**: An object representing the override configuration settings that will be merged into the base configuration.\n\n### Output\nA new object that is a deep merge of the `base` and `override` configurations, ensuring nested properties are preserved and overridden as specified.\n\n### Immediate Dependencies\n- **node:path** (imported as `join`): Used for path manipulation if paths need to be joined or resolved within the configuration objects.\n- **./platform.mjs** (imported as `resolveConfigDirs`): This function likely resolves directories where configurations might be stored, which could be used in more complex scenarios involving multi-environment or multi-source configuration handling.\n\n### Role in Module\nThe `mergeConfig` function serves as a utility to facilitate the merging of configuration settings across different environments or layers within the module. It ensures that no matter how deeply nested the configurations are, they can be merged correctly without overwriting each other's properties. This is particularly useful for applications where configurations might need to be adjusted based on runtime conditions (local vs. cloud) or deployment targets.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-config.mjs"
+  ]
+}

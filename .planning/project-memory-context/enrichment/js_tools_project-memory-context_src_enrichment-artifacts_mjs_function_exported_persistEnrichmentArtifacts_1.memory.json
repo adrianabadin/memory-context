@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `persistEnrichmentArtifacts` function is responsible for persisting the results of an enrichment process to disk. It ensures that the necessary artifacts (memory payload and, optionally, enrichment result) are written to specific files within a project's memory context directory. This includes resolving the project root, creating necessary directories if they don't exist, building the artifact objects, and writing these objects to JSON files.\n\n### Primary Inputs\n- `projectRoot`: The root directory of the project where the memory context will be stored.\n- `projectSlug`: A unique identifier for the project.\n- `job`: An object containing details about the current job or task being processed, including its symbol key and other relevant metadata.\n- `report`: The semantic report to be included in the artifacts.\n- `memoryId`: An optional ID that uniquely identifies this memory context, which is used to name the enrichment result file if provided.\n- `enrichedAt`: Timestamp indicating when the project was enriched.\n\n### Output\nThe function returns an object containing:\n- The built `memoryPayload` and optionally `enrichmentResult`.\n- File paths for both the memory payload and, if applicable, the enrichment result JSON files.\n\n### Immediate Dependencies\n- Node's `path` module (imported as `{ join, resolve }`) for path manipulation.\n- Custom modules:\n  - `./memory-payload.mjs`: Provides functions to build `memoryPayload` and `enrichmentResult`.\n  - `./semantic-report.mjs`: Provides a function to normalize the semantic report.\n\n### Role in Module\nThis function serves as an intermediary between the enrichment process and the file system, ensuring that all generated artifacts are properly stored according to their specific requirements (e.g., naming based on job symbol key). It encapsulates the logic for creating and writing JSON files related to project memory context enrichment results.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-artifacts.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `installWithBlockMarker` is responsible for installing or updating a template file within a project. It ensures that the target file (specified by `targetFile`) contains a specific block marker, and if not, it will either replace or append the content of the template to this marker. The function handles both cases where the target file may already contain some content or is completely empty.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project where the target file resides.\n- **packageRoot**: The root directory of the package containing the template files.\n- **placeholders**: A dictionary of placeholders that will be replaced in the template before insertion into the target file.\n- **targetFile**: The name or path to the target file within the project where the template content will be inserted.\n- **templatePath**: The relative path from `packageRoot` to the template file that contains the placeholder values to be used for replacement and insertion.\n- **marker** (optional): A string that identifies the block in the target file where the template should be inserted or replaced. Default is 'init'.\n\n### Output\n- No explicit return value; the function modifies the target file directly by inserting or replacing the content based on the marker.\n\n### Immediate Dependencies\n- **node:fs/promises**: For filesystem operations (reading from and writing to files).\n- **node:fs**: Specifically `existsSync` for checking if the target file exists.\n- **node:path**: For path manipulation (`dirname`, `join`) to construct paths relative to the project root.\n- **node:url**: To convert URL objects into filesystem paths (`fileURLToPath`).\n\n### Role in Module\nThis function serves as a utility for managing template insertion and updating within a project, ensuring that placeholders are replaced with actual values and that specific blocks (marked by `marker`) are correctly handled during the installation process. It is part of the larger functionality related to setting up or maintaining project configurations based on predefined templates.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `EmbeddingCache` class is responsible for managing an embedding cache, which stores and retrieves vector representations of text data. It provides methods to get and set embeddings based on the input text using a SHA-1 hash as the unique identifier.\n\n### Primary Inputs\n- `text`: A string representing the textual data for which the embedding needs to be retrieved or stored.\n\n### Output\n- For `get(text: string)`: Returns an array of floats if the embedding exists in the cache, otherwise returns `null`.\n- For `set(text: string, vector: number[])`: Does not return a value; it either successfully writes the embedding to the cache or fails silently.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `crypto` (for creating SHA-1 hashes): Imported as `createHash`.\n  - `fs/promises` (for file system operations): Imported as `readFile`, `writeFile`, and `rename`.\n  - `path`: Imported as `join`.\n\n### Role in Module\nThe `EmbeddingCache` class serves as a module for managing embeddings, providing methods to store and retrieve them efficiently using caching mechanisms. It abstracts the details of file storage and retrieval, making it easier to use within other parts of the application that require embedding-based operations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/embedding-cache.ts"
+  ]
+}

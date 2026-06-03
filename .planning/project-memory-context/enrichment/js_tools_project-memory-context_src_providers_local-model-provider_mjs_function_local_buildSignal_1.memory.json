@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildSignal` function is responsible for creating an AbortSignal based on the provided request, specifically checking if a timeoutMs property exists within the request object. If it does, it returns an AbortSignal that will abort after the specified number of milliseconds (timeoutMs). If not, it simply returns undefined.\n\n### Primary Inputs\n- `request`: An object expected to contain at least one property named `timeoutMs`. This could be a configuration or parameter passed to the function to control its behavior regarding timing out operations.\n\n### Output\n- The output of this function is an AbortSignal if `request` contains a `timeoutMs` property, otherwise it returns undefined. This signal can be used to abort asynchronous operations if needed.\n\n### Immediate Dependencies\n- `AbortSignal`: A native JavaScript class provided by the environment that allows for signaling whether an operation should be aborted or not.\n- `request`: The input object which is expected to provide a `timeoutMs` property, indicating how long (in milliseconds) the function should wait before considering the operation as timed out and aborting it if necessary.\n\n### Role in Module\nIn the module where this function resides (`tools/project-memory-context/src/providers/local-model-provider.mjs`), `buildSignal` serves as a utility function to facilitate the creation of AbortSignals based on specific configurations, which can be crucial for managing and controlling asynchronous operations within the broader context of handling local models or any other resource that might require timing out operations due to time constraints.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/providers/local-model-provider.mjs"
+  ]
+}

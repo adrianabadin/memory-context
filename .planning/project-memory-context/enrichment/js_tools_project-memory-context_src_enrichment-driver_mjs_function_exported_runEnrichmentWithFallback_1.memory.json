@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `runEnrichmentWithFallback` function is responsible for orchestrating the enrichment process by attempting to use each configured provider in the order specified by the `config.preferredModes`. It handles errors, fallback mechanisms, and returns detailed results about the attempts made during the enrichment process.\n\n### Primary Inputs\n- **request**: The request object that needs enrichment.\n- **config**: Configuration settings for the enrichment process.\n- **providers**: An array of provider objects capable of performing enrichment.\n- **env** (optional): Environment variables, defaults to `process.env` if not provided.\n\n### Output\nThe function returns an object with detailed results about the status and attempts made during the enrichment:\n- **status**: Indicates whether the enrichment succeeded ('succeeded'), failed due to configuration issues ('error'), or skipped ('skipped').\n- **content**: The enriched content, if successful; otherwise, `null`.\n- **mode**: The mode used for enrichment, if successful; otherwise, `null`.\n- **provider**: The provider used for enrichment, if successful; otherwise, `null`.\n- **model**: The model used for enrichment, if successful; otherwise, `null`.\n- **attempts**: An array of objects detailing each attempt made during the process.\n\n### Immediate Dependencies\n- **classifyEnrichmentError**: A function to classify errors encountered during enrichment attempts.\n\n### Role in Module\nThis function serves as a central orchestrator for all enrichment activities within the module, ensuring that multiple providers are tried sequentially and handling any issues gracefully by falling back to other configured providers if necessary. It abstracts the complexity of error management and fallback mechanisms from the main business logic, making the code cleaner and more maintainable.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-driver.mjs"
+  ]
+}

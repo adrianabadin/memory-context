@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `findFiles` function is responsible for recursively searching through directories to find files that match specified extensions, while ignoring certain paths.\n\n**Primary Inputs**:\n- `dir`: The directory to start the search from.\n- `exts`: An array of file extensions to look for (e.g., ['.js', '.ts']).\n- `ignore`: An array of strings representing paths or substrings to ignore during the search.\n- `projectRoot`: The root directory of the project, used to normalize file paths.\n\n**Output**: \n- An array of file paths that match the specified extensions and do not contain any ignored substrings. Each path is relative to the `projectRoot`.\n\n**Immediate Dependencies**:\n- `readdirSync` from 'node:fs': Used to read directory contents.\n- `resolve` from 'node:path': Used to resolve full file paths.\n\n**Role in Module**: \n- This function serves as a utility within the module, enabling other parts of the codebase to easily locate files with specific criteria. It is likely used by higher-level functions that require knowledge of project file structures for operations like setup or analysis.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

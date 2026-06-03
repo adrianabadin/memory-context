@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n**Responsibility:**  \nThe function `updateStats` is responsible for updating the user interface to reflect the current state of node statistics, including counts of active nodes, enriched nodes, and total visible nodes based on various filters (active only, community match, and search query).\n\n**Primary Inputs:**  \n- `state`: An object containing data such as `graphData`, `contextData` (with `activeNodeIds` and potentially other context details), and methods (`getEnrichedNodeIds`) if applicable. It also includes filters like `enabledCommunities` and `searchQuery`.\n\n**Output:**  \n- The function does not return anything but directly manipulates the DOM to update an element with id \"stats\" displaying node statistics.\n\n**Immediate Dependencies:**  \n- Accesses the DOM to get the element with id \"stats\".\n- Uses data from `state` including collections of nodes, active IDs, enriched IDs, and community filters.\n\n**Role in Module:**  \nThis function plays a crucial role in maintaining an interactive user interface that dynamically reflects the current state of node attributes (active, enriched) and application settings (community visibility, search query), ensuring users have real-time feedback on the graph's composition.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/filters.js"
+  ]
+}

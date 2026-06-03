@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `detectAgentType` function is responsible for determining the type of agent (or tool) associated with a given project based on the presence of specific files or directories within the project's root directory. It helps identify if the project is using OpenAI's Codex (opencode), Claude by Anthropic (claude-code), Cursor (cursor), or falls into a generic category where no specific tool is detected.\n\n### Primary Inputs\n- `projectRoot`: A string representing the path to the root directory of the project. This is the only input parameter required for this function.\n\n### Output\n- The output is a string that represents the type of agent associated with the project:\n  - 'opencode' if `.opencode` exists in the project root.\n  - 'claude-code' if either `CLAUDE.md` or `.claude` exists in the project root.\n  - 'cursor' if either `.cursorrules` or `.cursor` exists in the project root.\n  - 'generic' if none of the specified files or directories are found in the project root.\n\n### Immediate Dependencies\n- The function directly depends on Node.js standard library modules:\n  - `node:fs`: To check for the existence of files and directories using `existsSync`.\n  - `node:path`: For path manipulation (joining paths to construct file paths).\n\n### Role in Module\nThis function serves as a utility or helper function within the module, providing a way to introspect the environment or configuration of a project by examining its filesystem. It is used to detect specific tools that might be integrated into the project, which can be useful for various purposes such as setting up environments, configuring tool-specific behaviors, or displaying appropriate usage instructions based on detected tools.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

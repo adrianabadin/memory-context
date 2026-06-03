@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `PruneOptions` interface defines the configuration options for pruning operations within the application. It provides parameters to control aspects such as whether to perform a dry run, the minimum strength threshold for retaining data, and the maximum number of dormant days before pruning an item.\n\n### Primary Inputs\n- **dryRun**: A boolean that indicates if the operation should be performed in simulation mode without actually deleting any data. Default is `true`.\n- **minStrength**: A numerical value representing the minimum strength required for retaining data. Default is `0.05`.\n- **maxDormantDays**: An integer specifying the maximum number of days a piece of data can remain dormant before it is pruned. Default is `90`.\n\n### Output\nThis interface does not define an output, but rather serves as a structure for passing configuration options to functions that perform pruning operations.\n\n### Immediate Dependencies\n- None specified in the provided code snippet; however, typical dependencies might include other configuration interfaces or types used within the application context.\n\n### Role in Module\nThe `PruneOptions` interface is central to managing and configuring pruning behaviors across various modules and functions that handle data retention and cleanup. It ensures consistency and flexibility in adjusting pruning criteria according to different scenarios and requirements defined by user settings or operational needs.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

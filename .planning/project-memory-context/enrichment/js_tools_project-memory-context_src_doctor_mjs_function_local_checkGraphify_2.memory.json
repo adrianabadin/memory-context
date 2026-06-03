@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `checkGraphify` function is responsible for checking if the `graphifyy` Python package is installed and importable by running a simple script using the provided Python binary. It abstracts the process of accessing and executing a command to check the installation status, providing a standardized output indicating whether the check was successful or not, along with an appropriate message.\n\n### Primary Inputs\n- `resolvePythonBin`: A function that returns the path to the Python binary (default is 'python3' if not provided).\n- `spawnCheck`: A function capable of executing a command and returning its output and exit code.\n\n### Output\nThe function returns an object with three properties:\n- `name`: The name of the check, which is always 'graphifyy'.\n- `status`: One of 'ok', 'fail', or 'warn' based on whether the Python binary can import `graphifyy` and execute a print statement.\n- `message`: A descriptive message explaining the result of the check.\n\n### Immediate Dependencies\n- `node:fs/promises`: For accessing file system paths, though in this context it is not used directly for I/O but rather to potentially resolve Python binary paths if provided by the user.\n\n### Role in Module\nThis function serves as a utility within the module responsible for ensuring that all necessary dependencies (like `graphifyy`) are correctly installed and accessible before proceeding with further operations. It acts as a health check or prerequisite verification step, providing feedback on whether the system meets the minimum requirements to use certain features provided by `graphifyy`.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/doctor.mjs"
+  ]
+}

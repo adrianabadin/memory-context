@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildStatusReport` function is responsible for generating a comprehensive status report of the project's memory context, including details about its configuration, installation state, and synchronization status. It encapsulates various aspects such as reading JSON files, detecting agent type, and deriving runtime state from queue data.\n\n### Primary Inputs\n- `projectRoot` (default: current working directory) - The root directory of the project.\n- `now` (default: current date in ISO format) - A timestamp for determining the current status.\n\n### Output\nA structured object containing detailed information about the project's memory context, including paths to configuration and state files, agent type, installation details, runtime state, and synchronization timestamps.\n\n### Immediate Dependencies\n- `node:fs/promises` for file system operations (readFile).\n- `node:path` for path manipulation.\n- `node:url` for URL conversion to file paths.\n- Custom modules (`../src/platform.mjs`) for platform-specific functionalities like resolving configuration directories and detecting agent type.\n\n### Role in Module\nThis function serves as a central point for retrieving and presenting key project data, facilitating understanding and management of the project's memory context through its various states and configurations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/status.mjs"
+  ]
+}

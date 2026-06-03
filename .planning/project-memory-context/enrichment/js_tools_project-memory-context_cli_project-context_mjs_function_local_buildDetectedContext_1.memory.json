@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildDetectedContext` function is responsible for aggregating various contextual information about a project by detecting different aspects such as stack, structure, architecture, and rules.\n\n**Primary Inputs**: \n- `projectRoot`: A string representing the root directory of the project.\n\n**Output**: \n- An object containing detected contexts: `{ stack, structure, architecture, rules }`.\n\n**Immediate Dependencies**: \n- `detectStackContext`\n- `detectStructureContext`\n- `detectArchitectureContext`\n- `detectRulesContext`\n\n**Role in Module**: This function serves as a central orchestrator within the module, coordinating the detection of different project contexts and returning them in a structured format. It is crucial for initializing the project context analysis process by gathering essential data from various sources.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

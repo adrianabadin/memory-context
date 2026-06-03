@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `printHelp` function is responsible for providing usage instructions and information about the supported agent types for the CLI tool named \"pmc\" (Project Memory Context). It helps users understand how to use the command line interface to initialize different types of agents.\n\n### Primary Inputs\n- None, as it does not take any direct inputs from external sources during runtime.\n\n### Output\n- The function outputs a formatted help message to the console, detailing the usage and supported agent types.\n\n### Immediate Dependencies\n- From the provided context, the immediate dependencies include:\n  - `console.log` for outputting the help message.\n  - Import statements from Node.js modules (`node:path`, `node:url`) which are used in more complex scenarios not directly related to this function's execution but part of the environment where this module is run.\n\n### Role in Module\n- This function serves as a utility within the CLI tool \"pmc\" to assist users by providing clear and concise information about its functionalities, particularly around agent initialization options. It enhances user experience by guiding them through available commands and their intended purposes directly from the command line interface.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/init.mjs"
+  ]
+}

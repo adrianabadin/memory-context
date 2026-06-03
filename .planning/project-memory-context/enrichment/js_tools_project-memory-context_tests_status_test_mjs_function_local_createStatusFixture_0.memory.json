@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createStatusFixture` function is responsible for setting up a temporary directory and its structure to be used as a fixture for testing the status report generation of a project memory context. This setup includes creating a root directory, subdirectories, and any necessary files that would normally be present in such a context.\n\n### Primary Inputs\n- None explicitly listed; however, it implicitly takes no inputs since it is an asynchronous function without parameters.\n\n### Output\nThe output of `createStatusFixture` is an object containing two properties:\n- `projectRoot`: The path to the root directory of the temporary project setup.\n- `enrichmentDir`: The path to a specific subdirectory within the project root for enrichment data.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `fs/promises` (for file system operations like creating directories and files).\n  - `path` (for managing and transforming file paths).\n  - `os` (to use the temporary directory location provided by Node.js).\n\n### Role in Module\nThis function serves as a utility to facilitate testing of other functionalities within the module, specifically related to generating status reports for a project memory context. It ensures that each test has a clean and isolated environment with predefined structure, which is crucial for deterministic testing without side effects from previous tests or system state changes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/status.test.mjs"
+  ]
+}

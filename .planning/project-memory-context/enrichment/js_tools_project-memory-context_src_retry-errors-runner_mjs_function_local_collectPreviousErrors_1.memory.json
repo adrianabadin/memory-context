@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe `collectPreviousErrors` function is responsible for collecting and formatting previous error details from an entry object, which includes attempts and potential standalone errors. It aims to provide a structured way to represent failed attempts or the main error if no attempts are available.\n\n#### Primary Inputs\n- **entry**: An object that can contain multiple properties including `attempts`, `error`, and timestamps related to failure (`failedAt`).\n  - **attempts**: An array of objects, each representing a single attempt with details like `provider`, `errorType`, `status`, `errorMessage`, `endedAt`, and `startedAt`.\n  - **error**: A standalone error message that might be present if no attempts were made.\n\n#### Output\n- Returns an array of objects:\n  - Each object contains structured information about a failed attempt or the main error, including:\n    - `provider`: The provider associated with the error (default to null if not provided).\n    - `errorType`: The type of error (default to null if not provided).\n    - `message`: The error message.\n    - `failedAt`: The timestamp when the failure occurred, derived from either `endedAt` or `startedAt`, defaulting to null if neither is available.\n- If no errors are found, it returns an empty array.\n\n#### Immediate Dependencies\n- **Array methods**: Specifically `.filter()` and `.map()` for processing arrays.\n- **Nullish coalescing operator (`??`)**: Used to provide a default value when the property might be undefined or null.\n\n#### Role in Module\nThis function is crucial for error handling within the module, especially during retries where it helps consolidate all failed attempts into a single format that can be used for logging, reporting, or further processing. It ensures that any potential issues are captured and presented consistently across different parts of the application relying on this module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retry-errors-runner.mjs"
+  ]
+}

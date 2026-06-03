@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `buildMcpConfig` is responsible for constructing the MCP (Memory Context Provider) configuration based on the provided `installState`. It generates configurations for both 'agent-memory' and 'pmc-query' servers, setting up their respective commands, arguments, and environment variables.\n\n### Primary Inputs\n- **installState**: An object containing paths and other necessary state information for setup. This includes:\n  - `installState.memoryDbPath`: Path to the memory database.\n  - `installState.embeddingCachePath` (optional): Path to the embedding cache, which can be omitted if not provided.\n\n### Output\n- An object containing configurations for both 'agent-memory' and 'pmc-query' servers:\n  - **mcpServers**: An object with keys 'agent-memory' and 'pmc-query', each holding configuration details like `command`, `args`, and `env`.\n    - **'agent-memory'**: Configuration for the agent memory server.\n      - **command**: The command to run is 'npx'.\n      - **args**: Arguments passed to the command are '-y @aabadin/agent-memory-mcp'.\n      - **env**: Environment variables set include `MEMORY_DB_PATH` and optionally `EMBEDDING_CACHE_PATH`.\n    - **'pmc-query'**: Configuration for the PMC (Project Memory Context) query server.\n      - **command**: The command to run is taken from the result of `buildPmcQueryConfig({ installState })`, specifically `pmcQuery.command[0]` and its subsequent elements as args.\n      - **args**: Arguments passed to the command are the sliced result of `pmcQuery.command`.\n      - **env**: Environment variables set include those from `pmcQuery.environment`.\n\n### Immediate Dependencies\n- Functions:\n  - `buildPmcQueryConfig`: Constructs configuration for 'pmc-query' server based on `installState`.\n- Variables:\n  - `PMC_ENRICHMENT_CONFIG_FILE` from `./enrichment-config.mjs`: Indicates the file path or name related to enrichment config, though it is not directly used in this function.\n\n### Role in Module\nThis function plays a crucial role in setting up and configuring the MCP servers based on the provided",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/setup-bootstrap.mjs"
+  ]
+}

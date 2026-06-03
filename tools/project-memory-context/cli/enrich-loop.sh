@@ -5,7 +5,7 @@
 ENRICH_DIR=".planning/project-memory-context/enrichment"
 WORKLIST="$ENRICH_DIR/worklist.json"
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
-OLLAMA_MODEL="${OLLAMA_MODEL:-deepseek-coder-v2:16b-ctx32k}"
+OLLAMA_MODEL="${OLLAMA_MODEL:-deepseek-coder-v2:16b-ctx16k}"
 
 check_pending() {
   node -e "const w=require('$WORKLIST'); const p=w.filter(s=>s.status==='pending').length; console.log(p)" 2>/dev/null || echo "99"
@@ -85,7 +85,7 @@ while true; do
     task_id=$(node -e "
       const spawn = require('child_process').spawn;
       const sym = $symbol_json;
-      const prompt = 'You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: ' + JSON.stringify(sym) + '\nPROJECT_ROOT: C:\\\\Users\\\\aabad\\\\Documents\\\\CODE\\\\ia\\\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx32k\n\nSTEPS:\n1. Read the source file at the symbol filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Call Ollama via bash: node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'deepseek-coder-v2:16b-ctx32k',prompt:'YOUR_PROMPT',stream:false,options:{temperature:0.1,num_predict:512}})}).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n3. Store via agent-memory_store: content, category architecture, tags symbol ts kind project:memory-context file:filepath\n4. Return JSON with symbolKey memoryId status enrichedAt\n\nDo NOT update any JSON files. Return result.'
+      const prompt = 'You are enriching ONE code symbol for project-memory-context.\n\nSYMBOL: ' + JSON.stringify(sym) + '\nPROJECT_ROOT: C:\\\\Users\\\\aabad\\\\Documents\\\\CODE\\\\ia\\\\memory-context\nOLLAMA_URL: http://localhost:11434\nOLLAMA_MODEL: deepseek-coder-v2:16b-ctx16k\n\nSTEPS:\n1. Read the source file at the symbol filePath (use Read tool), lines startLine to endLine PLUS imports above\n2. Call Ollama via bash: node -e \"fetch('http://localhost:11434/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:\'qwen2.5-coder:14b\',prompt:\'YOUR_PROMPT\',stream:false,options:{temperature:0.1,num_predict:512}})})).then(r=>r.json()).then(d=>process.stdout.write(d.response))\"\n3. Store via agent-memory_store: content, category architecture, tags symbol ts kind project:memory-context file:filepath\n4. Return JSON with symbolKey memoryId status enrichedAt\n\nDo NOT update any JSON files. Return result.'
       // Can't actually dispatch task from here - output the prompt for manual use
       console.log(prompt);
     " 2>&1 | head -1) &

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `writeLine` function is responsible for writing a given message to a specified stream, appending a newline character at the end.\n\n**Primary Inputs**:\n- `stream`: An object representing the writable stream where the message will be written.\n- `message`: A string containing the text to be written to the stream.\n\n**Output**: None. The function does not return any value; it performs an action by writing to the provided stream.\n\n**Immediate Dependencies**:\n- None. The function does not rely on any external dependencies or variables within its scope.\n\n**Role in Module**: This function is a utility within the module, designed to facilitate writing messages to streams in a consistent manner. It is likely used by other functions in the module to output information or status updates to the console or other writable destinations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/src/command-dispatch.mjs"
+  ]
+}

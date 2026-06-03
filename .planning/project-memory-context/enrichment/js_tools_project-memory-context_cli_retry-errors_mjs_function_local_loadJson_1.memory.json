@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadJson` function is responsible for reading and parsing a JSON file from the given path. It reads the contents of the file as UTF-8 encoded text, then parses it using `JSON.parse` to convert it into a JavaScript object.\n\n### Primary Inputs\n- **path**: A string representing the file system path to the JSON file that needs to be loaded and parsed.\n\n### Output\n- **Object**: The output is a JavaScript object created by parsing the contents of the JSON file located at the provided path.\n\n### Immediate Dependencies\n- `readFile` from `node:fs/promises`: This function reads the content of the file specified by the given path and returns it as a buffer.\n- `JSON.parse`: This method parses a string with JSON syntax, constructing the JavaScript value or object described by the string.\n\n### Role in Module\nIn this module, `loadJson` serves as a utility function to facilitate reading and parsing JSON files. It is used for tasks such as loading configuration settings from JSON files, which are essential for various functionalities within the application, including data enrichment and synchronization processes. This function ensures that any necessary file operations and conversions are handled efficiently before passing on the parsed data for further processing or use in other parts of the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

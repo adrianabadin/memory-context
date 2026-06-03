@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `writeMemories` Function\n\n**Responsibility:**\nThe `writeMemories` function is responsible for writing project context memories to both JSON and Markdown files. It processes each memory, generates corresponding JSON and Markdown artifacts, and writes them to specified directories.\n\n**Primary Inputs:**\n- `dirs`: An object containing directory paths where the JSON and Markdown files will be written.\n- `memories`: An array of memory objects, each representing a different type of project context.\n\n**Output:**\n- Writes JSON files for each memory kind in the `projectContextMaterialized` directory.\n- Writes Markdown files for each memory kind in the `projectContextMarkdown` directory.\n\n**Immediate Dependencies:**\n- `writeJsonArtifact`: Function to write JSON data to a file.\n- `renderProjectContextMarkdown`: Function to generate Markdown content from a memory object.\n- `mkdir`: Function to create directories recursively if they do not exist.\n- `writeFile`: Function to write text data to a file.\n\n**Role in Module:**\nThis function is crucial for materializing the project context into persistent storage formats, making it easier to review and document the various aspects of the project. It serves as a bridge between the memory generation process and the final output artifacts.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

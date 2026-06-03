@@ -30,7 +30,7 @@ Then invoke the `brainstorming` skill to clarify any ambiguity in the intake bef
 Persist the normalized intake using:
 
 ```bash
-node tools/project-memory-context/cli/save-intake-context.mjs "<project description>" <goal1> <goal2>
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/save-intake-context.mjs" "<project description>" <goal1> <goal2>
 ```
 </step>
 
@@ -59,7 +59,7 @@ Exclude generated folders such as `node_modules`, `dist`, `.git`, `bin`, `obj`.
 Build the deterministic worklist with:
 
 ```bash
-node tools/project-memory-context/cli/build-worklist.mjs <relative-file-paths>
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/build-worklist.mjs" <relative-file-paths>
 ```
 
 The script writes `.planning/project-memory-context/enrichment/worklist.json`.
@@ -69,7 +69,7 @@ The script writes `.planning/project-memory-context/enrichment/worklist.json`.
 Prepare semantic jobs with:
 
 ```bash
-node tools/project-memory-context/cli/prepare-semantic-jobs.mjs
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/prepare-semantic-jobs.mjs"
 ```
 
 The script writes `.planning/project-memory-context/enrichment/semantic-jobs.json`.
@@ -77,7 +77,7 @@ The script writes `.planning/project-memory-context/enrichment/semantic-jobs.jso
 For each pending job in `semantic-jobs.json`:
 
 1. load the exact file fragment for the symbol range
-2. call `ia-local` with the prepared prompt and require a `report` operation whose findings use this stable prefix format:
+2. call the `pmc-local-model` MCP with the prepared prompt and require a `semantic_report` result using this stable prefix format:
 
 ```text
 responsibility: ...
@@ -87,48 +87,31 @@ dependencies: dep1, dep2
 role: ...
 ```
 
-3. materialize the memory payload before calling `agent-memory`:
+3. materialize the memory payload before calling `pmc-agent-memory`:
 
 ```bash
-node tools/project-memory-context/cli/materialize-enrichment-artifacts.mjs @<job-file> @<report-file>
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/materialize-enrichment-artifacts.mjs" @<job-file> @<report-file>
 ```
 
-This writes a `<symbol>.memory.json` artifact under `.planning/project-memory-context/enrichment/`.
+4. persist or update the semantic payload in `pmc-agent-memory`
 
-4. persist or update the semantic payload in `agent-memory`
-
-5. once `agent-memory` returns the `memoryId`, materialize the graph update payload:
+5. once `pmc-agent-memory` returns the `memoryId`, materialize the graph update payload:
 
 ```bash
-node tools/project-memory-context/cli/materialize-enrichment-artifacts.mjs @<job-file> @<report-file> <memory-id>
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/materialize-enrichment-artifacts.mjs" @<job-file> @<report-file> <memory-id>
 ```
-
-This writes:
-
-- `<symbol>.memory.json` for `agent-memory`
-- `<symbol>.result.json` for graph/index backfill
 
 6. finalize the successful symbol using:
 
 ```bash
-node tools/project-memory-context/cli/finalize-enrichment.mjs @<symbol>.result.json
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/finalize-enrichment.mjs" @<symbol>.result.json
 ```
-
-This updates:
-
-- `graph.json`
-- `symbol-index.json`
-- `worklist.json`
-
-The result payload must include `symbolKey`, `graphNodeId`, `memoryId`, `codeHash`, `semanticSummary`, `status`, and `enrichedAt`.
 
 If a symbol cannot be processed, mark it as `error` without aborting the rest of the run:
 
 ```bash
-node tools/project-memory-context/cli/fail-enrichment.mjs <symbol-key> "<error message>"
+node "C:\Users\aabad\Documents\CODE\ia\memory-context\tools\project-memory-context/cli/fail-enrichment.mjs" <symbol-key> "<error message>"
 ```
-
-This updates `worklist.json` and appends `failures.json`.
 </step>
 
 <step name="report">

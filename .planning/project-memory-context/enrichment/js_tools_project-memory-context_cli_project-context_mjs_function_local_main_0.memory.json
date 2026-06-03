@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility:**\nThe `main` function serves as the entry point for the CLI tool, orchestrating the execution of project context detection and processing.\n\n**Primary Inputs:**\n- Command-line arguments (`process.argv.slice(2)`), which include:\n  - A path to the project root (optional; defaults to the current working directory if not provided).\n  - The `--refresh` flag, indicating whether to refresh the context regardless of previous state.\n\n**Output:**\n- None. The function primarily performs side effects such as file reads/writes and invokes other functions to process the project context.\n\n**Immediate Dependencies:**\n- `runProjectContextCli`: A function that executes the core logic for processing the project context.\n- Node.js built-in modules like `path`, `fs/promises`, and `crypto` for file system operations, path manipulations, and cryptographic hashing.\n\n**Role in Module:**\nThe `main` function initializes the CLI tool by parsing command-line arguments, determining whether to refresh the context, resolving the project root directory, and then invoking the main processing function (`runProjectContextCli`). It acts as a bridge between user input and the underlying logic for detecting and materializing the project context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

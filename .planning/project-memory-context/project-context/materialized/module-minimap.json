@@ -1,0 +1,30 @@
+{
+  "memory_key": "project-context:module-minimap",
+  "title": "Module navigation map",
+  "kind": "module-minimap",
+  "source_mode": "detected",
+  "summary": "Module-level navigation map: 17 key modules, 3 cross-module connectors identified. Use get-context to drill into any module.",
+  "body": "**Key modules** (ranked by how many others import them):\n\n- `src/artifacts.mjs` ← 74 modules · imports: —\n- `src/types.ts` ← 52 modules · imports: —\n- `src/platform.mjs` ← 47 modules · imports: —\n- `src/sync-manifest.mjs` ← 32 modules · imports: —\n- `src/tools.ts` ← 13 modules · imports: src/types.ts\n- `src/symbol-extractor.mjs` ← 13 modules · imports: extractors/regex-extractor.mjs, extractors/js-ts-extractor.mjs, src/symbol-keys.mjs\n- `cli/enrich-queue.mjs` ← 13 modules · imports: src/enrichment-attempts.mjs, src/sync-manifest.mjs, providers/cloud-api-provider.mjs, providers/local-model-provider.mjs\n- `src/memory-store.ts` ← 11 modules · imports: src/types.ts, src/errors.ts\n- `retrieval/query-engine.mjs` ← 11 modules · imports: —\n- `src/command-dispatch.mjs` ← 10 modules · imports: —\n- `src/file-hash-store.mjs` ← 10 modules · imports: —\n- `src/plugin-config.mjs` ← 10 modules · imports: —\n- `retrieval/source-cache.mjs` ← 9 modules · imports: src/semantic-unit.mjs\n- `src/template-installer.mjs` ← 9 modules · imports: src/platform.mjs\n\n**Entry points** (import many, imported by few):\n- `public/app.js` → 8 deps · public/filters.js, public/context-tracker.js, public/graph.js\n- `cli/retry-errors.mjs` → 7 deps · src/sync-manifest.mjs, providers/cloud-api-provider.mjs, providers/local-model-provider.mjs\n- `src/index.ts` → 6 deps · src/embedder.ts, src/embedding-cache.ts, src/hardcopy-store.ts\n\n**Cross-module connectors** (high betweenness centrality):\n- `LanceMemoryStore`: High betweenness centrality (0.076) - this node is a cross-community bridge.\n- `HardcopyMemoryStore`: High betweenness centrality (0.059) - this node is a cross-community bridge.\n- `MockMemoryStore`: High betweenness centrality (0.055) - this node is a cross-community bridge.\n\n> Drill: `pmc get-context <symbol> extended dependencies` · `pmc get-context <symbol> extended dependents`",
+  "tags": [
+    "project-context",
+    "project:memory-context",
+    "minimap",
+    "architecture",
+    "navigation"
+  ],
+  "source_files": [
+    ".planning/project-memory-context/graph/graph.json"
+  ],
+  "graph_refs": [
+    "tools/project-memory-context/src/artifacts.mjs",
+    "agent-memory-mcp/src/types.ts",
+    "tools/project-memory-context/src/platform.mjs",
+    "tools/project-memory-context/src/sync-manifest.mjs",
+    "agent-memory-mcp/src/tools.ts"
+  ],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "medium",
+  "content_hash": "cf709dae1567bd28e0cd6f229e39b7ca8b5d42b8491d83f718116dd4fe8119cc",
+  "updated_at": "2026-06-02T05:31:53.395Z"
+}

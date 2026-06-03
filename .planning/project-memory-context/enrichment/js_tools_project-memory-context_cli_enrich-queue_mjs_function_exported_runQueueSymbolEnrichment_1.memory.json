@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility**: The `runQueueSymbolEnrichment` function is responsible for enriching a symbol by running it through a series of enrichment attempts using various providers. It handles the execution, recording of attempts, and updating of worklist and symbol index files based on the outcome.\n\n**Primary Inputs**:\n- `symbol`: The symbol to be enriched.\n- `projectRoot`, `projectSlug`: Project-related metadata.\n- `timeoutMs`: Timeout for enrichment operations.\n- `enrichmentDir`, `worklistFile`, `symbolIndexFile`: File paths for storing results and indices.\n- `config`, `providers`: Configuration and providers for enrichment.\n- `env`: Environment variables (default is `process.env`).\n\n**Output**: \n- Updates worklist and symbol index files with the result of enrichment attempts.\n- Creates or updates memory files with enriched content if successful.\n\n**Immediate Dependencies**:\n- `runEnrichmentWithFallback`: Executes enrichment with fallback mechanisms.\n- `appendProviderEvent`, `saveJson`: Record events and save JSON data.\n- `applyAttemptsToEntry`, `getLastAttemptError`, `getLastAttemptMode`: Helper functions for processing attempts.\n\n**Role in Module**: This function is a core part of the module, orchestrating the enrichment process for symbols, handling errors, and maintaining state through worklists and indices.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

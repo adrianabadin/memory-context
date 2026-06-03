@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `loadJson` function is responsible for reading and parsing JSON data from a specified file path.\n\n**Primary Inputs**: \n- `path`: A string representing the file path from which to read the JSON data.\n\n**Output**: \n- Returns a JavaScript object parsed from the JSON content of the specified file. If the file does not exist or there is an error during reading, it returns `undefined`.\n\n**Immediate Dependencies**: \n- `readFile` from 'node:fs/promises': Used to asynchronously read the file content.\n- `JSON.parse`: Used to parse the string content into a JavaScript object.\n\n**Role in Module**: \n- This function serves as a utility within the module to load configuration or data files that are expected to be in JSON format. It is likely used by other functions in the module to retrieve necessary configurations or data for processing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

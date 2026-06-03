@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `checkpointSave` function is responsible for saving the state of an enrichment queue, likely by writing it to a file or database.\n\n**Primary Inputs**: \n- An object containing the queue's status (`status`), process ID (`pid`), start time (`startedAt`), heartbeat time (`heartbeatAt`), finish time (`finishedAt`), last error (`lastError`), and summary (`summary`).\n\n**Output**: \n- Saves the queue state to a persistent storage location, such as a file or database.\n\n**Immediate Dependencies**: \n- `readFile`, `writeFile`, `mkdir` from 'node:fs/promises' for file operations.\n- `resolve`, `dirname`, `basename` from 'node:path' for path manipulations.\n- `homedir` from 'node:os' to determine the user's home directory.\n\n**Role in Module**: \n- Acts as a utility function within the module, ensuring that the state of the enrichment queue is preserved across different stages or failures, allowing for recovery and resumption of processing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

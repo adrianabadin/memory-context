@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseList` function is responsible for taking an input value, which is expected to be a string containing comma-separated values, and converting it into an array of trimmed strings. It ensures that any empty strings resulting from trimming are filtered out, leaving only non-empty strings in the final array.\n\n### Primary Inputs\nThe primary input to `parseList` is:\n- **value**: This is a string that may contain comma-separated values. If no value is provided or if it is not a string, the function will default to an empty string.\n\n### Output\nThe output of `parseList` is:\n- An array of strings where each element is a trimmed and non-empty substring from the original input string, separated by commas.\n\n### Immediate Dependencies\nThe immediate dependencies of `parseList` are:\n- **String()**: Used to convert the input value to a string, ensuring that even if the input is not a string (e.g., null or undefined), it can be processed.\n- **split(',')**: Splits the string into an array of substrings based on commas.\n- **map((item) => item.trim())**: Trims each substring to remove any leading or trailing whitespace.\n- **filter(Boolean)**: Filters out any empty strings from the resulting array, leaving only non-empty strings.\n\n### Role in Module\nThe `parseList` function plays a crucial role in ensuring that data is consistently formatted and prepared for further processing within the module or application where it is used. It helps maintain clean and predictable input formats by trimming and filtering out unwanted whitespace and empty values, making it easier to handle and manipulate the data as needed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-report.mjs"
+  ]
+}

@@ -308,6 +308,7 @@ test('buildQueueSummary counts already_enriched entries as enriched in reports',
     enriched: 2,
     errors: 1,
     pending: 1,
+    subagentQueued: 0,
   });
 });
 

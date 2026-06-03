@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `parseSymbolKeyParts` is responsible for **splitting** the input string `key` into an array of substrings, using the delimiter '|'. This operation is typically used to break down a compound key or identifier into its constituent parts.\n\n### Primary Inputs\n- `key`: A string that represents the symbol key which needs to be parsed.\n\n### Output\n- An **array** of strings, where each element is a substring from the original string split at every occurrence of '|'.\n\n### Immediate Dependencies\nThere are no external dependencies or imports used within this function; it operates purely on JavaScript's built-in methods and does not rely on any other modules or functions.\n\n### Role in Module\nThis function serves as a utility to facilitate the parsing of specific keys, which can be crucial for tasks such as data retrieval, indexing, or organizing complex data structures within the module where it is used. It helps in breaking down information that might have been combined into a single string for easier manipulation and access.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/query-engine.mjs"
+  ]
+}

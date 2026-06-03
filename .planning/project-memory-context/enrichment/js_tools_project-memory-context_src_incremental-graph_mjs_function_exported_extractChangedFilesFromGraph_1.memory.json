@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `extractChangedFilesFromGraph` is responsible for extracting the set of source files that have been modified or added based on the provided delta graph. This involves iterating through the nodes of the delta graph, checking if each node has a `source_file` property, and collecting these file paths into a set before returning them as an array.\n\n### Primary Inputs\n- **delta**: An object representing the change delta in the project graph. It is expected to have a list of nodes (`nodes`), where each node contains metadata about parts of the codebase.\n\n### Output\n- **[...files]**: An array containing unique file paths that were identified as changed or added based on the provided delta graph.\n\n### Immediate Dependencies\n- **Set**: The `files` variable is initialized as a new Set, which automatically ensures all elements are unique without needing additional logic to handle duplicates.\n\n### Role in Module\nThis function plays a crucial role in maintaining an up-to-date record of the files that have been modified or added during development or CI processes. It helps in efficiently tracking changes and can be used for various purposes such as triggering selective rebuilds, generating change logs, or performing targeted code analysis.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/incremental-graph.mjs"
+  ]
+}

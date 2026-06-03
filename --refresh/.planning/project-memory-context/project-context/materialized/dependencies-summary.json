@@ -1,0 +1,22 @@
+{
+  "memory_key": "project-context:dependencies-summary",
+  "title": "Dependency summary",
+  "kind": "dependencies-summary",
+  "source_mode": "detected",
+  "summary": "Critical dependencies: none.",
+  "body": "- Critical: Not detected\n- Testing: Not detected",
+  "tags": [
+    "project-context",
+    "project:--refresh",
+    "dependencies"
+  ],
+  "source_files": [
+    "package.json"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "da99640453805a173df3dd76bb1b9daafdcf770659111903288b90e9fad488f9",
+  "updated_at": "2026-05-17T18:45:19.496Z"
+}

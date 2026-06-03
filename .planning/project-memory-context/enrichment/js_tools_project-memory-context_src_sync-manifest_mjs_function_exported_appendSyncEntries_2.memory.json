@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `appendSyncEntries` function is responsible for appending new synchronization entries to an existing manifest file within a specified directory. It ensures that the operation is atomic by using a lock mechanism to prevent concurrent modifications.\n\n### Primary Inputs\n- **enrichmentDir**: A string representing the path to the directory where the sync manifest resides.\n- **entries**: An array of objects, each representing a new entry to be appended to the existing entries in the manifest.\n\n### Output\n- Returns a promise that resolves to the array of appended entries after they have been successfully added to the manifest file.\n\n### Immediate Dependencies\n- `readFile` and `writeFile` from Node.js's fs/promises module: These are used for reading from and writing to the sync manifest file.\n- `mkdir` from Node.js's fs/promises module: This is used to create a lock directory if it does not already exist, ensuring atomic operations.\n- `dirname` and `join` from Node.js's path module: These are used for constructing paths related to the manifest file.\n- `randomUUID` from Node.js's crypto module: This is used to generate unique identifiers for lock files, ensuring that only one operation can proceed at a time.\n\n### Role in Module\nThe `appendSyncEntries` function serves as an interface between the application and the underlying filesystem operations related to managing synchronization entries in a manifest file. It abstracts away the details of reading from and writing to disk, providing a clean API for adding new entries to the sync manifest. This abstraction helps maintain the integrity and consistency of the sync process across different parts of the module and potentially across different modules if this function is exported and used externally.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

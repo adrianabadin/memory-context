@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `fixture` is responsible for generating the path to a specific fixture file located within the `tools/project-memory-context/tests/fixtures` directory. This function constructs and returns the full file path by joining the current directory (`__dir`) with the specified fixture name.\n\n### Primary Inputs\n- **name**: A string representing the name of the fixture file without its extension.\n\n### Output\n- The output is a string that represents the absolute path to the fixture file, constructed as `tools/project-memory-context/tests/fixtures/<name>`.\n\n### Immediate Dependencies\n- `join`: This Node.js utility function is used to concatenate the directory path (`__dir`) with the specified fixture name and 'fixtures' folder to form the full path.\n- `dirname` and `fileURLToPath`: These utilities from the `node:url` module are used to handle file paths correctly, ensuring that relative paths are resolved properly regardless of the environment in which the code is run.\n\n### Role in Module\nThe function `fixture` serves as a helper utility within the module where it resides (`tools/project-memory-context/tests`) for dynamically generating paths to test fixture files. This aids in managing and accessing resource files during testing, making the tests more flexible and independent of the file system structure.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/symbol-extractor-multilang.test.mjs"
+  ]
+}

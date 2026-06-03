@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadMemories` function is responsible for loading memory artifacts from a project's context directory. It determines whether to load from the 'materialized' subdirectory or directly from the main project directory, reads each artifact file, and returns them as an array of objects containing the memory data along with its path.\n\n### Primary Inputs\n- `projectContextDir`: A string representing the path to the project context directory.\n\n### Output\n- An array of objects where each object represents a loaded memory artifact, including:\n  - Memory data (extracted from JSON files).\n  - Path to the memory file (`path` property in each object).\n\n### Immediate Dependencies\n- `readdir` and `readFile` from 'node:fs/promises': These are used for reading directory contents and file data respectively.\n- `join` from 'node:path': This is used to construct paths relative to the project context directory.\n\n### Role in Module\nThis function serves as a utility within the module responsible for managing and querying memory artifacts of a software project, facilitating access to these artifacts based on their location within the filesystem or specific processing requirements indicated by the presence of a 'materialized' subdirectory.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/load-artifacts.mjs"
+  ]
+}

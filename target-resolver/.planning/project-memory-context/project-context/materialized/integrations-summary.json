@@ -1,0 +1,22 @@
+{
+  "memory_key": "project-context:integrations-summary",
+  "title": "Integration summary",
+  "kind": "integrations-summary",
+  "source_mode": "detected",
+  "summary": "Detected services: none.",
+  "body": "- Services: Not detected",
+  "tags": [
+    "project-context",
+    "project:target-resolver",
+    "integrations"
+  ],
+  "source_files": [
+    "src"
+  ],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "medium",
+  "content_hash": "4ee6bb68d5b39196928e8722e757cb48cde2cc34ce96ae3b1f7bb067731f736f",
+  "updated_at": "2026-05-20T00:04:46.864Z"
+}

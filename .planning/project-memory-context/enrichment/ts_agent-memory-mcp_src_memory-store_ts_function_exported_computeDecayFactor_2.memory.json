@@ -1,5 +1,5 @@
 {
-  "content": "Symbol: computeDecayFactor\nKind: function\nLanguage: ts\nLocation: agent-memory-mcp/src/memory-store.ts:551-558\n\nResponsibility:\n\n\nInputs:\n- None detected\n\nOutput:\nNot specified.\n\nImmediate dependencies:\n- None detected\n\nRole in module:\nNot specified.",
+  "content": "### Explanation\n\n**Responsibility:**\nThe `computeDecayFactor` function calculates the decay factor for a memory item based on its last update time and a specified half-life period.\n\n**Primary Inputs:**\n- `updatedAt`: A string representing the timestamp of the last update to the memory item.\n- `halfLifeDays`: A number indicating the half-life period in days over which the decay effect is applied.\n\n**Output:**\n- A number representing the decay factor, which ranges from 0 to 1. If `halfLifeDays` is less than or equal to 0, it returns 1, effectively disabling decay.\n\n**Immediate Dependencies:**\n- `Date.now()`: To get the current time in milliseconds.\n- `new Date(updatedAt).getTime()`: To convert the `updatedAt` string timestamp into milliseconds since epoch.\n\n**Role in Module:**\nThis function is used within the memory management module to determine how much a memory item's relevance should decay over time, influencing its importance or weight in queries and updates.",
   "category": "architecture",
   "tags": [
     "symbol",

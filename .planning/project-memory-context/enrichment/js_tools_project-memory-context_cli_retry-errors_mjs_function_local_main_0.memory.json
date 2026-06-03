@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for orchestrating the retry process of error entries in a worklist, handling command line arguments to configure and limit retries, and generating a report on the outcome.\n\n### Primary Inputs\n- Command line arguments (`process.argv`)\n- Paths derived from project structure (e.g., `.planning/project-memory-context/enrichment` files)\n\n### Output\n- A JSON report detailing the retry process and outcomes.\n- Exit code indicating success or failure of the retry operation.\n\n### Immediate Dependencies\n- Node.js built-in modules: `fs/promises`, `path`, `url`, `os`\n- Custom module functions: `loadJson`, `saveJson`, `parseArgs`, `printHelp` from various utility files (`enrichment-attempts.mjs`, etc.)\n\n### Role in Module\nThe `main` function serves as the entry point for a CLI tool, integrating data handling and configuration with file system operations to facilitate automated error retry mechanisms within a software project context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

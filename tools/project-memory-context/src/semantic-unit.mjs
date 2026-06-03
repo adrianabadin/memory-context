@@ -1,4 +1,4 @@
-function sliceLines(content, startLine, endLine) {
+export function sliceLines(content, startLine, endLine) {
   return content.split('\n').slice(startLine - 1, endLine).join('\n');
 }
 

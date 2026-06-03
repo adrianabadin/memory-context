@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `findByFilePathAndName` function is responsible for locating a specific symbol within a graph of nodes based on its file path and name. It performs the following tasks:\n1. Normalizes the file paths of both the provided symbol and the nodes in the graph.\n2. Filters the nodes to find those that have a matching normalized file path.\n3. Searches for an exact match of the symbol's name within the filtered nodes, considering possible inferred kinds if no exact match is found.\n4. If no exact or inferable match is found, it searches for a node whose normalized label matches the symbol's name (case insensitive).\n5. Returns the matching node or `null` if no match is found.\n\n### Primary Inputs\n- **graph**: An object representing the graph containing nodes.\n- **symbol**: An object containing at least two properties:\n  - `filePath`: A string representing the file path of the symbol.\n  - `name`: A string representing the name of the symbol.\n  - `kind`: (Optional) A string indicating the kind of the symbol, which is used for inferring matches if an exact match is not found.\n\n### Output\n- **Node** or **null**: The function returns a node from the graph that matches the provided file path and name according to the specified criteria. If no such node exists, it returns `null`.\n\n### Immediate Dependencies\n- **normalizePath**: A utility function used to normalize the file paths of both the symbol and the nodes in the graph.\n- **extractLabelFromGraphify**: A utility function that extracts a cleaned label from a string potentially containing Graphify labels.\n- **inferKindFromLabel**: A utility function that infers the kind of a symbol from its label.\n\n### Role in Module\nThis function serves as a core component for resolving symbols within a graph by their file paths and names, providing flexibility through normalization and inference mechanisms to accommodate various kinds of symbols and potential discrepancies in naming or path formats. It is crucial for enabling search operations based on symbolic metadata that may not be directly available from the node properties alone.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/graph-node-resolver.mjs"
+  ]
+}

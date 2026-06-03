@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `errorResult` function is responsible for generating an error response object that includes details about the failure of a tool.\n\n**Primary Inputs**:\n- `toolName`: A string representing the name of the tool that failed.\n- `error`: An error object or any value that can be converted to a string, indicating the reason for the failure.\n\n**Output**: \n- Returns an object with two properties:\n  - `content`: An array containing a single object with `type` set to `'text'` and `text` set to a message combining the tool name and error details.\n  - `isError`: A boolean value set to `true`, indicating that this response represents an error.\n\n**Immediate Dependencies**: \n- The function does not have any immediate dependencies on other functions or variables within its scope. It relies solely on the inputs provided to it.\n\n**Role in Module**: \n- This function is likely used within a larger module to handle errors gracefully by providing a standardized format for error responses, which can be easily integrated with other parts of the application that expect this structure.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/mcp/pmc-query-server.mjs"
+  ]
+}

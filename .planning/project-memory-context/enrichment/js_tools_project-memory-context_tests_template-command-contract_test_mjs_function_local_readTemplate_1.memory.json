@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `readTemplate` function is responsible for reading the contents of a template file located within the project's templates directory. It constructs the absolute path to the template file using the provided relative path and reads its content synchronously from the filesystem.\n\n### Primary Inputs\n- **relativePath**: A string representing the path to the template file, relative to the templates directory.\n\n### Output\n- The function returns a string containing the contents of the template file.\n\n### Immediate Dependencies\n- `readFileSync`: This Node.js core module is used to read the content of the file synchronously.\n- `join`: This utility from the `node:path` module constructs the absolute path to the template file by joining the package root directory with the relative path and 'templates'.\n\n### Role in Module\nThe `readTemplate` function serves as a utility for accessing static resources (in this case, templates) within the project. It encapsulates the logic for locating and reading these files, ensuring that other parts of the application can access template content without needing to handle file system operations directly. This promotes code reusability and separation of concerns by abstracting filesystem interactions into a single function.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/template-command-contract.test.mjs"
+  ]
+}

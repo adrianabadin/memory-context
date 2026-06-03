@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe function `detectStructureContext` is responsible for detecting the structure context of a project by identifying root directories, key subtrees, and entry points. It does this by listing directories at various depths from the project root and checking for specific file paths that might indicate entry points.\n\n#### Primary Inputs\n- **projectRoot**: A string representing the absolute path to the root directory of the project.\n\n#### Output\n- An object containing:\n  - `rootDirectories`: An array of strings representing relative paths to directories at depth 0 (root directories).\n  - `keySubtrees`: An array of strings representing relative paths to directories at depths greater than 0 (indicating key subtrees or subdirectories).\n  - `entryPoints`: An array of strings representing the relative paths to files that are considered entry points based on predefined names.\n\n#### Immediate Dependencies\n- **fs/promises**: Imported from 'node:fs/promises' for asynchronous file system operations like reading directories and checking file status.\n- **path**: Imported from 'node:path' for joining paths and getting relative paths.\n\n#### Role in Module\nThis function is part of the module responsible for extracting structural information about a project, specifically focusing on identifying key components such as root directories, subtrees, and entry points. It integrates file system operations to gather data dynamically based on the provided `projectRoot`.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/structure-extractor.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `extractJava` Function\n\n#### Responsibility\nThe `extractJava` function is responsible for extracting Java class and method symbols from a list of lines representing the source code of a Java file. It identifies classes (including interfaces, enums, and records) and methods within those classes, determining their visibility (exported or local), and capturing details such as parameter count and return type if applicable.\n\n#### Primary Inputs\n- `lines`: An array of strings where each string represents a line of the Java source code file.\n- `filePath`: A string representing the path to the Java source code file from which the lines are extracted.\n\n#### Output\n- `symbols`: An array of objects, each representing a symbol (class or method) found in the input lines. Each object contains properties such as type (`java`), kind (`class`, `function`), name, visibility (`exported` or `local`), and other metadata like line numbers and parameter count.\n\n#### Immediate Dependencies\n- **Regular Expressions**: \n  - `classRe`: Matches class, interface, enum, and record declarations to identify the type of symbol.\n  - `methodRe`: Matches method signatures within classes to extract method names and parameters.\n- **Helper Functions**:\n  - `findBlockEnd`: A function that determines the line number where a method or constructor block ends, used for defining the scope of each extracted method.\n  - `makeSymbol`: A utility function that constructs a symbol object based on the extracted information.\n\n#### Role in Module\nThe `extractJava` function plays a crucial role in the module by providing a mechanism to parse and extract meaningful symbols from Java source code files. This is particularly useful for tools or environments requiring metadata about classes, methods, and their properties directly from the source code without executing it. It supports further processing such as indexing, linting, refactoring, or visualization of Java projects in development environments where this kind of direct extraction can be beneficial.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

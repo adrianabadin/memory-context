@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe `main` function is responsible for setting up and managing a file system watcher that listens to changes in the project directory. It triggers a refresh of the context when it detects changes, debounced by 2000ms to prevent excessive triggering. The function also handles errors from the watcher and gracefully stops the process on receiving a SIGINT signal (Ctrl+C).\n\n#### Primary Inputs\n- `process.argv[2]` or defaulting to `process.cwd()`: This determines the root directory of the project being watched.\n- Event listener for filesystem changes: Triggered by the file system watcher when files within the project are modified, added, or deleted.\n\n#### Output\n- Logs indicating events and actions taken (e.g., \"Changes detected\", \"Running refresh-context --enrich\").\n- Errors logged if issues occur during execution or in the filesystem watcher itself.\n\n#### Immediate Dependencies\n- `node:path` for resolving file paths.\n- `node:url` to convert URL objects to local file paths.\n- `node:fs` for watching the directory and detecting changes.\n- Custom modules from `../src/file-watcher.mjs` and `./refresh-context.mjs` for specific functionalities like debouncing and refreshing context, respectively.\n\n#### Role in Module\nThe `main` function serves as the entry point for the file watching and refresh logic within the CLI tool. It integrates various modules to provide a functional command line interface that reacts to filesystem changes by updating the project's runtime context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/watch.mjs"
+  ]
+}

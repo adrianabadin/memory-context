@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `safeAccessCount` Function\n\n#### Responsibility:\nThe function `safeAccessCount` is responsible for safely accessing and converting the value associated with the key `access_count` from a given record. If the key exists, it returns its numeric value; otherwise, it returns 0. This ensures that the function handles potential null or undefined values gracefully by providing a default return of 0.\n\n#### Primary Input:\n- **row**: A record (object) containing various properties, one of which is `access_count`. The type for this input is `Record<string, unknown>`, indicating it can be any object with string keys and possibly unknown values.\n\n#### Output:\n- **number**: The function returns a number. If the key `access_count` exists in the record and its value is not null or undefined, it converts this value to a number and returns it. If the key does not exist or its value is null/undefined, it returns 0.\n\n#### Immediate Dependencies:\n- **Record<string, unknown>**: The input type which specifies that `row` is an object with string keys and values of any type.\n- **Number()**: A built-in JavaScript function used to convert the value associated with `access_count` to a number if it exists.\n\n#### Role in Module:\nThe function plays a crucial role in data handling within the module, particularly when dealing with records that might not always contain specific keys or have values set explicitly. It ensures that access operations are safe and predictable by providing default behavior for missing or null/undefined key-value pairs. This reliability is essential for maintaining consistent application logic across different parts of the system where this function may be used.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

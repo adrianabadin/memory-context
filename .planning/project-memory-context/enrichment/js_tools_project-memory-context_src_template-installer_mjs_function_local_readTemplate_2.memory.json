@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `readTemplate` function is responsible for reading the content of a template file from the specified path within a package's templates directory. It constructs the full path to the template by joining the provided `packageRoot` with the relative `templatePath`, and then reads the file using Node.js's `fs/promises` module, interpreting its contents as UTF-8 encoded text.\n\n### Primary Inputs\n1. **packageRoot**: A string representing the root directory of a package where templates are stored under the 'templates' subdirectory.\n2. **templatePath**: A string representing the relative path within the 'templates' directory to the template file that needs to be read.\n\n### Output\n- The output is a promise that resolves to a string containing the content of the template file.\n\n### Immediate Dependencies\n1. **`node:fs/promises`**: For performing asynchronous file system operations, including reading files.\n2. **`node:path`**: To join paths safely and avoid issues with different operating systems' path separators (e.g., '/' or '\\').\n3. **`node:url`**: Specifically `fileURLToPath` is used to convert a file URL to a file path, which helps in handling module imports uniformly across different environments.\n\n### Role in Module\nThe `readTemplate` function serves as a utility within the module for initializing or configuring projects by reading predefined templates. It ensures that any template required for project setup can be retrieved dynamically from the package's resources without hardcoding file paths, making it flexible and adaptable to changes in the project structure or template locations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

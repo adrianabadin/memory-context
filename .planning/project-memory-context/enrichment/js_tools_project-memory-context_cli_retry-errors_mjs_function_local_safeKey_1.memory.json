@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `safeKey` function is responsible for sanitizing and transforming a given key string to ensure it only contains alphanumeric characters, underscores, and hyphens. This helps in creating safe identifiers that can be used in various contexts where only specific character sets are allowed.\n\n### Primary Inputs\n- **key**: A string input which represents the original key that needs to be sanitized.\n\n### Output\n- The output is a new string where all characters not matching the pattern `[a-zA-Z0-9_-]` have been replaced with underscores (`_`).\n\n### Immediate Dependencies\n- **None** (The function itself does not rely on external functions or variables defined within its scope.)\n\n### Role in Module\nIn the context of the module, `safeKey` serves as a utility function to ensure that keys used for file names, identifiers, or any other string representations are clean and safe. This is particularly useful when dealing with configuration settings, environment variables, or data storage where invalid characters can cause issues (e.g., in file paths on different operating systems).\n\n### Example Usage\n```javascript\nconst sanitizedKey = safeKey(\"my-key!@#\"); // Output: \"my_key__\"\nconsole.log(sanitizedKey); // Outputs: my_key__\n```\n\nThis function is crucial for maintaining the integrity and compatibility of keys across different systems and applications, ensuring they meet specific character requirements without altering their core meaning or functionality.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

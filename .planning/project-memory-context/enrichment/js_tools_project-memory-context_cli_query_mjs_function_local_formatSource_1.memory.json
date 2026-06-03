@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `formatSource` is responsible for formatting the source information, whether it's a project context or a symbol. It determines the type of the source and returns a string that describes it in a user-friendly manner. This helps in easily identifying what kind of data (project context or symbol) is being referred to, along with its title/symbolKey and file path.\n\n### Primary Inputs\n- `source`: An object containing information about either a project context or a symbol. The structure of this object includes:\n  - `type`: A string that indicates whether the source is a 'project-context' or not (likely a symbol).\n  - `title` (for project-context): A title for the project context.\n  - `path` (for project-context): The path to the project context file.\n  - `symbolKey`: A key representing the symbol, used when the source is a symbol.\n  - `filePath`: The file path where the symbol is located.\n\n### Output\n- A string that describes the source in a user-friendly manner:\n  - If the source type is 'project-context', it returns a string like \"- [project-context] {title} ({path})\".\n  - If the source type is not 'project-context' (likely a symbol), it returns a string like \"- [symbol] {symbolKey} ({filePath})\".\n\n### Immediate Dependencies\n- The function directly depends on the structure of the `source` object, which includes properties such as `type`, `title`, `path`, `symbolKey`, and `filePath`.\n\n### Role in Module\nThe `formatSource` function plays a crucial role in the module by providing a clear and user-friendly way to represent both project contexts and symbols. This is particularly useful for debugging, logging, or any other scenario where it's important to understand what resources are being referenced without delving into detailed object structures. It simplifies communication about data representation within the team and with external users of this module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/query.mjs"
+  ]
+}

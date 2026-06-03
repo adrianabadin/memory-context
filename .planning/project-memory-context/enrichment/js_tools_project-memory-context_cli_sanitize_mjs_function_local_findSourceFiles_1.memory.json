@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `findSourceFiles` function is responsible for discovering source files within a given project root directory. It scans the directory structure, filters out unwanted directories and file extensions (based on a set of predefined extensions), and collects paths to all relevant source files. These paths are then returned as an array of strings representing relative paths from the project root.\n\n### Primary Inputs\n- `projectRoot`: A string representing the absolute path to the root directory of the project where the search for source files should begin.\n\n### Output\n- An array of strings, each being a relative path (from the project root) to a file that is either a TypeScript (.ts), JavaScript (.js), or C# (.cs) file.\n\n### Immediate Dependencies\n- Node.js built-in modules: `path`, `fs/promises`, and `crypto`.\n- Custom modules from the same project: `../src/artifacts.mjs`, `../src/symbol-extractor.mjs`, `../src/graph-node-resolver.mjs`, `../src/sync-manifest.mjs`, and `../src/platform.mjs`.\n\n### Role in Module\nThis function serves as a utility within the module to facilitate the discovery of source code files, which is crucial for various tasks such as analysis, bundling, or documentation generation that might require scanning through project directories to locate relevant files.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/sanitize.mjs"
+  ]
+}

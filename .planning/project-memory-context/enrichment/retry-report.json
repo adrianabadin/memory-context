@@ -1,0 +1,647 @@
+{
+  "startedAt": "2026-05-24T17:23:42.166Z",
+  "finishedAt": "2026-05-24T17:31:34.805Z",
+  "iterations": 1,
+  "config": {
+    "model": "deepseek-coder-v2:16b-ctx32k",
+    "baseUrl": "http://localhost:11434",
+    "timeoutMs": 300000
+  },
+  "symbols": [
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/app.js|function|local|getActiveNodeIds|0",
+      "name": "getActiveNodeIds",
+      "filePath": "tools/pmc-graph-explorer/public/app.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.284Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 17962,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:23:42.168Z",
+              "endedAt": "2026-05-24T17:24:00.129Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getActiveNodeIds_0",
+          "contentPreview": " ### Responsibility\nThe `getActiveNodeIds` function is responsible for retrieving the set of active node IDs from the application's state. It checks if the `state.contextData` and its `activeNodeIds` "
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getActiveNodeIds_0",
+      "contentPreview": " ### Responsibility\nThe `getActiveNodeIds` function is responsible for retrieving the set of active node IDs from the application's state. It checks if the `state.contextData` and its `activeNodeIds` "
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/app.js|function|local|getEnrichedNodeIds|0",
+      "name": "getEnrichedNodeIds",
+      "filePath": "tools/pmc-graph-explorer/public/app.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.300Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 19322,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:24:00.158Z",
+              "endedAt": "2026-05-24T17:24:19.479Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getEnrichedNodeIds_0",
+          "contentPreview": " ### Responsibility\nThe `getEnrichedNodeIds` function is responsible for extracting and returning the unique node IDs from the `state.worklistData`. This set of IDs is used to manage and manipulate no"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getEnrichedNodeIds_0",
+      "contentPreview": " ### Responsibility\nThe `getEnrichedNodeIds` function is responsible for extracting and returning the unique node IDs from the `state.worklistData`. This set of IDs is used to manage and manipulate no"
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/app.js|function|local|getWorklistStatusMap|0",
+      "name": "getWorklistStatusMap",
+      "filePath": "tools/pmc-graph-explorer/public/app.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.316Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 19859,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:24:19.503Z",
+              "endedAt": "2026-05-24T17:24:39.362Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getWorklistStatusMap_0",
+          "contentPreview": " ### Responsibility\nThe `getWorklistStatusMap` function is responsible for creating and returning a map of worklist statuses, where each key is a graph node ID from the `state.worklistData` array, and"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_getWorklistStatusMap_0",
+      "contentPreview": " ### Responsibility\nThe `getWorklistStatusMap` function is responsible for creating and returning a map of worklist statuses, where each key is a graph node ID from the `state.worklistData` array, and"
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/app.js|function|local|init|0",
+      "name": "init",
+      "filePath": "tools/pmc-graph-explorer/public/app.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.296Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 20099,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:24:39.391Z",
+              "endedAt": "2026-05-24T17:24:59.490Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_init_0",
+          "contentPreview": " ### Responsibility\nThe `init` function is responsible for initializing the application by loading data, setting up communities, and configuring filters and graph visualization.\n\n### Primary Inputs\n- "
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_app_js_function_local_init_0",
+      "contentPreview": " ### Responsibility\nThe `init` function is responsible for initializing the application by loading data, setting up communities, and configuring filters and graph visualization.\n\n### Primary Inputs\n- "
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/context-tracker.js|function|exported|loadContext|0",
+      "name": "loadContext",
+      "filePath": "tools/pmc-graph-explorer/public/context-tracker.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.306Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 20313,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:24:59.516Z",
+              "endedAt": "2026-05-24T17:25:19.829Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_context-tracker_js_function_exported_loadContext_0",
+          "contentPreview": " ### Responsibility\nThe `loadContext` function is responsible for fetching and retrieving the context data from an API endpoint. It handles asynchronous HTTP requests to retrieve JSON data, which repr"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_context-tracker_js_function_exported_loadContext_0",
+      "contentPreview": " ### Responsibility\nThe `loadContext` function is responsible for fetching and retrieving the context data from an API endpoint. It handles asynchronous HTTP requests to retrieve JSON data, which repr"
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/context-tracker.js|function|exported|markNodesActive|1",
+      "name": "markNodesActive",
+      "filePath": "tools/pmc-graph-explorer/public/context-tracker.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.321Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 17103,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:25:19.854Z",
+              "endedAt": "2026-05-24T17:25:36.957Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_context-tracker_js_function_exported_markNodesActive_1",
+          "contentPreview": " ### Responsibility:\nThe `markNodesActive` function is responsible for marking specified nodes as active by sending a POST request to the `/api/context` endpoint, indicating that these node IDs should"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_context-tracker_js_function_exported_markNodesActive_1",
+      "contentPreview": " ### Responsibility:\nThe `markNodesActive` function is responsible for marking specified nodes as active by sending a POST request to the `/api/context` endpoint, indicating that these node IDs should"
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/filters.js|function|exported|initFilters|2",
+      "name": "initFilters",
+      "filePath": "tools/pmc-graph-explorer/public/filters.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-23T15:52:43.314Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 14353,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:25:36.981Z",
+              "endedAt": "2026-05-24T17:25:51.334Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_filters_js_function_exported_initFilters_2",
+          "contentPreview": " The `initFilters` function is responsible for creating and rendering community filters on the web page. It takes two main inputs: `state`, which contains information about enabled communities, and `c"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_filters_js_function_exported_initFilters_2",
+      "contentPreview": " The `initFilters` function is responsible for creating and rendering community filters on the web page. It takes two main inputs: `state`, which contains information about enabled communities, and `c"
+    },
+    {
+      "symbolKey": "js|tools/pmc-graph-explorer/public/filters.js|function|exported|updateStats|1",
+      "name": "updateStats",
+      "filePath": "tools/pmc-graph-explorer/public/filters.js",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:03:41.913Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 27029,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:25:51.361Z",
+              "endedAt": "2026-05-24T17:26:18.390Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_pmc-graph-explorer_public_filters_js_function_exported_updateStats_1",
+          "contentPreview": " ### Structured Explanation\n\n**Responsibility:**  \nThe function `updateStats` is responsible for updating the user interface to reflect the current state of node statistics, including counts of active"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_pmc-graph-explorer_public_filters_js_function_exported_updateStats_1",
+      "contentPreview": " ### Structured Explanation\n\n**Responsibility:**  \nThe function `updateStats` is responsible for updating the user interface to reflect the current state of node statistics, including counts of active"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/retry-errors.mjs|function|local|buildSymbolPrompt|3",
+      "name": "buildSymbolPrompt",
+      "filePath": "tools/project-memory-context/cli/retry-errors.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:10:55.372Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 41878,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:26:18.417Z",
+              "endedAt": "2026-05-24T17:27:00.294Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_retry-errors_mjs_function_local_buildSymbolPrompt_3",
+          "contentPreview": " ```json\n{\n  \"responsibility\": \"Generates a detailed prompt for symbol information, including its context and code snippet, tailored for further processing or display.\",\n  \"primary_inputs\": [\n    {\n  "
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_retry-errors_mjs_function_local_buildSymbolPrompt_3",
+      "contentPreview": " ```json\n{\n  \"responsibility\": \"Generates a detailed prompt for symbol information, including its context and code snippet, tailored for further processing or display.\",\n  \"primary_inputs\": [\n    {\n  "
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/retry-errors.mjs|function|local|main|0",
+      "name": "main",
+      "filePath": "tools/project-memory-context/cli/retry-errors.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:13:05.543Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 45779,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:27:00.320Z",
+              "endedAt": "2026-05-24T17:27:46.099Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_retry-errors_mjs_function_local_main_0",
+          "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the retry process of error entries in a worklist, handling command line arguments to configure and limit retries, and generatin"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_retry-errors_mjs_function_local_main_0",
+      "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the retry process of error entries in a worklist, handling command line arguments to configure and limit retries, and generatin"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/status.mjs|function|local|toIsoString|1",
+      "name": "toIsoString",
+      "filePath": "tools/project-memory-context/cli/status.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:13:32.256Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 21618,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:27:46.126Z",
+              "endedAt": "2026-05-24T17:28:07.744Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_status_mjs_function_local_toIsoString_1",
+          "contentPreview": " ### Responsibility\nThe `toIsoString` function is responsible for converting a given value to an ISO string representation if it can be parsed as a date. If the input cannot be converted to a valid da"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_status_mjs_function_local_toIsoString_1",
+      "contentPreview": " ### Responsibility\nThe `toIsoString` function is responsible for converting a given value to an ISO string representation if it can be parsed as a date. If the input cannot be converted to a valid da"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/context.mjs|function|exported|runTargetContext|1",
+      "name": "runTargetContext",
+      "filePath": "tools/project-memory-context/cli/context.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:20:31.199Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 36530,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:28:07.770Z",
+              "endedAt": "2026-05-24T17:28:44.299Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_context_mjs_function_exported_runTargetContext_1",
+          "contentPreview": " ### Responsibility\nThe `runTargetContext` function is responsible for orchestrating the retrieval and rendering of target context within a project. It involves resolving the target, building input fo"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_context_mjs_function_exported_runTargetContext_1",
+      "contentPreview": " ### Responsibility\nThe `runTargetContext` function is responsible for orchestrating the retrieval and rendering of target context within a project. It involves resolving the target, building input fo"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/context.mjs|function|exported|main|1",
+      "name": "main",
+      "filePath": "tools/project-memory-context/cli/context.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:21:03.337Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 39647,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:28:44.322Z",
+              "endedAt": "2026-05-24T17:29:23.969Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_context_mjs_function_exported_main_1",
+          "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the execution of project memory context retrieval and visualization. It handles command line argument parsing, determines the p"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_context_mjs_function_exported_main_1",
+      "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the execution of project memory context retrieval and visualization. It handles command line argument parsing, determines the p"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/enrich-queue.mjs|function|local|main|0",
+      "name": "main",
+      "filePath": "tools/project-memory-context/cli/enrich-queue.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:21:51.676Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 54163,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:29:23.993Z",
+              "endedAt": "2026-05-24T17:30:18.156Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_enrich-queue_mjs_function_local_main_0",
+          "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the enrichment process of a project's memory context. It manages file operations, configuration loading, and state management t"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_enrich-queue_mjs_function_local_main_0",
+      "contentPreview": " ### Responsibility\nThe `main` function is responsible for orchestrating the enrichment process of a project's memory context. It manages file operations, configuration loading, and state management t"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/cli/status.mjs|function|exported|buildStatusReport|1",
+      "name": "buildStatusReport",
+      "filePath": "tools/project-memory-context/cli/status.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:22:16.543Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 27912,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:30:18.177Z",
+              "endedAt": "2026-05-24T17:30:46.088Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_cli_status_mjs_function_exported_buildStatusReport_1",
+          "contentPreview": " ### Responsibility\nThe `buildStatusReport` function is responsible for generating a comprehensive status report of the project's memory context, including details about its configuration, installatio"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_cli_status_mjs_function_exported_buildStatusReport_1",
+      "contentPreview": " ### Responsibility\nThe `buildStatusReport` function is responsible for generating a comprehensive status report of the project's memory context, including details about its configuration, installatio"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/src/extractors/structure-extractor.mjs|function|local|listDirectories|5",
+      "name": "listDirectories",
+      "filePath": "tools/project-memory-context/src/extractors/structure-extractor.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:22:44.864Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 20843,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:30:46.112Z",
+              "endedAt": "2026-05-24T17:31:06.955Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_src_extractors_structure-extractor_mjs_function_local_listDirectories_5",
+          "contentPreview": " ### Responsibility\nThe `listDirectories` function is responsible for recursively listing all directories within a given directory up to a specified depth, excluding any ignored directories. It constr"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_src_extractors_structure-extractor_mjs_function_local_listDirectories_5",
+      "contentPreview": " ### Responsibility\nThe `listDirectories` function is responsible for recursively listing all directories within a given directory up to a specified depth, excluding any ignored directories. It constr"
+    },
+    {
+      "symbolKey": "js|tools/project-memory-context/src/template-installer.mjs|function|local|installOpencode|1",
+      "name": "installOpencode",
+      "filePath": "tools/project-memory-context/src/template-installer.mjs",
+      "kind": "function",
+      "language": "js",
+      "previousErrors": [
+        {
+          "provider": "ollama",
+          "errorType": "timeout",
+          "message": "The operation was aborted due to timeout",
+          "failedAt": "2026-05-24T17:23:24.522Z"
+        }
+      ],
+      "iterationResults": [
+        {
+          "iteration": 1,
+          "status": "succeeded",
+          "elapsedMs": 27801,
+          "attempts": [
+            {
+              "mode": "local-model",
+              "provider": "ollama",
+              "model": "deepseek-coder-v2:16b-ctx32k",
+              "status": "succeeded",
+              "startedAt": "2026-05-24T17:31:06.979Z",
+              "endedAt": "2026-05-24T17:31:34.780Z"
+            }
+          ],
+          "memoryId": "queue-js_tools_project-memory-context_src_template-installer_mjs_function_local_installOpencode_1",
+          "contentPreview": " The `installOpencode` function is responsible for installing OpenCode templates and configurations into a project directory. It takes the following inputs:\n\n- **projectRoot**: Path to the root of the"
+        }
+      ],
+      "finalStatus": "enriched",
+      "memoryId": "queue-js_tools_project-memory-context_src_template-installer_mjs_function_local_installOpencode_1",
+      "contentPreview": " The `installOpencode` function is responsible for installing OpenCode templates and configurations into a project directory. It takes the following inputs:\n\n- **projectRoot**: Path to the root of the"
+    }
+  ],
+  "summary": {
+    "symbolsRetried": 17,
+    "symbolsRecovered": 17,
+    "symbolsStillFailing": 0,
+    "maxIterationsReached": false
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `createGraph` function is responsible for initializing and rendering the graph visualization within a web page using D3.js. It sets up the SVG container, defines zoom functionality, creates nodes and links based on provided data, applies forces for layout, and handles interactions like dragging nodes and displaying tooltips.\n\n### Primary Inputs\n- `state`: An object containing `graphData` which includes `nodes` (array of node objects) and `links` (array of link objects).\n- `callbacks`: An object with methods to interact with the graph, such as getting active node IDs (`getActiveNodeIds`), enriched node IDs (`getEnrichedNodeIds`), and handling node clicks (`onNodeClick`).\n\n### Output\n- A D3.js-powered interactive graph visualization rendered within an HTML element identified by `#canvas`.\n\n### Immediate Dependencies\n- **D3.js**: For creating the SVG elements, applying forces for layout, and handling interactions.\n- **HTML/CSS**: For rendering the SVG container and styling nodes and links.\n- **JavaScript**: For managing event listeners and updating the DOM based on graph updates or user interactions.\n\n### Role in Module\nThe `createGraph` function serves as a central hub for initializing and maintaining the state of the graph visualization, handling both static data representation (nodes and links) and dynamic interactions with this data. It encapsulates all necessary steps from setting up the SVG container to enabling interactive features like zooming and node dragging.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/graph.js"
+  ]
+}

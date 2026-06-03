@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `isExported` is responsible for determining whether a given AST (Abstract Syntax Tree) node represents an exported declaration in JavaScript or TypeScript code. This is crucial for extracting and identifying the relevant parts of the code during the extraction process.\n\n### Primary Inputs\n- **node**: The AST node to be checked, which could be from parsed JavaScript or TypeScript code using Babel's parser (`@babel/parser`).\n\n### Output\n- A boolean value: `true` if the node is an exported declaration (either named export or default export), and `false` otherwise.\n\n### Immediate Dependencies\n- **Babel's `parse` function**: To parse JavaScript or TypeScript code into an AST.\n- **Node.js's `crypto` module** (`createHash`) for cryptographic purposes, though not directly used here, it is imported as part of the broader toolchain context.\n- **Custom module `symbol-keys.mjs`** (`buildSymbolKey`): For handling symbol keys related tasks, which might be indirectly involved in some other operations but are not direct dependencies of this function.\n\n### Role in Module\nThis function plays a critical role in the extraction process by providing a way to filter out nodes that represent exported declarations. This is essential for modules or tools that need to isolate and work with only those parts of the codebase which have been explicitly marked as exports, facilitating further processing or analysis focused on these specific segments of the project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/js-ts-extractor.mjs"
+  ]
+}

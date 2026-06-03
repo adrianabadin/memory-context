@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `listDirectories` function is responsible for recursively listing all directories within a given directory up to a specified depth, excluding any ignored directories. It constructs relative paths from the root and records their depths.\n\n### Primary Inputs\n- **dir**: The starting directory path where the search begins.\n- **root**: The root directory against which relative paths are calculated.\n- **depth**: Current depth level (starts at 0).\n- **maxDepth**: Maximum depth to explore.\n- **acc**: An accumulator array that stores results.\n\n### Output\nAn array of objects containing the relative path (`rel`) and the depth from the root directory.\n\n### Immediate Dependencies\n- `readdir` and `stat` from Node.js's fs/promises module for file system operations.\n- `join` and `relative` from Node.js's path module to handle and manipulate file paths.\n\n### Role in Module\nThis function serves as a utility within the module for extracting directory structures, aiding in tasks such as project analysis or data extraction where detailed directory information is required.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/structure-extractor.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `computeSymbolDelta` function is responsible for comparing the current set of symbols (`currentSymbols`) with an existing worklist (`existingWorklist`) and determining the changes between them. It identifies new, stale, removed, and unchanged symbols based on their keys and code hashes.\n\n### Primary Inputs\n- **currentSymbols**: An array of objects representing the current state of symbols in the system. Each object contains a `symbolKey` and potentially other metadata like `codeHash`.\n- **existingWorklist**: An array of objects representing previously recorded symbols, each with a `symbolKey`, `memoryId`, and optionally `graphNodeId`.\n\n### Output\nThe function returns an object containing four arrays:\n- `new`: Symbols that are new in the current set but not in the existing worklist.\n- `stale`: Symbols that exist in both sets but have a different code hash, indicating they need to be updated.\n- `removed`: Symbols that were present in the existing worklist but are no longer found in the current set.\n- `unchanged`: Symbols that remain unchanged between the two sets.\n\n### Immediate Dependencies\n- **Map**: The function uses a JavaScript Map to efficiently look up symbols by their key from the existing worklist.\n- **Set**: A Set is used to quickly check if a symbol's key exists in both the current and existing sets.\n\n### Role in Module\nThis function plays a crucial role in maintaining an accurate record of symbols, especially useful for tracking changes or additions/deletions across different states of the system. It helps in managing updates and ensuring that any discrepancies between versions are handled appropriately by marking symbols as new, stale, removed, or unchanged.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/symbol-delta.mjs"
+  ]
+}

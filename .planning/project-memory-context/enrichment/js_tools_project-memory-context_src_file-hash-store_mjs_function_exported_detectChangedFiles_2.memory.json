@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `detectChangedFiles` function is responsible for comparing two sets of file hashes (from the previous and current states) to determine which files have been added, modified, or removed. It helps identify changes in a project's file structure or content efficiently.\n\n### Primary Inputs\n- **previous**: An object where keys are filenames and values are their corresponding hash digests from a previous state.\n- **current**: An object similar to `previous`, but representing the current state of files with their respective hash digests.\n\n### Output\nThe function returns an object containing four arrays:\n- `added`: Files that were not present in the previous state but are now in the current state.\n- `modified`: Files that have changed between the previous and current states.\n- `removed`: Files that were present in the previous state but are no longer present in the current state.\n- `unchanged`: Files that remain unchanged from the previous state to the current state.\n\n### Immediate Dependencies\nThe function directly depends on:\n- **`Object.keys()`**: To iterate over keys of the input objects.\n- **`createHash` from 'node:crypto'**: For generating hash digests of file contents.\n- **`readdir`, `readFile`, and `stat` from 'node:fs/promises'**: For reading directory structures, file contents, and metadata respectively.\n- **`join` and `relative` from 'node:path'**: For handling and transforming file paths.\n\n### Role in Module\nThis function plays a crucial role in the module by providing an efficient way to track changes in files across different states, which is essential for version control, backup systems, or any scenario where tracking file modifications is necessary. It helps maintainers of the project quickly identify what has changed and take appropriate actions based on these changes.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/file-hash-store.mjs"
+  ]
+}

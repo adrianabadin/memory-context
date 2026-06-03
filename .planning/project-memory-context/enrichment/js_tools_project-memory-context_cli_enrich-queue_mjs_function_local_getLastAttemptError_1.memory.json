@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `getLastAttemptError` function retrieves the error message from the most recent attempt in a list of attempts.\n\n**Primary Inputs**: \n- `attempts`: An array of objects, each representing an attempt with potential properties like `errorMessage`.\n\n**Output**: \n- Returns the error message (`string`) of the last failed attempt. If no error messages are found, it returns `null`.\n\n**Immediate Dependencies**: \n- None directly; operates on the input data structure.\n\n**Role in Module**: \n- This function is part of a larger module responsible for managing and processing enrichment attempts. It helps in diagnosing issues by providing access to the most recent error encountered during these attempts.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

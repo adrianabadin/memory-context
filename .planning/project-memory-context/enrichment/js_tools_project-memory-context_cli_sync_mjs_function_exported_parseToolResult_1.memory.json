@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `parseToolResult` function is responsible for parsing the result of a tool execution, specifically designed to handle errors and parse JSON content from the result. It abstracts away the complexity of checking if the result is an error or contains valid JSON data, providing a straightforward interface for handling such scenarios.\n\n### Primary Inputs\n- `result`: This is expected to be an object that might contain information about whether it's an error and its content. The structure should include at least one nested property where text (or equivalent) might be stored.\n\n### Output\n- If the result contains valid JSON, it returns the parsed JSON object.\n- If there's no valid text or if the result is considered an error, it throws an error with a message derived from the content or defaults to 'unknown error'.\n- If the input does not contain any meaningful data (e.g., null or undefined), it returns `null`.\n\n### Immediate Dependencies\n- The function directly uses JavaScript's optional chaining (`?.`) and property access operators (`?.[0]?.text`) to safely navigate through potential nested structures in the result object, ensuring that operations are only performed if these conditions are met.\n\n### Role in Module\nThis function serves as a utility within the module for handling asynchronous file system operations (via `readFile` from Node.js) and parsing JSON data specifically tailored for tool results. It helps maintain clean code by abstracting error handling and content extraction logic, making it easier to integrate with other parts of the application that might consume this function's output.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/sync.mjs"
+  ]
+}

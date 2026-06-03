@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `parseArgs` function is responsible for parsing command-line arguments to identify and categorize agent flags.\n\n**Primary Inputs**: \n- `args`: An array of strings representing the command-line arguments passed to the script.\n\n**Output**: \n- An object containing an array of agents (`agents`) that were identified from the input arguments.\n\n**Immediate Dependencies**: \n- `AGENT_FLAGS`: A predefined mapping or object that associates specific argument flags with corresponding agent types.\n\n**Role in Module**: \n- This function acts as a utility within the module to filter and categorize command-line inputs, facilitating further processing based on detected agents. It is likely used early in the script's execution flow to set up necessary configurations or conditions for subsequent operations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/setup.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `buildDeclaredContext` function initializes and returns an object representing the declared context of a project. This context includes placeholders for architecture, technical rules, project requirements, and known issues.\n\n**Primary Inputs**: None; it operates without external inputs.\n\n**Output**: An object with properties for architecture target, technical rules, project requirements, and known issues, each initialized to empty or default values.\n\n**Immediate Dependencies**: None; the function does not depend on any other functions or variables within its scope.\n\n**Role in Module**: This function serves as a foundational component for setting up the initial state of the project context. It is likely called at the beginning of the module's execution to ensure that all necessary context structures are available for subsequent operations, such as data extraction and processing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/project-context.mjs"
+  ]
+}

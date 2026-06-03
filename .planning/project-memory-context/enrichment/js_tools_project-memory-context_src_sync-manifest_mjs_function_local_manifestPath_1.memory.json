@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `manifestPath` function is responsible for generating the path to a manifest file within a specified enrichment directory. This function constructs and returns the full file path by joining the provided `enrichmentDir` with a constant string representing the manifest file name (`MANIFEST_FILE`).\n\n### Primary Inputs\n- **enrichmentDir**: A string representing the directory where the manifest file should be located or will be created.\n\n### Output\n- The output is a string that represents the full path to the manifest file, constructed by joining `enrichmentDir` and `MANIFEST_FILE`.\n\n### Immediate Dependencies\n- **join**: A method from Node.js's `node:path` module used to concatenate the provided `enrichmentDir` with `MANIFEST_FILE`.\n\n### Role in Module\nThe `manifestPath` function serves as a utility for generating consistent paths to manifest files within different enrichment directories, ensuring that all operations involving these paths are handled uniformly across the application. This helps maintain organization and coherence in how file paths are managed throughout the module or system where this function is used.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

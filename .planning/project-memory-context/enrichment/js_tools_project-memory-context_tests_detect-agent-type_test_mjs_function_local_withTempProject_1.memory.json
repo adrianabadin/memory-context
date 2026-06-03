@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `withTempProject` function is responsible for setting up and tearing down a temporary project directory. It ensures that the provided function (`fn`) has access to a clean, isolated environment where it can perform operations without affecting other tests or the system's file structure. This setup and teardown are crucial for maintaining test isolation and preventing side effects between tests.\n\n### Primary Inputs\n- `fn`: A callback function that is passed the path to the temporary project directory. This function is executed within the context of the temporary directory, allowing it to perform operations specific to that directory.\n\n### Output\n- The output of this function is undefined (`void`). However, the primary effect is setting up and tearing down the temporary directory, which indirectly supports the execution of `fn`.\n\n### Immediate Dependencies\n- **Node.js Core Modules**: \n  - `fs/promises`: For file system operations like creating a temporary directory, writing files, and removing directories.\n  - `os`: To use the operating system's temp directory for the temporary project path.\n  - `path`: For joining paths to create the full path of the temporary directory.\n- **Local Module**:\n  - `../src/platform.mjs`: This module likely contains utility functions or configurations related to platform detection, which might be used within the tests that utilize `withTempProject`.\n\n### Role in Module\nThe `withTempProject` function serves as a utility for setting up and tearing down isolated test environments, ensuring that each test runs with a clean slate. It is specifically designed to facilitate testing by providing controlled contexts where file system operations can be safely performed without affecting other parts of the system or interfering with ongoing tests.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tests/detect-agent-type.test.mjs"
+  ]
+}

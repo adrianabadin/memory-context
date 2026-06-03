@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `sliceLines` function is responsible for extracting a portion of text from a larger block of text, specifically designed to handle multi-line strings. It takes the entire content and slices it into lines, then selects a subset of these lines based on provided start and end line numbers. Finally, it joins these selected lines back together into a single string with newline characters.\n\n### Primary Inputs\n1. **content**: A string that represents the full text which may span multiple lines. This is typically markdown or some other formatted text.\n2. **startLine**: An integer representing the first line number to include in the output.\n3. **endLine**: An integer representing the last line number to include in the output.\n\n### Output\n- A string where only the lines between `startLine` and `endLine` (inclusive) are included, with each line separated by a newline character (`\\n`).\n\n### Immediate Dependencies\nThere are no external dependencies listed; all operations are performed using native JavaScript methods:\n- **split('\\n')**: This method splits the input string into an array of lines.\n- **slice(startLine - 1, endLine)**: This method extracts a portion of the array based on the provided start and end indices (adjusted by subtracting 1 from `startLine` because array indexing starts at 0).\n- **join('\\n')**: This method joins the elements of the array back into a single string with newline characters.\n\n### Role in Module\nThe `sliceLines` function serves as a utility to facilitate easy extraction of specific sections of text, which can be particularly useful for tasks involving configuration, documentation, or any scenario where selective retrieval of information from structured text is required. It enhances the module's capability to handle and manipulate complex textual data by providing a straightforward method to work with segments of multi-line content.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/semantic-unit.mjs"
+  ]
+}

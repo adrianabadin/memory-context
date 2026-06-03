@@ -50,7 +50,7 @@ test('resolveCommand is anchored to the package root instead of process.cwd()', 
 });
 
 test('resolveCommand preserves auxiliary package commands', () => {
-  for (const name of ['enrich', 'install-pmc', 'project-context', 'query', 'setup']) {
+  for (const name of ['enrich', 'install-pmc', 'project-context', 'query', 'setup', 'subagent-apply']) {
     const command = resolveCommand([name]);
     assert.equal(command.name, name);
     assert.ok(command.modulePath, `Expected modulePath for ${name}`);
@@ -114,6 +114,7 @@ test('help output matches the supported dispatch table', async () => {
   assert.match(output, /sanitize/);
   assert.match(output, /setup/);
   assert.match(output, /sync-context/);
+  assert.match(output, /subagent-apply/);
   assert.match(output, /view-context/);
   assert.doesNotMatch(output, /(?:<|\|)bootstrap(?:\||>)/);
   assert.doesNotMatch(output, /(?:<|\|)context(?:\||>)/);

@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "command": "retry-errors",
+  "total": 83,
+  "succeeded": 83,
+  "failed": 0,
+  "reportPath": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment\\retry-report.json"
+}
+{
+  "ok": true,
+  "command": "retry-errors",
+  "total": 17,
+  "succeeded": 17,
+  "failed": 0,
+  "iterations": 1,
+  "maxIterationsReached": false,
+  "reportPath": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\enrichment\\retry-report.json"
+}

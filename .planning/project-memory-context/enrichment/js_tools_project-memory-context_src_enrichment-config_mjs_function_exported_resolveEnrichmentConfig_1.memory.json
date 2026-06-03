@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `resolveEnrichmentConfig` function is responsible for merging and enriching the configuration settings from both global and project configurations, as well as extracting environment variables to update the configuration. It ensures that all necessary properties are present and correctly populated based on the provided inputs.\n\n### Primary Inputs\n- **projectConfig**: An object representing the local project configuration.\n- **globalConfig**: An object representing the global configuration.\n- **env**: An object containing environment variables which might override or provide additional settings for the configuration.\n\n### Output\nThe function returns an enriched configuration object that includes defaults, merged configurations from `projectConfig` and `globalConfig`, and any overridden values based on environment variables.\n\n### Immediate Dependencies\n- **mergeConfig**: A utility function to merge two configuration objects.\n- **unwrapEnrichmentConfig**: A utility function to extract the enrichment config object from a given configuration.\n- **readEnvPreferredModes** and **normalizePreferredModes**: Utility functions to handle preferred modes based on environment variables.\n\n### Role in Module\nThis function plays a crucial role in assembling the complete configuration for the application, ensuring that it is both comprehensive and adaptable to local settings as well as external environment conditions. It helps maintain flexibility while providing essential defaults and overriding capabilities based on runtime parameters.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-config.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `getLastAttemptMode` function is designed to retrieve the last attempt mode from an enrichment configuration file.\n\n**Primary Inputs**: None explicitly listed, but it likely reads data from a predefined configuration file path (`PMC_ENRICHMENT_CONFIG_FILE`).\n\n**Output**: Returns the mode of the last recorded attempt, presumably a string indicating the type or state of the last enrichment operation.\n\n**Immediate Dependencies**: \n- `resolveEnrichmentConfig`: Used to resolve the path to the enrichment configuration file.\n- File system operations from `node:fs/promises` for reading the file.\n\n**Role in Module**: This function is part of a larger module responsible for managing and retrieving information about previous enrichment attempts. It plays a crucial role in determining the context or state of the last operation, which can be used to inform subsequent actions or decisions within the application.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich-queue.mjs"
+  ]
+}

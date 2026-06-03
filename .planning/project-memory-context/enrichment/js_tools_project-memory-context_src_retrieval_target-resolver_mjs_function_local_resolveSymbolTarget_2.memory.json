@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `resolveSymbolTarget` is responsible for resolving the target symbol within an engine by querying its symbol key. It determines if the target symbol exists uniquely, is ambiguous, or does not exist and returns a structured object indicating the result of this resolution.\n\n### Primary Inputs\n- **engine**: An object that has a method `findSymbolKeyByName(target)`, which takes a string (the target name) and returns an array of possible symbol keys matching the target name.\n- **target**: A string representing the name of the symbol to be resolved.\n\n### Output\nThe function returns an object with three properties:\n- **mode**: A string that indicates whether the symbol was found uniquely ('symbol'), ambiguously ('symbol-ambiguous'), or not found ('symbol-missing').\n- **target**: The original target string provided as input.\n- **symbolKey** (optional): If the symbol is unique, this property contains the single matching symbol key; if ambiguous, it contains an array of possible keys.\n\n### Immediate Dependencies\nThere are no external dependencies mentioned in the code snippet itself, but implicitly, it relies on:\n- The `engine` object having a method `findSymbolKeyByName(target)`. This method is expected to return results based on the target name provided.\n\n### Role in Module\nThis function plays a crucial role in the module by providing a clear and structured way to handle symbol resolution queries, which can be used for further processing or user notifications about the status of the requested symbols within the engine context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/target-resolver.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `spawnCheck` function is designed to execute a command-line binary (`bin`) with specified arguments (`args`) and capture its exit status, standard output, and standard error.\n\n**Primary Inputs**:\n- `bin`: The path or name of the executable binary to run.\n- `args`: An array of strings representing the arguments to pass to the binary.\n\n**Output**: \n- Returns an object containing:\n  - `exitCode`: The exit status code of the executed command (defaulting to 1 if undefined).\n  - `stdout`: The standard output from the command (defaulting to an empty string if undefined).\n  - `stderr`: The standard error from the command (defaulting to an empty string if undefined).\n\n**Immediate Dependencies**:\n- `spawnSync` from `node:child_process`: Used to execute the binary synchronously.\n\n**Role in Module**: \n- This function is a utility within the module, facilitating the execution of external commands and handling their results. It is likely used by other functions in the module to perform checks or setup tasks that require running shell commands.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/setup.mjs"
+  ]
+}

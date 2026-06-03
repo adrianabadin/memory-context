@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe responsibility of the `MemoryCategory` type is to define an enumeration of possible memory categories. This type ensures that only predefined values can be assigned to variables or passed as arguments, maintaining consistency and correctness within the application's data model related to memory management.\n\n### Primary Inputs\n- **MEMORY_CATEGORIES**: A constant array containing all possible memory category values. This is typically defined elsewhere in the codebase but should be available at the point of usage for this type definition.\n\n### Output\n- `MemoryCategory`: A TypeScript type that restricts the value to one of the items within the `MEMORY_CATEGORIES` array.\n\n### Immediate Dependencies\n- **MEMORY_CATEGORIES**: This constant is used directly in the export statement, making it an immediate dependency for this type definition.\n\n### Role in Module\nIn the module where `MemoryCategory` is defined and used (`agent-memory-mcp/src/types.ts`), this type serves as a fundamental part of the application's data structure, ensuring that all memory management operations adhere to predefined categories. It acts as a contract for how different parts of the system should handle or categorize memory-related data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "type",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

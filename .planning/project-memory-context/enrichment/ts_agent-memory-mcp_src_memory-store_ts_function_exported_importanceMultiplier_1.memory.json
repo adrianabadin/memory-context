@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation\n\n**Responsibility**:  \nThe `importanceMultiplier` function calculates the importance score of a memory row based on its access frequency and recency.\n\n**Primary Inputs**:  \n- `row`: A record containing memory details, including `access_count`, `last_accessed_at`, and `updated_at`.\n\n**Output**:  \n- A number representing the importance multiplier, ranging from 1.0 to 3.0.\n\n**Immediate Dependencies**:  \n- `safeAccessCount(row)`: A function that safely retrieves the access count from the row.\n- `MS_PER_DAY`: A constant representing milliseconds per day (not shown in the provided code).\n\n**Role in Module**:  \nThis function is integral to determining how frequently a memory should be accessed or updated within the agent's memory management system. It influences the retrieval and prioritization of memories based on their usage patterns and freshness.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

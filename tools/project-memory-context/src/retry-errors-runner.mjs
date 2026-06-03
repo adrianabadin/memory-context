@@ -90,7 +90,9 @@ export async function runRetryLoop({
       const outcome = await retrySymbol(symbol, iterations);
       const reportEntry = reportBySymbol.get(symbol.symbolKey);
       reportEntry.iterationResults.push({ iteration: iterations, ...outcome });
-      reportEntry.finalStatus = outcome.status === 'succeeded' ? 'enriched' : 'error';
+      reportEntry.finalStatus = outcome.status === 'succeeded' ? 'enriched'
+        : outcome.status === 'subagent-queued' ? 'subagent-queued'
+        : 'error';
       reportEntry.memoryId = outcome.memoryId ?? reportEntry.memoryId;
       reportEntry.contentPreview = outcome.contentPreview ?? reportEntry.contentPreview;
 
@@ -105,7 +107,8 @@ export async function runRetryLoop({
 
   const symbols = [...reportBySymbol.values()];
   const symbolsRecovered = symbols.filter((item) => item.finalStatus === 'enriched').length;
-  const symbolsStillFailing = symbols.length - symbolsRecovered;
+  const symbolsSubagentQueued = symbols.filter((item) => item.finalStatus === 'subagent-queued').length;
+  const symbolsStillFailing = symbols.length - symbolsRecovered - symbolsSubagentQueued;
 
   return {
     iterations,
@@ -113,6 +116,7 @@ export async function runRetryLoop({
     summary: {
       symbolsRetried: symbols.length,
       symbolsRecovered,
+      symbolsSubagentQueued,
       symbolsStillFailing,
       maxIterationsReached: symbolsStillFailing > 0 && iterations === maxIterations,
     },

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `readJson` function is responsible for reading and parsing a JSON file from the given file path. It also handles cases where the file does not exist (ENOENT error) by returning a fallback value instead of throwing an error.\n\n### Primary Inputs\n- **filePath**: A string representing the path to the JSON file that needs to be read.\n- **fallback**: The value to return if the file at `filePath` does not exist or cannot be read (e.g., due to a parsing error).\n\n### Output\n- Returns the parsed JSON object from the file if successful, otherwise returns the provided fallback value.\n\n### Immediate Dependencies\n- **readFile**: A method from Node.js's `fs/promises` module used to read the contents of the file at the given path.\n- **JSON.parse**: A JavaScript function that parses a JSON string and converts it into an object.\n- **Error Handling**: The function includes error handling specifically for the case where the file does not exist (`ENOENT` error).\n\n### Role in Module\nThe `readJson` function serves as a utility to facilitate reading and parsing JSON files within the module, providing robust error handling for cases where the file might be missing or unreadable. This function is likely used by other parts of the module to load configuration data or other structured information from JSON files.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/load-artifacts.mjs"
+  ]
+}

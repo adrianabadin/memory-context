@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `buildIntakeContext` function is responsible for constructing a standardized context object that includes essential information about a project, such as its description and goals. This function ensures that the input strings are normalized (e.g., trimmed and converted to lowercase) before being included in the output object. Additionally, it automatically adds a timestamp indicating when the context was created.\n\n### Primary Inputs\n- `projectDescription`: A string that describes the project.\n- `mappingGoals`: An array of strings representing the goals or objectives of the project mapping phase.\n- `focusAreas` (optional): An array of strings specifying areas where the project should focus, defaulting to an empty array if not provided.\n\n### Output\nThe function returns an object with the following properties:\n- `projectDescription`: A normalized string version of the input description.\n- `mappingGoals`: A normalized list of goals.\n- `focusAreas`: A normalized list of focus areas.\n- `createdAt`: The current date and time in ISO format, indicating when the context was created.\n\n### Immediate Dependencies\nThe function does not directly import any external modules or dependencies; it only uses built-in JavaScript functions like `new Date()` for generating timestamps and basic string manipulation utilities (`normalizeString` and `normalizeList`) which are assumed to be defined elsewhere in the module or imported from a library.\n\n### Role in Module\nThe `buildIntakeContext` function serves as a utility within the module, providing a standardized way to encapsulate project metadata during the intake phase. It ensures that all input strings are properly formatted before being stored, which can be crucial for consistent data handling across different parts of the system or integrations with other tools/services. This role is particularly important in maintaining data integrity and facilitating easier querying or processing of project information later on.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/intake-context.mjs"
+  ]
+}

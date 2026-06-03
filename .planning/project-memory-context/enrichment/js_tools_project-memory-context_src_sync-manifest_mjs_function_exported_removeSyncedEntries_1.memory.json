@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `removeSyncedEntries` function is responsible for removing entries from the sync manifest file that have a status of 'synced'. It filters out these entries and updates the manifest accordingly.\n\n### Primary Inputs\n- `enrichmentDir`: A directory path where the sync manifest file resides.\n\n### Output\n- The number of remaining entries in the filtered sync manifest after removal.\n\n### Immediate Dependencies\n- Node.js built-in modules:\n  - `node:fs/promises` for file system operations (readFile, writeFile).\n  - `node:path` for path manipulation (dirname, join).\n  - `node:crypto` for generating a unique identifier (randomUUID) which is not used in this function.\n\n### Role in Module\nThis function serves as an utility to manage the sync manifest by removing entries marked as 'synced'. It ensures that only non-synced entries are retained, facilitating clean synchronization status tracking and management within the module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/sync-manifest.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `handleFindRelated` function is responsible for creating an asynchronous function that queries related memories from a given memory store based on the provided `memory_id`. It allows specifying a limit to the number of results, defaulting to 5 if not specified. The function encapsulates the logic for interacting with the memory store and handling potential errors gracefully.\n\n### Primary Inputs\n- **store**: A MemoryStore object which is expected to have a method `findRelated` that takes two parameters:\n  1. `memory_id`: A string representing the identifier of the memory whose related memories are to be found.\n  2. `limit`: An optional number specifying the maximum number of related memories to retrieve, defaulting to 5 if not provided.\n\n### Output\n- The function returns a promise that resolves to an object containing:\n  - **count**: The total number of related memories found.\n  - **results**: An array of objects representing the related memories.\n  - If there is an error, it returns a rejected promise with an error message indicating the failure.\n\n### Immediate Dependencies\n- `z`: A schema validation library used to define and validate the structure of inputs (though not directly in this function implementation).\n- `type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'`: Importing the type definition for McpServer, which is part of an external SDK but not directly utilized within this function.\n- `success` and `error` functions: These are assumed to be utility functions provided elsewhere in the module or imported from other modules, used for consistent error handling and success responses.\n\n### Role in Module\nThis function serves as a factory for creating asynchronous handlers that interact with memory stores to find related memories based on specified criteria. It abstracts the details of how data is retrieved and provides a standardized way to handle such queries across different implementations or integrations within the module or application using this function.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

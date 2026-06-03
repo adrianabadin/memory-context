@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `ensureEnrichmentConfig` function is responsible for ensuring that the enrichment configuration file (`PMC_ENRICHMENT_CONFIG_FILE`) exists and is correctly populated with the necessary information from the `installState`. This includes updating or creating the config file with the provided base URL and model name.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project where the configuration will be managed.\n- **configDir**: The directory within the project where the enrichment configuration file is located or should be created.\n- **installState**: An object containing properties `ollamaBaseUrl` and `ollamaModel`, which are used to update the enrichment configuration.\n\n### Output\nThe function does not explicitly return a value, but it ensures that the enrichment configuration file (`PMC_ENRICHMENT_CONFIG_FILE`) is updated or created with the provided information.\n\n### Immediate Dependencies\n- **readFile**: To read the existing JSON content of the config file.\n- **writeFile**: To write the new or updated JSON content back to the config file.\n- **mkdir**: To ensure that the directory for the config file exists, creating it if necessary.\n- **dirname**: To get the parent directory path for the config file when creating directories.\n- **join**: To construct the full path for the config file.\n- **JSON.stringify**: To convert the JavaScript object to a JSON string with indentation for readability.\n\n### Role in Module\nThis function is crucial for setting up or updating the enrichment configuration, which is essential for the proper functioning of certain features or modules within the application that rely on this configuration. It ensures that all necessary information for enrichment processes (like models and base URLs) are correctly initialized or updated based on runtime state (`installState`).",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/setup-bootstrap.mjs"
+  ]
+}

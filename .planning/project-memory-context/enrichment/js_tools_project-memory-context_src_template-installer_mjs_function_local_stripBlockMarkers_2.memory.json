@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `stripBlockMarkers` function is responsible for removing specific block markers from the provided content. It targets markers that start with \"<!-- pmc:\" and end with \"-->\". These markers are used to delimit sections of text within a larger document, such as comments or placeholders in HTML templates. The function replaces these markers with an empty string, effectively stripping them out.\n\n### Primary Inputs\n- **content**: A string that represents the content from which block markers need to be stripped. This could be any kind of text, including HTML, JavaScript, or other markup languages.\n- **marker**: A string representing the specific marker to be removed. The function is designed to handle multiple markers by using a regular expression that matches \"<!-- pmc:${marker} -->\" and \"<!-- /pmc:${marker} -->\".\n\n### Output\nThe output of `stripBlockMarkers` is a string with the specified block markers removed, along with any leading or trailing whitespace. The function uses `.trim()` to ensure that after removal, there are no unnecessary spaces at the beginning or end of the content.\n\n### Immediate Dependencies\n- **RegExp**: Used in the `replace` method to match and replace the block markers defined by the marker parameter.\n- **String.prototype.replace()**: Applies a regular expression to find and remove the specified block markers from the input string.\n- **String.prototype.trim()**: Ensures that any whitespace around the content is removed after markers are stripped.\n\n### Role in Module\nIn the context of the module, `stripBlockMarkers` serves as a utility function designed to clean up and standardize the text by removing unwanted sections defined by specific markers. This can be particularly useful for tasks such as parsing or templating where clear separation between different parts of the content is necessary. The function contributes to maintaining a clean and manageable data structure within the module, making it easier to process and manipulate the input content according to intended use cases.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

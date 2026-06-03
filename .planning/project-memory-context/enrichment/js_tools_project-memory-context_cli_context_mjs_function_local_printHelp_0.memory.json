@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `printHelp` function is responsible for displaying usage instructions and help information for the PMC CLI tool, specifically for the context-related commands.\n\n**Primary Inputs**: None. It does not take any parameters or arguments directly; it simply prints predefined help text to the console.\n\n**Output**: The function outputs a formatted string of help information to the console, detailing how to use the `pmc context` command with various options and modes.\n\n**Immediate Dependencies**: \n- `console.log`: Used for printing the help text to the console.\n- No other dependencies within the provided code snippet are directly used by this function.\n\n**Role in Module**: The `printHelp` function serves as a utility within the module, providing users with guidance on how to interact with and utilize the context-related features of the PMC CLI tool. It is triggered when the user requests help or when an incorrect command format is detected, ensuring that users have access to necessary information to use the tool effectively.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}

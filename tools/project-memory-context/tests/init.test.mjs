@@ -33,7 +33,7 @@ test('installAgentTemplates writes a CLAUDE.md for claude-code', async () => {
     assert.match(claudeMd, /pmc get-context <target>/);
     assert.match(claudeMd, /\/enrich-status/);
     assert.match(claudeMd, /pmc enrich-status/);
-    assert.match(claudeMd, /\/doctor/);
+    assert.match(claudeMd, /\/pmc-doctor/);
     assert.match(claudeMd, /\/init-project/);
     assert.match(claudeMd, /pmc init-project/);
     assert.match(claudeMd, /pmc sync-context/);
@@ -123,7 +123,7 @@ test('installAgentTemplates writes opencode commands and agent files', async () 
     assert.ok(existsSync(join(globalConfig, 'commands', 'sync-context.md')), 'sync-context command missing');
     assert.ok(existsSync(join(globalConfig, 'commands', 'sanitize.md')), 'sanitize command missing');
     assert.ok(existsSync(join(globalConfig, 'commands', 'enrich-status.md')), 'enrich-status command missing');
-    assert.ok(existsSync(join(globalConfig, 'commands', 'doctor.md')), 'doctor command missing');
+    assert.ok(existsSync(join(globalConfig, 'commands', 'pmc-doctor.md')), 'pmc-doctor command missing');
     assert.ok(existsSync(join(globalConfig, 'commands', 'init-project.md')), 'init-project command missing');
     assert.ok(existsSync(join(globalConfig, 'agents', 'enrich.md')), 'enrich agent missing');
     assert.ok(existsSync(join(globalConfig, 'skills', 'pmc-skill', 'SKILL.md')), 'pmc skill missing');

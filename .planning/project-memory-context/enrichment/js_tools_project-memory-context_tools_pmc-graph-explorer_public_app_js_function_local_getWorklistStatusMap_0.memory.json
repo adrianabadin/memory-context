@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `getWorklistStatusMap` function is responsible for creating and returning a map of worklist statuses. It checks if there is any available worklist data, and if so, it populates a new Map with the graph node IDs as keys and their corresponding statuses as values.\n\n### Primary Inputs\n- `state.worklistData`: An array of objects where each object contains at least two properties: `graphNodeId` (a unique identifier for a node in the graph) and `status` (the current status of that node).\n\n### Output\n- A Map containing keys as `graphNodeId` values and corresponding `status` values. If there is no worklist data available, it returns an empty Map.\n\n### Immediate Dependencies\n- The function directly depends on the existence of `state.worklistData`.\n\n### Role in Module\nThis function serves to provide a quick access mechanism for retrieving the statuses of nodes within the graph from the worklist data stored in the application state (`state`). This is particularly useful for updating UI components or performing further operations based on these statuses without needing to re-fetch or process the entire worklist data each time.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/tools/pmc-graph-explorer/public/app.js"
+  ]
+}

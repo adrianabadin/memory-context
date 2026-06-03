@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for handling command line arguments and executing the appropriate actions based on those arguments. It serves as an entry point for the CLI tool, allowing users to map a project using various options such as specifying target repositories, stages, and enrichment.\n\n### Primary Inputs\n- `args`: Command line arguments passed to the script, excluding the first two elements which are typically used by Node.js (the path to the Node executable and the path to the script). This input is optional and defaults to `process.argv.slice(2)` if not provided.\n\n### Output\n- The function returns a promise that resolves with an exit code (`0` for success, non-zero for failure) or rejects with an error in case of issues (e.g., invalid arguments, errors during execution).\n\n### Immediate Dependencies\n- `spawn`: From the `node:child_process` module, used to spawn a new child process that runs the script specified by `SCRIPT_PATH`.\n- `dirname`, `resolve`: From the `node:path` module, used for path manipulation.\n- `fileURLToPath`: From the `node:url` module, used to convert file URLs to paths.\n\n### Role in Module\nThe `main` function plays a crucial role in setting up and managing the CLI interface for the project memory context (PMC) tool. It parses command line arguments, checks for help requests, and delegates tasks accordingly, ensuring that the tool can be used flexibly through the command line without requiring direct interaction with its internal functions or configurations.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/new-project.mjs"
+  ]
+}

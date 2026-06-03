@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `postFilter` Function\n\n#### Responsibility\nThe `postFilter` function is responsible for filtering rows based on the provided search filters, specifically looking at tags associated with each row. It ensures that only those rows which contain any of the specified tags are returned.\n\n#### Primary Inputs\n- **rows**: An array of objects where each object represents a memory entry and contains a `tags` field as a stringified JSON array.\n- **filters**: An object containing potential filters, specifically a property `tags` which is an array of strings representing the tags to be matched against the rows' tags.\n\n#### Output\nThe output is an array of objects that match at least one of the specified tags in the filters. If there are no tags provided in the filters or if none of the row tags match any filter tags, it returns the original `rows` without modifications.\n\n#### Immediate Dependencies\n- **imports**: The function directly depends on TypeScript types for its parameters (`SearchFilters`) and uses utility functions from JavaScript's global object (specifically JSON parsing).\n\n#### Role in Module\nThe `postFilter` function plays a crucial role in the module by providing a mechanism to refine the results of memory queries based on user-defined criteria, enhancing the functionality to meet specific requirements or constraints. This is particularly useful for applications requiring tag-based filtering across large datasets.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/memory-store.ts"
+  ]
+}

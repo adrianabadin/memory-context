@@ -1,0 +1,9 @@
+{
+  "projectRoot": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context",
+  "packageRoot": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\tools\\project-memory-context",
+  "ollamaBaseUrl": "http://localhost:11434",
+  "ollamaModel": "deepseek-coder-v2:16b-ctx32k",
+  "memoryDbPath": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\memory-db",
+  "embeddingCachePath": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\embedding-cache",
+  "installedAt": "2026-05-30T22:30:21.563Z"
+}

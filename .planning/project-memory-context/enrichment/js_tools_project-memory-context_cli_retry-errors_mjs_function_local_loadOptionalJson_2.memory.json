@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadOptionalJson` function is responsible for attempting to load and parse a JSON file from the given path. If it fails to do so (e.g., due to missing file or syntax errors), it will return a fallback value, which defaults to `null`. This function acts as a safety net to handle optional JSON files gracefully, preventing the application from crashing if a required configuration file is not present or malformed.\n\n### Primary Inputs\n- **path**: A string representing the file path where the JSON file is located.\n- **fallback** (optional): A default value that will be returned if loading or parsing the JSON fails. Defaults to `null`.\n\n### Output\n- The function returns a JavaScript object parsed from the JSON file, if successful. If it encounters an error during the process of reading and parsing the file, it returns the provided fallback value (`null` by default).\n\n### Immediate Dependencies\n- **node:fs/promises**: For file system operations like reading files asynchronously.\n- **node:path**: To handle and transform file paths.\n- **node:url**: To convert URL objects to local file paths.\n- **homedir** from `node:os`: To construct default paths relative to the user's home directory.\n\n### Role in Module\nThis function is part of a utility module designed for handling optional JSON data loading, which can be used across different parts of the application where configuration or settings might be stored as JSON files. It ensures that even if some JSON files are missing or incorrectly formatted, the application does not break and can still operate with fallback mechanisms in place. This is particularly useful in environments where configurations might be optional or dynamically loaded based on runtime conditions.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/retry-errors.mjs"
+  ]
+}

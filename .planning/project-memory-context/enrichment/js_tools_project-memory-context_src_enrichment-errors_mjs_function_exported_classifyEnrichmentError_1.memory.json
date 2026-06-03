@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `classifyEnrichmentError` function is responsible for categorizing different types of error messages based on their content. It aims to classify errors into categories such as 'auth', 'rate-limit', 'provider', 'network', 'timeout', 'config', or defaulting to 'runtime' if no specific category matches.\n\n### Primary Inputs\nThe primary input is an `error` object, which typically contains a message property that holds the error description.\n\n### Output\nThe function outputs an object with two properties:\n- `type`: A string indicating the type of the error (e.g., 'auth', 'rate-limit', etc.).\n- `message`: The original error message for reference.\n\n### Immediate Dependencies\nThere are no external dependencies listed in the provided code snippet, so the immediate dependencies can be considered as none.\n\n### Role in Module\nThis function plays a crucial role in the module by providing a standardized way to categorize errors based on their content. This helps in handling and debugging issues more efficiently, especially when dealing with various error types from different sources or services.\n\n### Summary\nThe `classifyEnrichmentError` function is designed to classify errors into meaningful categories based on the content of their messages. It uses string manipulations (like checking for specific keywords) to determine the type of error and returns this information along with the original message for reference.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-errors.mjs"
+  ]
+}

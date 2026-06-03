@@ -1,0 +1,11 @@
+{
+  "content": "### Explanation of `getTargetDir` Function\n\n**Responsibility:**\nThe `getTargetDir` function determines the target directory for a project based on command-line arguments. It checks for specific flags and resolves paths accordingly.\n\n**Primary Inputs:**\n- `args`: An array of command-line arguments passed to the script.\n\n**Output:**\n- Returns the resolved path to the target directory as a string, or `null` if help is requested.\n\n**Immediate Dependencies:**\n- `resolve` from 'node:path': Used to resolve paths.\n- `process.cwd()`: Provides the current working directory if no specific target is specified.\n\n**Role in Module:**\nThis function is crucial for setting up the environment by identifying where project files should be placed or operated upon, based on user input. It supports flexible directory specification and provides a fallback to the current working directory when no explicit path is given.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

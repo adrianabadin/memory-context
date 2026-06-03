@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `Memory` interface is responsible for defining the structure and schema of memory objects within the application. It encapsulates all necessary properties that a memory item should have, such as its unique identifier, content, category, tags, creation date, last update date, and versioning information. This ensures consistency and type safety when handling memory data across different parts of the application.\n\n### Primary Inputs\n- `id`: A string representing a unique identifier for the memory.\n- `content`: A string containing the actual content or details of the memory.\n- `category`: An enum or similar structure that categorizes the type of memory (e.g., personal, professional).\n- `tags`: An array of strings used to tag and classify the memory with keywords or labels relevant to its context.\n- `createdAt`: A string representing when the memory was first created.\n- `updatedAt`: A string representing the last time the memory was updated.\n- `version`: A number indicating the version or revision level of the memory record, useful for tracking changes over time.\n\n### Outputs\nThere are no direct outputs defined by this interface in terms of function return types but it serves as a blueprint for how data should be structured and validated when interacting with various parts of the application that handle memory data.\n\n### Immediate Dependencies\n- `MemoryCategory`: An enum or similar type defined elsewhere in the module, which is used to specify the category of each memory item. This dependency implies that users of this interface must have access to or define this enum for proper usage.\n\n### Role in Module\nThe `Memory` interface plays a pivotal role in maintaining data integrity and facilitating consistent interactions within the agent-memory-mcp module. It ensures that all components handle memory data uniformly by providing a standardized format, which is crucial for applications requiring robust data management capabilities.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "interface",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/types.ts"
+  ]
+}

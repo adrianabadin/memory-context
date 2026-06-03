@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation\n\n#### Responsibility\nThe `MemoryNotFoundError` class is responsible for creating an error that represents the scenario where a memory item cannot be found. It encapsulates the details of the missing memory, including its identifier (`id`), and provides a clear message to indicate this issue.\n\n#### Primary Inputs\n- **id**: A string representing the unique identifier of the memory that was not found.\n\n#### Output\nWhen an instance of `MemoryNotFoundError` is thrown, it outputs an error object with a specific message indicating that the memory was not found based on the provided ID.\n\n#### Immediate Dependencies\n- **Error**: The base class from which `MemoryNotFoundError` inherits, providing essential properties and methods for handling errors in TypeScript (e.g., `name`, `message`).\n\n#### Role in Module\nThis error class serves as a critical component within the module where it is defined, ensuring that any operation requiring a specific memory item can handle cases where such an item does not exist gracefully by throwing this error. It enhances the robustness and usability of the application by clearly signaling issues related to data access.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "class",
+    "project:memory-context",
+    "file:agent-memory-mcp/src/errors.ts"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `loadData` function is responsible for fetching and loading data from the server related to the graph, worklist, and context. It orchestrates asynchronous HTTP requests to retrieve JSON data from specific API endpoints and then stores these retrieved data into the application's state.\n\n### Primary Inputs\n- None (the inputs are implicitly provided through function calls like `fetch`).\n\n### Output\n- The output is an object containing the fetched graph, worklist, and context data (`state`), which includes:\n  - `graphData`: Data from `/api/graph`.\n  - `worklistData`: Data from `/api/worklist`.\n  - `contextData`: Data from `/api/context`.\n\n### Immediate Dependencies\n- The function directly depends on the following functions and methods for its operation:\n  - `fetch` (from JavaScript's global environment, used to make HTTP requests).\n  - `Promise.all` (to handle multiple asynchronous operations concurrently).\n  - State management (`state`) where it stores the fetched data.\n\n### Role in Module\n- The `loadData` function serves as a central hub for fetching and managing application state related to graphs, worklists, and context information from external sources. It is crucial for initializing or updating the UI components like the graph visualization and sidebar filters based on these retrieved data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/public/app.js"
+  ]
+}

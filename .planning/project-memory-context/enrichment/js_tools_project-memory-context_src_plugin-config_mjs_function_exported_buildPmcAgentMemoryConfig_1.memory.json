@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `buildPmcAgentMemoryConfig` is responsible for constructing and returning the configuration object required to set up and configure the PMC (Project Memory Context) agent memory. This includes specifying the type of memory, the command to run, whether it's enabled, and setting environment variables necessary for the operation of the agent memory module.\n\n### Primary Inputs\n- `installState`: An object containing properties such as `memoryDbPath` which is essential for configuring where the database file should be stored or accessed during the execution of this function.\n\n### Output\nThe output is a configuration object that can be used by other parts of the system to initialize and run the PMC agent memory module correctly. This includes:\n- `type`: Specifies the type of memory, here it's 'local'.\n- `command`: An array containing command line arguments for running the specified npm package (`@aabadin/agent-memory-mcp`).\n- `enabled`: A boolean indicating whether this configuration should be used. Here, it is set to true.\n- `environment`: An object containing environment variables that need to be set during execution of the command:\n  - `MEMORY_DB_PATH`: Path where the memory database file will be stored or accessed.\n  - `EMBEDDING_MODEL`: Specifies the embedding model to use, here 'Xenova/bge-m3'.\n  - `EMBEDDING_DIMENSIONS` and `EMBEDDING_POOLING`: Parameters related to the embedding configuration which are set to predefined values.\n\n### Immediate Dependencies\nThe function does not directly import or depend on other functions from within the same module or external modules; it operates purely based on its input (`installState`) and uses built-in Node.js functionalities for exporting objects.\n\n### Role in Module\nThis function serves as a crucial part of the configuration pipeline for initializing the PMC agent memory, ensuring that all necessary parameters are set correctly to facilitate smooth operation when deploying or using the `@aabadin/agent-memory-mcp` package.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/plugin-config.mjs"
+  ]
+}

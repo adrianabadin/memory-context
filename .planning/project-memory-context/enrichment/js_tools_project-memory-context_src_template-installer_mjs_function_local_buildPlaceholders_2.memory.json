@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `buildPlaceholders` is responsible for constructing a set of placeholder values that will be used during the installation process of a template. These placeholders are essential for configuring and customizing the template according to its intended use within a project.\n\n### Primary Inputs\n- **projectRoot**: A string representing the root directory of the project where the template is being installed. This is where the final files will be placed after installation.\n- **packageRoot**: A string representing the root directory of the package (template) that is being installed. This includes all necessary files and configurations for the template.\n\n### Output\nThe function returns an object containing placeholder values:\n- `binNames`: An object where keys are names of binaries and values are paths to those binaries, derived from the template's package root.\n- `PROJECT_ROOT`: A string representing the project root directory, set as a placeholder for dynamic substitution during runtime.\n- `CONFIG_DIR`: A string representing the configuration directory within the project root, also intended for dynamic substitution, typically '.pmc'.\n\n### Immediate Dependencies\nThe function directly depends on:\n- **loadBinNames**: An asynchronous function that is assumed to be defined elsewhere in the module or imported from another module. Its responsibility is to load and return a list of binary names along with their paths from the template's package root. This dependency is not explicitly shown in the provided code snippet but is implied by the use of `binNames` as part of the output.\n\n### Role in Module\nIn the context of the module, `buildPlaceholders` serves as a utility function that prepares and initializes placeholder values for configuration and runtime usage within the template installation process. This setup ensures flexibility and dynamic substitution during the execution phase by providing placeholders for paths and other necessary configurations specific to each project's environment.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

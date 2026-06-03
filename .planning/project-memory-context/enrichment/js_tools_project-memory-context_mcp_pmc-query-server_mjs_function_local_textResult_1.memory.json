@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `textResult` function is responsible for formatting a given value into a structured JSON string wrapped within an object that represents the result content.\n\n**Primary Inputs**: \n- `value`: Any JavaScript value to be serialized and formatted as text.\n\n**Output**: \n- An object with a single property, `content`, which is an array containing one element. This element is another object specifying the type as 'text' and the text content as a JSON string representation of the input value.\n\n**Immediate Dependencies**: \n- The function does not have any immediate dependencies on external variables or functions within its scope.\n\n**Role in Module**: \n- `textResult` serves as a utility function to standardize the output format for query results, ensuring that all outputs are consistently structured and easily readable. It is likely used by other parts of the module to prepare data for transmission or further processing.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/mcp/pmc-query-server.mjs"
+  ]
+}

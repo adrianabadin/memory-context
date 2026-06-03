@@ -1,0 +1,20 @@
+{
+  "memory_key": "project-context:structure-summary",
+  "title": "Project structure summary",
+  "kind": "structure-summary",
+  "source_mode": "detected",
+  "summary": "Root directories: --refresh, .agents, .antigravitycli, .claude, .playwright-mcp, agent-memory-mcp, docs, MySymbol, target-resolver, tools.",
+  "body": "- Root directories: --refresh, .agents, .antigravitycli, .claude, .playwright-mcp, agent-memory-mcp, docs, MySymbol, target-resolver, tools\n- Key subtrees: .agents/skills, agent-memory-mcp/src, agent-memory-mcp/tests, docs/plans, docs/superpowers, tools/pmc-graph-explorer, tools/project-memory-context\n- Entry points: Not detected",
+  "tags": [
+    "project-context",
+    "project:memory-context",
+    "structure"
+  ],
+  "source_files": [],
+  "graph_refs": [],
+  "detected_sources": [],
+  "declared_sources": [],
+  "confidence": "high",
+  "content_hash": "c8213072fd556bf2ab7e1999da82508aedc12cc1d1648469bf4a4e33fa1fa196",
+  "updated_at": "2026-06-02T05:31:53.395Z"
+}

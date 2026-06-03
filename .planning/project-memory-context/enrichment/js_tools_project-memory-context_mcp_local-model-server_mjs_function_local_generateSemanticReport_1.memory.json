@@ -1,0 +1,11 @@
+{
+  "content": " ```json\n{\n  \"responsibility\": \"Analyze a single code symbol and provide a compact structured response.\",\n  \"inputs\": [\"prompt\"],\n  \"output\": {\n    \"summary\": \"Extracts responsibility, findings, and raw data from the Ollama API response.\",\n    \"findings\": \"List of findings extracted from the raw response.\",\n    \"raw\": \"The full text returned by the Ollama API.\"\n  },\n  \"dependencies\": [\"@modelcontextprotocol/sdk/server/mcp.js\", \"@modelcontextprotocol/sdk/server/stdio.js\"],\n  \"role\": \"Generates a semantic report for code symbols using an external API to interpret and analyze the provided prompt.\"\n}\n```",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/mcp/local-model-server.mjs"
+  ]
+}

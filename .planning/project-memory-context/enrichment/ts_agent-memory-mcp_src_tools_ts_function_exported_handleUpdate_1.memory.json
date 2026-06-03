@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `handleUpdate` function is responsible for updating an existing memory entry in the provided `MemoryStore`.\n\n**Primary Inputs**:\n- `store`: An instance of `MemoryStore`.\n- `args`: An object containing the following properties:\n  - `id`: A string representing the unique identifier of the memory to update.\n  - `content` (optional): A string representing the new content of the memory.\n  - `category` (optional): A string representing the new category of the memory.\n  - `tags` (optional): An array of strings representing the new tags for the memory.\n\n**Output**: \n- Returns a promise that resolves to an object with a success message and the updated memory data, or an error message if the update fails.\n\n**Immediate Dependencies**:\n- `MemoryStore`: The class or interface responsible for managing memory storage operations.\n- `success` and `error` functions: Presumably utility functions for returning structured success and error responses.\n\n**Role in Module**: \n- Acts as a middleware function to handle update requests, abstracting the details of updating a memory from the rest of the application. It ensures that updates are performed safely and provides meaningful feedback on the operation's outcome.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "ts",
+    "function",
+    "project:.",
+    "file:agent-memory-mcp/src/tools.ts"
+  ]
+}

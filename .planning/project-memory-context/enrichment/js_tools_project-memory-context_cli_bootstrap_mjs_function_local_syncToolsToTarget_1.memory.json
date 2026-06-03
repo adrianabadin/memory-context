@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `syncToolsToTarget` is responsible for synchronizing PMC (Project Memory Context) CLI tools from the source root to the target repository. It ensures that all necessary files, such as CLI files, src files, and templates, are copied over from the source root to the project's root directory.\n\n### Primary Inputs\n- `projectRoot`: The path to the target repository where the PMC tools need to be synchronized.\n\n### Output\n- This function does not return a value but logs information about the number of files copied and confirms that the PMC tools have been synced to the target repo.\n\n### Immediate Dependencies\n- `installPmcTools`: A function imported from `./install-pmc.mjs` which handles the actual copying of files between the source root and the target repository.\n- `log`: A utility function for logging messages, assumed to be defined elsewhere in the module or globally available.\n- `PMC_PACKAGE_ROOT`: A constant representing the path to the source root where the PMC tools are located, which is also an input to the `installPmcTools` function.\n\n### Role in Module\nThis function serves as a bridge between the setup process and the actual file copying mechanism. It encapsulates the logic for ensuring that all required files from the source are copied into the target repository during the initialization or setup phase of the project, making it easier to manage dependencies and maintain consistency across different project setups.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

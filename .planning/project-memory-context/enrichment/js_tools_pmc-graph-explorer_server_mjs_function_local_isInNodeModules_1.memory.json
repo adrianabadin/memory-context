@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `isInNodeModules` Function\n\n#### Responsibility\nThe function `isInNodeModules` is responsible for determining whether a given file path or directory contains the string \"node_modules\". This is typically used to check if a file or directory is part of the Node.js module system, which helps in managing dependencies and avoiding unnecessary processing or errors related to node_modules directories.\n\n#### Primary Inputs\n- **path**: A string representing the path to be checked for the presence of \"node_modules\". This can be either a file path or a directory path.\n\n#### Output\n- **boolean**: The function returns `true` if the given path contains the substring \"node_modules\" anywhere within it, including in nested directories, and `false` otherwise.\n\n#### Immediate Dependencies\n- **resolve**: This is imported from the 'path' module. It resolves a sequence of paths or path segments into an absolute path.\n- **includes**: This is a method available on strings in JavaScript, which checks if one string can be found within another string, returning `true` if so and `false` otherwise.\n\n#### Role in Module\nThis function plays a crucial role in the module by providing a utility to check for node_modules directories or files, which are essential for managing dependencies in Node.js applications. It helps in organizing imports and ensuring that scripts do not attempt to process unnecessary files within the node_modules directory. This is particularly useful during development and runtime phases of an application where precise file handling is critical.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/pmc-graph-explorer/server.mjs"
+  ]
+}

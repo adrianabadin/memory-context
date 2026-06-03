@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `extractRegexSymbols` function is responsible for extracting regular expression symbols from the content of a file based on its extension. It determines the language of the file by its extension, then uses specific extractors for that language to find regex patterns within the file's lines.\n\n### Primary Inputs\n- **filePath**: A string representing the path to the file whose contents are being analyzed.\n- **content**: A string containing the entire content of the file.\n\n### Output\nAn array of objects, each representing a regular expression symbol found in the file. Each object contains properties like `symbol`, `startIndex`, and `endIndex` for detailed information about where in the file the regex was located.\n\n### Immediate Dependencies\n- **createHash**: From the 'node:crypto' module, used to generate unique keys for symbols based on their content.\n- **buildSymbolKey**: A function from '../symbol-keys.mjs', which is responsible for creating a symbolic representation of each regex found.\n\n### Role in Module\nThis function serves as an interface between the file system (via `filePath` and `content`) and the language-specific regex extraction logic defined in `LANGUAGE_EXTRACTORS`. It acts as a dispatcher, selecting the appropriate extractor based on the file's extension and then applying it to extract regex symbols from the file content. This design allows for modularity and scalability, enabling easy addition of new languages with their own regex extraction rules by simply updating the mapping in `EXTENSION_TO_LANGUAGE` and implementing new extractors as needed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

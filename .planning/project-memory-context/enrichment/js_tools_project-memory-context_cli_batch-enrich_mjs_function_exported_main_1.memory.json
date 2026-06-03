@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `main` function is responsible for handling the command line interface (CLI) execution of a script that processes and enriches data related to Ollama. It serves as an entry point for the CLI, providing deprecation warnings and directing users to use an alternative command (`pmc enrich .`). This function also manages the arguments passed to it, defaulting to `process.argv.slice(2)` if no arguments are provided.\n\n### Primary Inputs\n- `args`: An optional array of string arguments. If not provided, defaults to `process.argv.slice(2)`. These typically represent command line inputs given when the script is run.\n\n### Output\n- The function returns a promise that resolves with the result of calling the `enrichMain` function from the `./enrich.mjs` module. This implies that the main responsibility of this function is to orchestrate and delegate the core enrichment logic as per the new command recommendation.\n\n### Immediate Dependencies\n- The immediate dependencies include:\n  - `process.argv`: Accesses command line arguments passed when the script is executed.\n  - `console.error`: Outputs error messages to the console, used here for deprecation warnings.\n  - `resolve` and `fileURLToPath` from `node:path` and `node:url`, respectively, which are likely used for handling file paths or URLs in a Node.js environment.\n  - `enrichMain` from `./enrich.mjs`: Calls the main enrichment logic that was previously hardcoded to Ollama but is now deprecated and should be invoked via the new command.\n\n### Role in Module\nThe `main` function plays a crucial role in transitioning the script smoothly by providing clear deprecation warnings and guiding users towards an updated usage pattern, while also maintaining backward compatibility for existing scripts that might call this function directly. It acts as a bridge between old functionality and future commands, ensuring smooth operation during transition periods.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/batch-enrich.mjs"
+  ]
+}

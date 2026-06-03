@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `detectInvalidatedProjectContextKinds` is responsible for determining which project context kinds are invalidated based on the list of changed files. It uses a set to keep track of the invalidated kinds and adds specific kinds based on the file paths provided.\n\n### Primary Inputs\n- **changedFiles**: An array of strings representing file paths that have been modified or added in the repository.\n\n### Output\n- **invalidated**: A list (array) of strings representing the kinds of project context that are invalidated due to changes in the input files.\n\n### Immediate Dependencies\n- **normalizeProjectPath** from `./platform.mjs`: This function is used to normalize and standardize file paths for comparison purposes.\n- **PACKAGE_FILES**: A set containing normalized file paths that indicate a package or project file, which triggers invalidation of certain context kinds.\n\n### Role in Module\nThis function plays a crucial role in maintaining the integrity and relevance of specific parts of the project context by identifying when they need to be re-evaluated based on changes in relevant files. It helps ensure that outdated information is not used or displayed, which could lead to incorrect assumptions about the state of the project.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/invalidation-matrix.mjs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `runEnrichQueue` function is responsible for dynamically importing and executing an asynchronous function from the `enrich-queue.mjs` module, passing a project root directory as an argument.\n\n**Primary Inputs**: \n- `projectRoot`: A string representing the root directory of the project. It defaults to the current working directory if not provided.\n\n**Output**: \n- Returns the result of executing the imported function from `enrich-queue.mjs`. If the default export is not a function, it returns `null`.\n\n**Immediate Dependencies**: \n- `import('./enrich-queue.mjs')`: Dynamically imports the module containing the enrich queue logic.\n- `typeof mod.default === 'function'`: Checks if the default export from the imported module is a function.\n\n**Role in Module**: \n- Acts as an intermediary to abstract the execution of the enrich queue process, allowing for flexible and dynamic invocation based on the project's root directory.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/enrich.mjs"
+  ]
+}

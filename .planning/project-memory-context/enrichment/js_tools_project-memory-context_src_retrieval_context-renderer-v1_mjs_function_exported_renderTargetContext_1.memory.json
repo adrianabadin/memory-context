@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `renderTargetContext` function is responsible for generating a formatted string that summarizes and displays the context of a rendering target. This includes details such as summary, target properties (like mode, name, value, and filePath), relevant items, relations with other entities, next reads, and metadata like depth and focus.\n\n### Primary Inputs\nThe function accepts an object containing various properties:\n- `summary`: An array of strings describing the context.\n- `target`: An object that can include properties such as mode, name, value, and filePath.\n- `relevant`: An array of objects where each object might contain a label or filePath to describe its relevance.\n- `relations`: An array of objects where each describes a relationship with other entities (kind and items).\n- `nextReads`: An array of strings representing the next reads in context.\n- `metadata`: An object that can include depth and focus properties.\n\n### Output\nThe function returns a single string that is formatted to display all the input details, organized into sections with appropriate labels. Each item within each section is prefixed by either '- ' for lists or indented under its respective label.\n\n### Immediate Dependencies\n- The function uses basic JavaScript constructs like arrays and objects, as well as control structures (loops and conditional checks).\n\n### Role in Module\nThis function serves as a utility to provide a structured and readable output of context details from various sources, which can be crucial for debugging or understanding the state of the system at any given point. It ensures that all relevant information is presented clearly and compactly, making it easier to analyze and act upon this data.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/retrieval/context-renderer-v1.mjs"
+  ]
+}

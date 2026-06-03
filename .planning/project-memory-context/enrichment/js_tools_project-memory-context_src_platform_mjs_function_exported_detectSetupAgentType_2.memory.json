@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `detectSetupAgentType` function is responsible for determining the type of setup agent (e.g., 'opencode') associated with a project based on its root directory and optional user options. It helps identify whether the project has a specific configuration or setup related to an Open Source Code Agent ('opencode').\n\n### Primary Inputs\n- `projectRoot`: The root directory of the project where the agent type needs to be detected.\n- `options`: An object that can include:\n  - `requestedAgent`: A user-specified agent type, if provided.\n  - `exists`: A function to check for file existence (default is `existsSync`).\n  - `homeDir`: The home directory path (default is the result of `homedir()`).\n\n### Output\n- Returns a string representing the detected setup agent type:\n  - 'opencode' if the specific configuration directory exists in the user's home directory.\n  - 'generic' if no specific configuration is found or if the project root does not contain any specific configurations.\n  - The value of `options.requestedAgent` if it is provided and matches one of the expected agent types.\n\n### Immediate Dependencies\n- `existsSync`: A function from Node.js core modules to check for file existence synchronously.\n- `homedir`: A function from Node.js core modules to get the home directory path.\n\n### Role in Module\nThis function serves as a utility to abstract the logic of detecting the setup agent type based on predefined configurations and user options, making it easier to integrate this functionality into other parts of the module or external usage where similar checks are needed.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/platform.mjs"
+  ]
+}

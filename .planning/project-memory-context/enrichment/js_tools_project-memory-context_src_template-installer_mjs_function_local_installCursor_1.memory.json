@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `installCursor` function is responsible for installing cursor rules into a project by creating or updating a `.cursorrules` file. This file contains configuration settings that define how the cursor should behave within the project, which can be particularly useful for text editors and IDEs to provide enhanced editing experiences.\n\n### Primary Inputs\n- `{ projectRoot, packageRoot, placeholders }`: These inputs specify the root directory of the project where the `.cursorrules` file will be created or updated, as well as any dynamic content that needs to be inserted into the template.\n\n### Output\nThe function does not explicitly return a value but performs an asynchronous operation that results in either creating or updating the `.cursorrules` file with the specified placeholders embedded according to the cursor rules defined in the template.\n\n### Immediate Dependencies\n- `node:fs/promises`: For file system operations like reading from and writing to files.\n- `node:fs`: Specifically for checking if a file exists (`existsSync`), which is used internally by the function but not exposed as an immediate dependency in its signature.\n- `node:path` (for `dirname` and `join`): To handle and construct file paths relative to the project root.\n- `node:url` (for `fileURLToPath`): To convert URL objects into file paths, which is used internally for path manipulation but not exposed as an immediate dependency in its signature.\n\n### Role in Module\nThe `installCursor` function serves as a utility within the module to facilitate the installation of cursor rules specific to the project's needs. It encapsulates the logic required to integrate dynamic content into a predefined template and write it to a designated file, making it easier to manage these configurations across different projects using this module.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/template-installer.mjs"
+  ]
+}

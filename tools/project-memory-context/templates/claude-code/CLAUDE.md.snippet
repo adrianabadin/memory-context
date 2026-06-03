@@ -36,7 +36,7 @@ When the user types `/enrich-status`, run:
 {{PMC_BIN}} enrich-status
 ```
 
-When the user types `/doctor`, run:
+When the user types `/pmc-doctor`, run:
 
 ```bash
 {{PMC_BIN}} doctor
@@ -80,7 +80,7 @@ On EVERY session start, BEFORE responding to the user, execute these steps IN OR
    - `finished` → done, report completion summary.
    - `stalled` or `failed` AND `.worklist.pending > 0` → crashed; relaunch (Bash
      `run_in_background: true`), report "PMC enrichment crashed — relaunched (attempt N/3)".
-   - After 3 failed relaunches: tell the user to run `/doctor`.
+   - After 3 failed relaunches: tell the user to run `/pmc-doctor`.
 
 2. **Check sync-manifest**: Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If entries have `status: "pending"`, inform: "PMC has N pending sync operations. Run `/sync-context`."
 3. **Recall base context**: Search agent-memory with `query: "project context overview"` and `tags: ["project-context"]`. Summarize in ~500 tokens.

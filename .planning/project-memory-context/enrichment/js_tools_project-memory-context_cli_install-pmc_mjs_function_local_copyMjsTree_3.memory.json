@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `copyMjsTree` function is responsible for recursively copying `.mjs` files from a source directory to a destination directory, while skipping certain patterns and directories.\n\n**Primary Inputs**:\n- `srcDir`: The source directory path from which files are copied.\n- `dstDir`: The destination directory path where files are copied.\n- `opts`: An optional object that can include `skipPatterns`, an array of strings representing file names or patterns to skip during the copy process.\n\n**Output**: \n- Returns the number of `.mjs` files successfully copied from the source to the destination directory.\n\n**Immediate Dependencies**:\n- `resolve`, `dirname`, `join` from 'node:path'\n- `fileURLToPath` from 'node:url'\n- `mkdirSync`, `readdirSync`, `copyFileSync` from 'fs'\n\n**Role in Module**: \nThis function is a core utility within the module, facilitating the copying of `.mjs` files necessary for setting up or updating project configurations. It ensures that only relevant files are copied and handles directory structures recursively.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/install-pmc.mjs"
+  ]
+}

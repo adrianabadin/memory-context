@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe `resolveEnrichmentConfigPaths` function is responsible for determining the paths to the project and global enrichment configuration files based on the provided options. It constructs these paths using the project root directory, environment variables, and platform-specific configurations.\n\n### Primary Inputs\n- **projectRoot**: The root directory of the project (default: current working directory).\n- **env**: An object representing the environment variables (default: `process.env`).\n- **platformOptions**: Configuration options specific to the platform or environment.\n\n### Output\nAn object containing the following properties:\n- **fileName**: The name of the enrichment configuration file (`PMC_ENRICHMENT_CONFIG_FILE`).\n- **projectConfigPath**: The path to the project-specific enrichment configuration file, which is either provided by an environment variable or derived from the `projectConfigDir`.\n- **globalConfigPath**: The path to the global enrichment configuration file, which is either provided by an environment variable or derived from the `globalConfigDir`.\n\n### Immediate Dependencies\n- **join** from 'node:path': Used to concatenate directory paths.\n- **resolveConfigDirs** from './platform.mjs': Determines the project and global configuration directories based on the platform options.\n\n### Role in Module\nThis function serves as a utility for retrieving the necessary paths to the enrichment configuration files, making it easier to locate or create these configuration files within the project structure. It abstracts the logic for determining file locations from other parts of the module, promoting modularity and reusability.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/enrichment-config.mjs"
+  ]
+}

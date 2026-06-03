@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `copyTemplatesDir` function is responsible for copying all files from a source directory to a destination directory.\n\n**Primary Inputs**:\n- `srcTemplates`: A string representing the path to the source directory containing template files.\n- `dstTemplates`: A string representing the path to the destination directory where templates will be copied.\n\n**Output**: \n- Returns an integer indicating the number of files successfully copied from the source to the destination directory.\n\n**Immediate Dependencies**:\n- `existsSync`, `mkdirSync`, `readdirSync`, and `copyFileSync` from Node.js's `fs` module.\n- `resolve`, `dirname`, and `join` from Node.js's `path` module.\n\n**Role in Module**: \nThis function is part of a larger script responsible for setting up a project memory context. It specifically handles the copying of template files necessary for initializing or configuring the project environment, ensuring that all required templates are present in the correct location.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/install-pmc.mjs"
+  ]
+}

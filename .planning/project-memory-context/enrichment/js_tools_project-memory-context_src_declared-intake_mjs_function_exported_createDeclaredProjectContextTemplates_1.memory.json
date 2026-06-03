@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `createDeclaredProjectContextTemplates` is responsible for generating a set of JSON templates that represent different aspects of a project's context. These templates include the target architecture, technical rules, project requirements, and known issues and fixes. This function abstracts the creation of these templates to ensure consistency and ease of use across various parts of the application that might need to access this information in a structured format.\n\n### Primary Inputs\n- `architectureTarget`: A string representing the target architecture of the project.\n- `technicalRules`: An array of objects, each describing a technical rule applicable to the project.\n- `projectRequirements`: An array of objects, each representing a requirement or specification for the project.\n- `knownIssuesAndFixes`: An array of objects, each detailing an issue and its corresponding fix within the project.\n\n### Output\nThe function outputs an object containing keys that correspond to filenames (as strings) and values that are objects conforming to the following structure:\n```javascript\n{\n  title: string;\n  [architecture || rules || requirements || items]: any; // The type of data depends on the template.\n}\n```\nThese templates can be used for documentation, reporting, or other purposes where structured project context information is required.\n\n### Immediate Dependencies\n- **None** explicitly listed in the provided code snippet, but typically, dependencies might include utility functions or configurations that are internal to the module or system using this function.\n\n### Role in Module\nThis function serves as a utility within the module `tools/project-memory-context` and is designed to abstract the creation of structured project context templates. It ensures that each template has a consistent structure and can be easily extended or modified if needed, maintaining modularity and separation of concerns within the larger system architecture.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/declared-intake.mjs"
+  ]
+}

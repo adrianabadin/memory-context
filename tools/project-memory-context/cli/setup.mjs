@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -13,6 +14,7 @@ import { installAgentTemplates } from '../src/template-installer.mjs';
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const AGENT_FLAGS = {
+  '--antigravity': 'antigravity',
   '--opencode': 'opencode',
   '--claude': 'claude-code',
   '--cursor': 'cursor',
@@ -71,12 +73,18 @@ try {
     'http://localhost:11434';
 
   const ollamaModel =
-    (await rl.question('Ollama model name [deepseek-coder-v2:16b-ctx32k]: ')).trim() ||
-    'deepseek-coder-v2:16b-ctx32k';
+    (await rl.question('Ollama model name [deepseek-coder-v2:16b-ctx16k]: ')).trim() ||
+    'deepseek-coder-v2:16b-ctx16k';
 
   installGraphify();
 
   const { globalConfig } = resolveConfigDirs(cwd);
+
+  const agentGlobalConfigDirs = {
+    'opencode': globalConfig,
+    'claude-code': join(homedir(), '.claude'),
+    'antigravity': join(homedir(), '.gemini', 'config'),
+  };
 
   const result = await bootstrapProjectInstall({
     projectRoot: cwd,
@@ -91,7 +99,7 @@ try {
       projectRoot: cwd,
       agent,
       packageRoot,
-      globalConfigDir: agent === 'opencode' ? globalConfig : undefined,
+      globalConfigDir: agentGlobalConfigDirs[agent],
     });
     console.log(`  ✓ Installed ${agent} templates.`);
   }

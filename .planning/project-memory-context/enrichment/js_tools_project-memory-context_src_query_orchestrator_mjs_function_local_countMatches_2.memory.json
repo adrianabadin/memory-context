@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `countMatches` Function\n\n#### Responsibility:\nThe function `countMatches` is responsible for counting the number of times each token appears within the concatenated string of all fields, ignoring case sensitivity. It serves as a utility to assess how well tokens match against a set of fields.\n\n#### Primary Inputs:\n- **tokens**: An array of strings representing individual search terms or patterns.\n- **fields**: An array of strings that are potentially long texts where the tokens might appear.\n\n#### Output:\n- The function returns an integer representing the total number of times any token from `tokens` appears in the concatenated string of all fields from `fields`. If no tokens are provided, it returns 0.\n\n#### Immediate Dependencies:\n- **None** (The function does not rely on external functions or variables defined within its scope).\n\n#### Role in Module:\nThis function is part of a larger module that likely handles query processing and artifact loading. It contributes to the functionality by providing a method to evaluate token matches against multiple fields, which can be used for tasks such as content indexing, search functionalities, or pattern matching across datasets.\n\n### Summary:\n- **Responsibility**: Counts how many times each token appears in concatenated field strings, ignoring case sensitivity.\n- **Primary Inputs**: `tokens` (array of strings) and `fields` (array of strings).\n- **Output**: Integer representing the total matches found across all fields.\n- **Immediate Dependencies**: None.\n- **Role in Module**: Utility function aiding in query processing or artifact matching, enhancing the module's capability to handle complex search scenarios.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/query/orchestrator.mjs"
+  ]
+}

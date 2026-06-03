@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `extractPython` Function\n\n#### Responsibility\nThe `extractPython` function is responsible for extracting Python class and function symbols from a list of lines of code. It identifies classes and functions defined using regular expressions, determines their scope (local or exported), and constructs symbol objects with relevant metadata such as file path, type, name, etc.\n\n#### Primary Inputs\n- `lines`: An array of strings where each string represents a line of code from the Python script.\n- `filePath`: A string representing the file path of the Python script.\n\n#### Output\n- `symbols`: An array of objects, each representing a symbol (class or function) extracted from the lines of code. Each object contains metadata about the symbol such as its type, name, scope, and location in the source file.\n\n#### Immediate Dependencies\n- Regular Expressions: `/^(class)\\s+(\\w+)/`, `/^(async\\s+def|def)\\s+(\\w+)\\s*\\(([^)]*)\\)/`, and `/^(async\\s+def|def)\\s+(\\w+)/` for identifying classes and functions.\n- Helper Functions: `findBlockEnd(lines, i)` to determine the end of function or class blocks, and `makeSymbol(...)` to create symbol objects.\n\n#### Role in Module\nThe `extractPython` function plays a crucial role in the module by providing an interface for extracting structured information about Python classes and functions from raw source code files. This extracted information is used for various purposes such as documentation generation, static analysis, or other tools that require understanding of the project's structure and symbols. It also helps in maintaining consistency across different parts of the system when dealing with similar functionalities or references to these constructs.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/extractors/regex-extractor.mjs"
+  ]
+}

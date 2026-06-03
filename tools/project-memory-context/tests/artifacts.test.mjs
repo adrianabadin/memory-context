@@ -20,6 +20,13 @@ test('ensureProjectMemoryContextDirs creates expected directory tree', async () 
   assert.equal(dirs.graph.endsWith('graph'), true);
   assert.equal(dirs.enrichment.endsWith('enrichment'), true);
   assert.equal(dirs.runs.endsWith('runs'), true);
+
+  assert.equal(dirs.projectContext, join(root, '.planning', 'project-memory-context', 'project-context'));
+  assert.equal(dirs.projectContextDetected, join(dirs.projectContext, 'detected'));
+  assert.equal(dirs.projectContextDeclared, join(dirs.projectContext, 'declared'));
+  assert.equal(dirs.projectContextMaterialized, join(dirs.projectContext, 'materialized'));
+  assert.equal(dirs.projectContextMarkdown, join(dirs.projectContext, 'markdown'));
+  assert.equal(dirs.projectContextState, join(dirs.projectContext, 'state'));
 });
 
 test('writeJsonArtifact persists readable JSON payloads', async () => {

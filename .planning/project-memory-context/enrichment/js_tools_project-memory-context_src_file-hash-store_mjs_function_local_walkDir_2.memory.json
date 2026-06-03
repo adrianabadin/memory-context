@@ -1,0 +1,11 @@
+{
+  "content": " ### Structured Explanation of `walkDir` Function\n\n#### Responsibility\nThe `walkDir` function is responsible for traversing a directory recursively and collecting paths to files that match specific criteria (i.e., tracked file extensions). It does this by:\n1. Reading the contents of the specified directory (`dir`).\n2. Filtering out directories based on a set of ignored directories (`IGNORED_DIRS`).\n3. Collecting paths to files if they have an extension listed in `TRACKED_EXTENSIONS`.\n4. Returning relative paths from the project root for tracked files, converting backslashes to forward slashes for consistency.\n\n#### Primary Inputs\n- **dir**: The directory to start traversing.\n- **projectRoot**: The base path from which all relative file paths are calculated.\n\n#### Output\nAn array of strings representing the relative paths of files within the directory tree, excluding ignored directories and only including files with tracked extensions.\n\n#### Immediate Dependencies\n- `readdir` from `node:fs/promises`: To read the contents of the directory.\n- `join` and `relative` from `node:path`: For constructing file paths relative to the project root.\n- `createHash` from `node:crypto`: Although not used in this function, it is imported for potential future hashing functionalities within the module.\n\n#### Role in Module\nThe `walkDir` function serves as a utility to explore and gather metadata about files within a directory structure, which can be crucial for various tasks such as dependency tracking, backup operations, or detailed analysis of project contents. It supports the broader functionality of the tool by providing a way to dynamically discover and interact with files based on defined criteria.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/src/file-hash-store.mjs"
+  ]
+}

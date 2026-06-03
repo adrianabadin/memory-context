@@ -1,0 +1,11 @@
+{
+  "content": " ### Responsibility\nThe function `runStageB` is responsible for running a specific stage of the build process, which involves building a worklist of files from the project directory. This includes identifying and collecting all relevant file types (TS/JS, JS, CS) that need to be processed, then invoking a script (`build-worklist.mjs`) to handle this task.\n\n### Primary Inputs\n1. **projectRoot**: The root directory of the project where the search for files will begin.\n2. **PMC_CLI_ROOT**: A path constant representing the location of CLI tools, used in locating the `build-worklist.mjs` script.\n3. **PMC_CONCURRENCY**: An environment variable specifying the degree of concurrency for processing tasks.\n\n### Output\nThe function does not return a value directly but logs messages and potentially modifies state related to the build process based on its execution. It outputs information about how many CS and TS/JS files were found, as well as status updates like whether no files are found or if it skips this stage due to lack of files to process.\n\n### Immediate Dependencies\n1. **findFiles**: This function is used within `runStageB` to recursively find all relevant files based on extensions and ignores specified paths.\n2. **spawnSync**: From Node.js's child_process module, this function spawns a new process with the script located at `build-worklist.mjs`, passing it found file paths as arguments.\n3. **log**: A utility to print messages during runtime, which could be from a logger or console.log based on implementation details not shown here.\n\n### Role in Module\n`runStageB` serves as an orchestrator for the build process, specifically handling the preparation of files that need to be processed by another script (`build-worklist.mjs`). It abstracts and encapsulates the logic required to gather project assets based on file types and paths defined within the module itself or via environment settings. This function is crucial for ensuring that all necessary components are considered during the build process, enhancing modularity and maintainability of the codebase.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:memory-context",
+    "file:tools/project-memory-context/cli/bootstrap.mjs"
+  ]
+}

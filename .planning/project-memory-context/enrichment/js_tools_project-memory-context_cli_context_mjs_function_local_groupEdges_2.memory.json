@@ -1,0 +1,11 @@
+{
+  "content": "**Responsibility**: The `groupEdges` function organizes edges into groups based on their relation types, filtering out those not specified.\n\n**Primary Inputs**:\n- `edges`: An array of edge objects, each containing a `relation` and a `target`.\n- `edgeTypes`: An array of strings representing the relation types to be included in the grouping.\n\n**Output**: \n- An array of objects, where each object contains a `kind` (the relation type) and an `items` array listing all targets associated with that kind.\n\n**Immediate Dependencies**:\n- None; it relies solely on the input parameters.\n\n**Role in Module**: This function is part of the retrieval and context rendering process, aiding in organizing and filtering edges to provide a structured view of relationships within the project memory context.",
+  "category": "architecture",
+  "tags": [
+    "symbol",
+    "js",
+    "function",
+    "project:.",
+    "file:tools/project-memory-context/cli/context.mjs"
+  ]
+}
