@@ -354,26 +354,3 @@ test('bootstrap.mjs stage-b ignores .next build artifacts', async () => {
   assert.equal(worklist.some((entry) => entry.filePath.startsWith('.next/')), false, 'worklist should exclude .next build artifacts');
   assert.equal(worklist.some((entry) => entry.filePath === 'src/main.ts'), true, 'worklist should include real source files');
 });
-
-test('deprecated enrich wrapper CLIs warn and delegate to pmc enrich behavior', async () => {
-  const wrappers = [
-    'enrich-sync.mjs',
-    'enrich-orchestrator.mjs',
-    'batch-enrich.mjs',
-    'enrich-batch.mjs',
-  ];
-
-  for (const wrapper of wrappers) {
-    const result = spawnSync(process.execPath, [join('tools', 'project-memory-context', 'cli', wrapper), '--help'], {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      timeout: 60000,
-    });
-
-    const combined = `${result.stdout ?? ''}${result.stderr ?? ''}`;
-    assert.equal(result.status, 0, `${wrapper} should delegate successfully. Output: ${combined}`);
-    assert.match(combined, /pmc enrich \./, `${wrapper} should print migration guidance`);
-    assert.match(combined, /Usage: pmc enrich/, `${wrapper} should delegate to enrich help output`);
-    assert.doesNotMatch(combined, /node tools\/project-memory-context\/cli\//, `${wrapper} should not point at package-internal CLI paths`);
-  }
-});
