@@ -1,14 +1,13 @@
 // Lazy singleton — xxhash-wasm initializes once
 import xxhash from 'xxhash-wasm';
 
-let _h64 = null;
+let _initPromise = null;
 
 async function getH64() {
-  if (!_h64) {
-    const { h64ToString } = await xxhash();
-    _h64 = h64ToString;
+  if (!_initPromise) {
+    _initPromise = xxhash().then(m => m.h64ToString);
   }
-  return _h64;
+  return _initPromise;
 }
 
 export async function hashSymbol(fragment) {

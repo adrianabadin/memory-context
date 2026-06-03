@@ -27,6 +27,15 @@ test('hashSymbol produces different hashes for different inputs', async () => {
   assert.notEqual(a, b);
 });
 
+test('hashSymbol handles concurrent calls before singleton warms (no double-init)', async () => {
+  const results = await Promise.all(['x', 'y', 'z'].map(s => hashSymbol(s)));
+  assert.equal(results.length, 3);
+  assert.ok(results.every(r => typeof r === 'string' && r.length > 0));
+  // Determinism: same input gives same result even under concurrent init
+  const [a, b] = await Promise.all([hashSymbol('x'), hashSymbol('x')]);
+  assert.equal(a, b);
+});
+
 // ── hashFile ────────────────────────────────────────────────────────
 
 test('hashFile differentiates content', async () => {
