@@ -25,13 +25,11 @@ Run `{{PMC_BIN}} enrich-status` first.
 
 Report: "PMC: N symbols pending enrichment — launching…"
 
-Launch via **Bash `run_in_background: true`**:
-
 ```bash
-{{PMC_BIN}} enrich .
+{{PMC_BIN}} enrich . --background
 ```
 
-⚠️ Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
+⚠️ `--background` detaches the process cross-platform (Node.js `detached+unref`). Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
 
 ---
 
@@ -43,7 +41,7 @@ Run every **≥120 seconds**. Track `relaunchCounter` (cap: 3) and `inProgressSu
 
 1. **Apply completed subagents**: for each in `inProgressSubagents` that returned, write response to temp file → `{{PMC_BIN}} subagent-apply . --entry-id <id> --content-file <tmp>` → delete temp file → remove from set.
 
-2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch `{{PMC_BIN}} enrich .` (background). If > 3: stop and report "PMC enrichment crashed 3 times. Run `/pmc-doctor`."
+2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch `{{PMC_BIN}} enrich . --background`. If > 3: stop and report "PMC enrichment crashed 3 times. Run `/pmc-doctor`."
 
 3. **Drain**: if `.subagentQueue.pending > 0` AND `inProgressSubagents` < 3 → read `subagent-queue.json`, collect `status: "pending"` entries, fill slots up to 3. For each, launch a subagent (`subagent_type: general-purpose`):
    ```

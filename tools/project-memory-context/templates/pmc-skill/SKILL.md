@@ -42,14 +42,14 @@ PMC returns focused structural context, so the agent can avoid loading many full
 
 ## Running enrichment (`pmc enrich`) — launch rules
 
-### ✅ Correct: Bash tool with `run_in_background: true`
+### ✅ Correct: use `--background` flag (cross-platform)
 
 ```bash
-pmc enrich .
+pmc enrich . --background
 ```
 
-Launch via the **Bash tool with `run_in_background: true`**. This runs inside the full user
-shell session, where `node` and all dependencies are on the PATH.
+`--background` uses Node.js `detached+unref` internally — works on Windows, macOS, and Linux
+without relying on shell `&` or agent-specific `run_in_background` flags.
 
 ### ❌ Wrong: PowerShell `Start-Process -WindowStyle Hidden`
 
@@ -59,14 +59,11 @@ Start-Process -FilePath "npx" -ArgumentList "--yes","--package","@aabadin/projec
 ```
 
 The hidden child process inherits a **restricted environment** (no full user PATH). It
-starts, prints its header, then crashes silently when it can't resolve `node` or PMC
-dependencies. It leaves `queue-state.json` with `status: "running"` and a stale
-`heartbeatAt`, so `pmc enrich-status` reports `stalled`, blocking any clean restart for
-~90 seconds until the heartbeat expires.
+crashes silently and leaves `queue-state.json` stalled.
 
 ### Still-Alive watchdog (applies every time `pmc enrich` is launched)
 
-Whenever `pmc enrich .` is started — whether at session autostart or via `/enrich` — run
+Whenever `pmc enrich . --background` is started — whether at session autostart or via `/enrich` — run
 this watchdog loop (cap: 3 automatic relaunches):
 
 1. Run `pmc enrich-status` and read `.state` and `.worklist.pending`.
@@ -74,7 +71,7 @@ this watchdog loop (cap: 3 automatic relaunches):
 3. `finished` → done; report completion summary and stop.
 4. `stalled` or `failed`, AND `.worklist.pending > 0` → process crashed:
    - Increment relaunch counter.
-   - If counter ≤ 3: relaunch via Bash `run_in_background: true`; report "PMC enrichment
+   - If counter ≤ 3: relaunch `pmc enrich . --background`; report "PMC enrichment
      crashed — relaunched (attempt N/3)"; resume from step 1.
    - If counter > 3: stop and tell the user: "PMC enrichment crashed 3 times. Run
      `/pmc-doctor` or check the terminal for errors."

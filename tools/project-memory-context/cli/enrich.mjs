@@ -13,6 +13,8 @@ function printHelp() {
   console.log('Options:');
   console.log('  --stale-only   Only re-enrich symbols marked stale (code changed since last enrichment).');
   console.log('                 Skips symbols with status "pending" (never enriched).');
+  console.log('  --background   Detach the enrichment process and return immediately (non-blocking).');
+  console.log('                 Works cross-platform without shell & or agent run_in_background flags.');
   console.log('  -h, --help     Show this help message.');
 }
 
@@ -30,15 +32,27 @@ export async function main(args = process.argv.slice(2)) {
     return 0;
   }
 
+  const background = args.includes('--background');
+  const childArgs = args.filter(a => a !== '--background');
+
+  if (background) {
+    const child = spawn(process.execPath, [SCRIPT_PATH, ...childArgs], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+    console.log(`[enrich] Started in background (pid ${child.pid})`);
+    return 0;
+  }
+
   return await new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(process.execPath, [SCRIPT_PATH, ...args], { stdio: 'inherit' });
+    const child = spawn(process.execPath, [SCRIPT_PATH, ...childArgs], { stdio: 'inherit' });
     child.once('error', rejectPromise);
     child.once('exit', (code, signal) => {
       if (signal) {
         rejectPromise(new Error(`enrich exited from signal ${signal}`));
         return;
       }
-
       resolvePromise(code ?? 0);
     });
   });
