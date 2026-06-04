@@ -1,6 +1,10 @@
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { buildErrorPayloads } from '../src/global-sync.mjs';
 import { existsSync } from 'node:fs';
 import { ensureProjectMemoryContextDirs, readJsonArtifact, writeJsonArtifact } from '../src/artifacts.mjs';
 import { hashSymbol } from '../src/hash.mjs';
@@ -16,6 +20,72 @@ import { openGraphDb } from '../src/graph-store/graph-db.mjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function log(msg) { console.error(`[refresh-context] ${msg}`); }
+
+function computeProjectId(rootPath) {
+  const normalised = rootPath.replace(/\\/g, '/').toLowerCase();
+  return createHash('sha256').update(normalised).digest('hex');
+}
+
+async function trySyncProjectToGlobal(projectRoot, dirs) {
+  const mcpPath = resolve(projectRoot, '.mcp.json');
+  let serverConfig;
+  try {
+    const raw = JSON.parse(await readFile(mcpPath, 'utf8'));
+    serverConfig = raw?.mcpServers?.['agent-memory'];
+  } catch {
+    return;
+  }
+  if (!serverConfig) return;
+
+  const projectId = computeProjectId(projectRoot);
+  const projectName = basename(projectRoot);
+
+  // Gather metadata from existing project-context artifacts
+  const architecturePath = resolve(dirs.projectContextMarkdown, 'ARCHITECTURE-CURRENT.md');
+  const [architectureText, minimapText] = await Promise.all([
+    readFile(architecturePath, 'utf8').catch(() => null),
+    readFile(resolve(dirs.projectContextMarkdown, 'MODULE-MINIMAP.md'), 'utf8').catch(() => null),
+  ]);
+
+  const errorPayloads = await buildErrorPayloads(
+    resolve(projectRoot, '.planning', 'project-memory-context'),
+    projectId,
+  );
+
+  const client = new Client({ name: 'pmc-refresh', version: '1.0.0' });
+  const transport = new StdioClientTransport({
+    command: serverConfig.command,
+    args: serverConfig.args ?? [],
+    env: { ...process.env, ...serverConfig.env },
+  });
+
+  try {
+    await client.connect(transport);
+
+    // Ensure project is registered (idempotent)
+    await client.callTool({
+      name: 'register_project',
+      arguments: { name: projectName, rootPath: projectRoot },
+    });
+
+    // Sync metadata
+    const metadataArgs = { projectId };
+    if (architectureText) metadataArgs.architecture = architectureText.slice(0, 2000);
+    if (minimapText) metadataArgs.minimap = { summary: minimapText.slice(0, 1000) };
+    await client.callTool({ name: 'sync_project_metadata', arguments: metadataArgs });
+
+    // Auto-promote errors
+    for (const payload of errorPayloads) {
+      await client.callTool({ name: 'record_error', arguments: payload });
+    }
+
+    log(`Global context synced (${errorPayloads.length} errors promoted)`);
+  } catch (err) {
+    log(`Global context sync skipped (non-fatal): ${err.message}`);
+  } finally {
+    try { await client.close(); } catch { /* ignore */ }
+  }
+}
 
 function safeKey(key) {
   return key.replace(/[^a-zA-Z0-9_-]+/g, '_');
@@ -161,6 +231,10 @@ export async function refreshContext(projectRoot, options = {}) {
   }
 
   console.log(JSON.stringify(result, null, 2));
+
+  // Sync to global context store (non-blocking, errors are swallowed)
+  await trySyncProjectToGlobal(projectRoot, dirs).catch(() => {});
+
   return result;
 }
 
