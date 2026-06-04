@@ -30,13 +30,18 @@ export function parseQueueConcurrency(rawValue) {
  * @param {boolean} staleOnly  When true, only symbols with status 'stale' are selected
  *                             (symbols never enriched — status 'pending' — are skipped).
  *                             When false (default), both 'pending' and 'stale' are selected.
+ *                             Order: pending first (never enriched), stale last (re-enrichment
+ *                             is lower priority since the semantic meaning rarely changes).
  * @returns {Array} Filtered array of symbols to enrich.
  */
 export function selectWorkItems(worklist, staleOnly = false) {
   if (staleOnly) {
     return worklist.filter(s => s.status === 'stale');
   }
-  return worklist.filter(s => s.status === 'pending' || s.status === 'stale');
+  // pending (never enriched) first, stale (changed since last enrichment) last
+  const pending = worklist.filter(s => s.status === 'pending');
+  const stale = worklist.filter(s => s.status === 'stale');
+  return [...pending, ...stale];
 }
 
 const PMC_CONCURRENCY = parseQueueConcurrency(process.env.PMC_CONCURRENCY);
