@@ -16,7 +16,7 @@
       "args": [
         "--yes",
         "--package",
-        "@aabadin/project-memory-context@0.4.2",
+        "@aabadin/project-memory-context@0.4.3",
         "pmc-query-server"
       ],
       "env": {
