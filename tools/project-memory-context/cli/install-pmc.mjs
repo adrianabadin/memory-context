@@ -2,6 +2,8 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { detectAgentType, installAgentTemplates } from '../src/template-installer.mjs';
+import { resolveConfigDirs } from '../src/platform.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_SOURCE_ROOT = resolve(__dirname, '..');
@@ -65,10 +67,18 @@ Options:
   log(`Source: ${sourceRoot}`);
   log(`Target: ${targetRoot}`);
 
-  const result = installPmcTools({ sourceRoot, targetRoot });
-
-  log(`Created install state: ${result.cliFiles} CLI files, ${result.srcFiles} src files, ${result.templateFiles} templates`);
+  installPmcTools({ sourceRoot, targetRoot });
   log('Created .planning/project-memory-context/ directory structure');
+
+  const agent = detectAgentType(targetRoot);
+  log(`Detected agent: ${agent} — updating skills (force overwrite)…`);
+  const { globalConfig } = resolveConfigDirs(targetRoot);
+  await installAgentTemplates({
+    projectRoot: targetRoot,
+    agent,
+    globalConfigDir: agent === 'opencode' ? globalConfig : undefined,
+  });
+  log(`Skills updated for ${agent}.`);
   log('Done.');
 }
 
