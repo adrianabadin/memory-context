@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-import { dirname, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { dirname, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 import { resolveConfigDirs } from '../src/platform.mjs';
 import { detectAgentType, installAgentTemplates } from '../src/template-installer.mjs';
@@ -28,6 +31,41 @@ Supported agents:
   generic          Generic CLI-only (README-SETUP.md)`);
 }
 
+async function tryRegisterProject(projectRoot) {
+  const mcpPath = resolve(projectRoot, '.mcp.json');
+  let serverConfig;
+  try {
+    const raw = JSON.parse(await readFile(mcpPath, 'utf8'));
+    serverConfig = raw?.mcpServers?.['agent-memory'];
+  } catch {
+    return; // No .mcp.json — skip global registration silently
+  }
+  if (!serverConfig) return;
+
+  const client = new Client({ name: 'pmc-init', version: '1.0.0' });
+  const transport = new StdioClientTransport({
+    command: serverConfig.command,
+    args: serverConfig.args ?? [],
+    env: { ...process.env, ...serverConfig.env },
+  });
+
+  try {
+    await client.connect(transport);
+    await client.callTool({
+      name: 'register_project',
+      arguments: {
+        name: basename(projectRoot),
+        rootPath: projectRoot,
+      },
+    });
+    console.error(`[pmc:init] Registered project in global context store`);
+  } catch (err) {
+    console.error(`[pmc:init] Global context registration skipped: ${err.message}`);
+  } finally {
+    try { await client.close(); } catch { /* ignore */ }
+  }
+}
+
 export async function main(args = process.argv.slice(2)) {
   if (args.includes('--help') || args.includes('-h')) {
     printHelp();
@@ -51,6 +89,7 @@ export async function main(args = process.argv.slice(2)) {
   });
 
   console.error(`[pmc:init] Installed PMC templates for ${agent}`);
+  await tryRegisterProject(projectRoot);
   return 0;
 }
 
