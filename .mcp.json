@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@aabadin/agent-memory-mcp"
+        "@aabadin/agent-memory-mcp@2.1.0"
       ],
       "env": {
         "MEMORY_DB_PATH": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\memory-db",
@@ -16,7 +16,7 @@
       "args": [
         "--yes",
         "--package",
-        "@aabadin/project-memory-context",
+        "@aabadin/project-memory-context@0.4.0",
         "pmc-query-server"
       ],
       "env": {
