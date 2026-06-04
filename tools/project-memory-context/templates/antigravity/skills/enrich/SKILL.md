@@ -1,85 +1,198 @@
 ---
 name: enrich
-description: "Launch batch semantic enrichment for all pending symbols. Handles both Ollama queue (run by CLI) and subagent queue (symbols >=5k tokens or >=80% file coverage, dispatched as Task subagents). Drains subagent queue concurrently with the Ollama CLI — every ≥120s — rather than waiting until after Ollama finishes. Use when the user asks to enrich, index, or process all pending symbols."
-allowed-tools: Bash Read Write TaskCreate TaskGet TaskUpdate
+description: "Launch batch semantic enrichment for all pending symbols using size-sorted split strategy: worklist is sorted ascending by line count, bottom half goes to Ollama (small/cheap), top half goes to subagents (large/expensive, batched 3 symbols per call). They run simultaneously. After each subagent batch, remaining pending are re-split and the next large batch is injected. Use when the user asks to enrich, index, analyze, or process pending symbols."
+allowed-tools: Bash Read Write Agent
 ---
 
-# Batch Enrichment — `pmc enrich`
+# Batch Enrichment — Size-Split Parallel Strategy
 
-Run batch semantic enrichment for all pending/stale symbols.
+**Strategy:** Sort all pending symbols by line count (ascending). Bottom half → Ollama (sequential, small symbols). Top half → subagents (parallel, **3 symbols per subagent call**, 3 calls in parallel = 9 symbols per wave). Both run simultaneously. After each wave, re-split and inject again — iterating until all symbols are processed.
 
-Enrichment has two queues:
-- **Ollama queue (<5k tokens, <80% file coverage):** processed sequentially by the CLI in background.
-- **Subagent queue (>=5k tokens or >=80% file coverage, e.g. EF migrations):** processed by Task subagents dispatched by this skill (up to 3 in parallel per drain cycle).
+Symbols injected into the subagent queue are marked `subagent-queued` in `worklist.json` so Ollama skips them automatically.
 
-## Launch
+---
 
-⚠️ Always launch via the **Bash tool with `run_in_background: true`**.
+## Step 1 — Check current state
 
-Do NOT use PowerShell `Start-Process -WindowStyle Hidden` — it inherits a restricted PATH,
-crashes silently, and leaves a stalled queue-state.
+Run `pmc enrich-status` first.
 
-### Step 1 — Check current state
+- `.state` is `running` AND `.worklist.pending > 0` → Ollama already active. Skip to **Step 3** (inject subagents alongside it).
+- `.state` is `finished` AND `.worklist.pending` is 0 AND `.subagentQueue.pending` is 0 → nothing to do. Report and stop.
+- `.state` is `finished` AND `.subagentQueue.pending > 0` → skip to **Step 3** (drain subagents only).
+- Otherwise → proceed to **Step 2**.
 
-Run `{{PMC_BIN}} enrich-status` first.
-- If `.state` is `running`, enrichment is already active — skip to Step 3 watchdog+drain loop.
-- If `.state` is `finished` and `.worklist.pending` is 0, check if `.subagentQueue.pending > 0`
-  and jump directly to Step 3 (subagent drain only).
+---
 
-### Step 2 — Report pending count and launch
+## Step 2 — Launch Ollama + inject large-symbol batches
 
-Report to the user: "PMC: N symbols pending enrichment — launching…"
+### 2a — Report and launch Ollama
+
+Report to the user: "PMC: N symbols pending — Ollama takes the small half, subagents take the large half (batched 3/call)…"
+
+Launch via **Bash `run_in_background: true`**:
 
 ```bash
-{{PMC_BIN}} enrich .
+pmc enrich .
 ```
 
-### Step 3 — Concurrent watchdog + subagent drain
+⚠️ Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
 
-Run this loop every **≥120 seconds** until the exit condition is met.
-Track `relaunchCounter` (cap: 3) and `inProgressSubagents` (a set of running Task handles).
+### 2b — Inject large-symbol batches into subagent queue
+
+Run the injection script below. It:
+1. Finds all `pending`/`stale` symbols not already claimed
+2. Sorts ascending by line count (shortest first)
+3. Takes the **top half** (largest symbols) — capped at 36 total (= 12 batches × 3), minimum 3
+4. **Groups into batches of 3** — each batch becomes one subagent queue entry
+5. Builds a combined prompt per batch asking for a JSON array response
+6. Marks those symbols as `subagent-queued` in worklist so Ollama skips them
+7. Outputs the batch entries as JSON
+
+```bash
+node -e "
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const root=process.cwd();
+const wlPath=path.join(root,'.planning/project-memory-context/enrichment/worklist.json');
+const sqPath=path.join(root,'.planning/project-memory-context/enrichment/subagent-queue.json');
+const wl=JSON.parse(fs.readFileSync(wlPath,'utf8'));
+const sq=JSON.parse(fs.readFileSync(sqPath,'utf8'));
+const alreadyClaimed=new Set(sq.entries.filter(e=>e.status==='pending'||e.status==='in_progress').map(e=>e.symbolKey));
+const pending=Object.entries(wl)
+  .filter(([k,v])=>(v.status==='pending'||v.status==='stale')&&!alreadyClaimed.has(v.symbolKey))
+  .map(([k,v])=>({key:k,...v,lineCount:(v.range?.endLine??0)-(v.range?.startLine??0)}))
+  .sort((a,b)=>a.lineCount-b.lineCount);
+if(!pending.length){console.log('[]');process.exit(0);}
+const half=Math.ceil(pending.length/2);
+const take=Math.min(Math.max(half,3),36);
+const symbols=pending.slice(-take);
+// Group into batches of 3
+const batches=[];
+for(let i=0;i<symbols.length;i+=3) batches.push(symbols.slice(i,i+3));
+const newEntries=batches.map(batch=>{
+  const batchId=crypto.randomUUID();
+  const items=batch.map(s=>{
+    let code='',imports='(none)';
+    try{
+      const lines=fs.readFileSync(path.join(root,s.filePath),'utf8').split('\n');
+      code=lines.slice(s.range.startLine-1,s.range.endLine).join('\n');
+      const imp=lines.slice(0,Math.min(30,lines.length)).filter(l=>l.trim().startsWith('import ')||l.trim().startsWith('const {'));
+      if(imp.length)imports=imp.join('\n');
+    }catch(e){code='[file not found]';}
+    return{id:crypto.randomUUID(),symbolKey:s.symbolKey,name:s.name,filePath:s.filePath,language:s.language,kind:s.kind,code,imports,startLine:s.range?.startLine??0,endLine:s.range?.endLine??0};
+  });
+  const prompt=[
+    'You are enriching code symbols for a project memory index.',
+    'Return ONLY a valid JSON array with exactly '+items.length+' objects — no preamble, no markdown fences, no code blocks.',
+    'Each object must have exactly two fields: \"id\" (string, the symbol id provided) and \"content\" (string, the structured explanation).',
+    '',
+    ...items.flatMap((item,i)=>[
+      '--- Symbol '+(i+1)+' [id: '+item.id+'] ---',
+      'Symbol: '+item.name,
+      'Kind: '+item.kind,
+      'Language: '+item.language,
+      'Location: '+item.filePath+':'+item.startLine+'-'+item.endLine,
+      '',
+      'Context (imports):',
+      item.imports,
+      '',
+      'Code:',
+      item.code,
+      '',
+      'Return for this symbol:',
+      '- responsibility',
+      '- primary inputs',
+      '- output',
+      '- immediate dependencies',
+      '- role in module',
+      '',
+    ]),
+    'Return as JSON array (no other text):',
+    '[{"id":"'+items[0].id+'","content":"..."},'+items.slice(1).map(it=>'{"id":"'+it.id+'","content":"..."}').join(',')+']',
+  ].join('\n');
+  return{
+    id:batchId,
+    batchItems:items.map(({id,symbolKey,name})=>({id,symbolKey,name})),
+    symbolKey:'batch:'+items.map(i=>i.name).join(','),
+    name:'batch('+items.map(i=>i.name).join(',')+') x'+items.length,
+    filePath:'(batch)',language:'mixed',kind:'batch',
+    tokenCount:Math.ceil(prompt.length/4),
+    prompt,status:'pending',memoryId:null,
+    queuedAt:new Date().toISOString(),claimedAt:null,doneAt:null,errorAt:null,error:null,
+  };
+});
+sq.entries.push(...newEntries);
+fs.writeFileSync(sqPath,JSON.stringify(sq,null,2));
+const claimedKeys=new Set(symbols.map(s=>s.symbolKey));
+for(const[k,v]of Object.entries(wl)){if(claimedKeys.has(v.symbolKey))wl[k].status='subagent-queued';}
+fs.writeFileSync(wlPath,JSON.stringify(wl,null,2));
+console.log(JSON.stringify(newEntries.map(e=>({id:e.id,name:e.name,batchItems:e.batchItems,prompt:e.prompt}))));
+" 2>&1
+```
+
+Parse the JSON output — each object has `{ id, name, batchItems: [{id, symbolKey, name}], prompt }`.
+
+**Dispatch first 3 batch-subagents in parallel** (`run_in_background: true` per Agent call):
+
+For each of the first 3 batch entries:
+```
+You are enriching code symbols for a project memory index.
+Return ONLY a valid JSON array — no preamble, no markdown fences, no code blocks.
+
+<entry.prompt>
+```
+
+When each subagent returns, write the JSON array to a temp file and apply the whole batch in one call:
+```bash
+cat > /tmp/batch-<entry.id>.json << 'BATCH_EOF'
+<subagent JSON array response>
+BATCH_EOF
+pmc subagent-apply . --entry-id <entry.id> --content-file /tmp/batch-<entry.id>.json
+rm /tmp/batch-<entry.id>.json
+```
+
+---
+
+## Step 3 — Watchdog + iterative re-injection loop
+
+Run every **≥120 seconds**. Track `relaunchCounter` (cap: 3) and `inProgressSubagents` set.
 
 **Each iteration:**
 
-1. Run `{{PMC_BIN}} enrich-status`; read `.state`, `.worklist.pending`, `.subagentQueue.pending`.
+### 3a — Apply completed subagents
 
-2. **Crash check** — if `.state` is `stalled` or `failed` AND `.worklist.pending > 0`:
-   - Increment `relaunchCounter`.
-   - If `relaunchCounter ≤ 3`: relaunch (`{{PMC_BIN}} enrich .` via Bash `run_in_background: true`);
-     report "PMC enrichment crashed — relaunched (attempt N/3)."; continue loop.
-   - If `relaunchCounter > 3`: stop and report:
-     "PMC enrichment crashed 3 times. Run `/pmc-doctor` or inspect the terminal for errors."
+For each subagent in `inProgressSubagents` that has returned: parse the JSON array response, apply each symbol with `pmc subagent-apply`, remove from set.
 
-3. **Subagent drain** — if `.subagentQueue.pending > 0`:
-   - Read `.planning/project-memory-context/enrichment/subagent-queue.json`.
-   - Collect entries with `status: "pending"`.
-   - Fill available slots up to **3 parallel subagents** (accounting for any still in-progress from
-     the previous iteration). For each dispatched entry:
-     a. Launch a Task subagent (`subagent_type: general-purpose`) with this prompt:
-        ```
-        You are enriching a code symbol for a project memory index.
-        Return ONLY the structured explanation — no preamble, no markdown fences.
+### 3b — Crash check (Ollama)
 
-        <entry.prompt>
-        ```
-     b. When the subagent returns, write its response to a temp file, then run:
-        ```bash
-        {{PMC_BIN}} subagent-apply . --entry-id <entry.id> --content-file <tmpfile>
-        ```
-     c. Delete the temp file.
+Run `pmc enrich-status`. If `.state` is `stalled` or `failed` AND `.worklist.pending > 0`:
+- Increment `relaunchCounter`.
+- If ≤ 3: relaunch `pmc enrich .` (background); report "PMC enrichment crashed — relaunched (N/3)."
+- If > 3: stop and report "PMC enrichment crashed 3 times. Run `/pmc-doctor`."
 
-4. **Exit condition** — stop the loop when ALL of:
-   - `.state` is `finished` (Ollama queue done or nothing was queued for it)
-   - `.subagentQueue.pending` is `0`
-   - `inProgressSubagents` is empty (all dispatched subagents have returned)
+### 3c — Re-inject next large batches
 
-   If `.state` is `finished` but `.subagentQueue.pending > 0` or subagents are still in progress,
-   **keep looping** (no more Ollama wait needed — just drain the remaining subagents).
+After applying completed subagents, if `inProgressSubagents` has < 3 in-flight:
 
-### Step 4 — Success criteria
+Re-run the injection script from Step 2b. If it outputs entries:
+- Dispatch up to 3 new batch-subagents in parallel (filling available slots).
+- Add their handles to `inProgressSubagents`.
 
-- `.worklist.pending` = 0
-- `.subagentQueue.pending` = 0
-- Sync-manifest updated with new entries
+### 3d — Exit condition
 
-Suggest running `{{PMC_BIN}} sync-context` to persist all new memories to agent-memory.
+Stop when ALL of:
+- `.state` is `finished`
+- `.subagentQueue.pending` is `0`
+- `inProgressSubagents` is empty
+
+---
+
+## Step 4 — Report success
+
+```
+Enrichment complete:
+  - Ollama enriched: N symbols (small)
+  - Subagents enriched: M symbols (large, batched 3/call)
+  - Errors: X (run /retry-errors if > 0)
+```
+
+Suggest: "Run `/sync-context` to persist all new memories to agent-memory."

@@ -147,7 +147,64 @@ export async function main(args = process.argv.slice(2)) {
 
   const symbolIndex = await loadOptionalJson(symbolIndexFile) ?? {};
 
-  // Build a symbol-like object from the queue entry
+  // Batch entry: content is a JSON array [{id, content}, ...]
+  if (Array.isArray(entry.batchItems) && entry.batchItems.length > 0) {
+    let batchResults;
+    try {
+      batchResults = JSON.parse(content);
+      if (!Array.isArray(batchResults)) throw new Error('expected JSON array');
+    } catch (err) {
+      console.error(`[subagent-apply] ERROR: batch content must be a JSON array: ${err.message}`);
+      await markSubagentError(enrichmentDir, entryId, `batch parse error: ${err.message}`);
+      return 1;
+    }
+
+    const appliedMemoryIds = [];
+    for (const result of batchResults) {
+      const batchItem = entry.batchItems.find((b) => b.id === result.id);
+      if (!batchItem) {
+        console.error(`[subagent-apply] WARN: batch result id ${result.id} not found in batchItems — skipping`);
+        continue;
+      }
+      const wlEntry = worklist.find((e) => e.symbolKey === batchItem.symbolKey);
+      if (!wlEntry) {
+        console.error(`[subagent-apply] WARN: symbolKey ${batchItem.symbolKey} not found in worklist — skipping`);
+        continue;
+      }
+      const symbol = {
+        symbolKey: batchItem.symbolKey,
+        name: batchItem.name,
+        filePath: wlEntry.filePath,
+        language: wlEntry.language,
+        kind: wlEntry.kind,
+        codeHash: wlEntry.codeHash ?? null,
+        graphNodeId: wlEntry.graphNodeId ?? null,
+      };
+      try {
+        const { memoryId } = await persistEnrichmentSuccess({
+          symbol,
+          content: result.content,
+          enrichedByTag: 'enriched-by-subagent',
+          enrichmentDir,
+          worklist,
+          worklistFile,
+          symbolIndex,
+          symbolIndexFile,
+          projectSlug,
+          attempts: [],
+        });
+        appliedMemoryIds.push({ id: result.id, symbolKey: batchItem.symbolKey, name: batchItem.name, memoryId });
+      } catch (err) {
+        console.error(`[subagent-apply] ERROR: persistEnrichmentSuccess failed for ${batchItem.name}: ${err.message}`);
+      }
+    }
+
+    await markSubagentDone(enrichmentDir, entryId, { memoryIds: appliedMemoryIds });
+    console.log(JSON.stringify({ ok: true, entryId, batch: true, applied: appliedMemoryIds }));
+    return 0;
+  }
+
+  // Single-symbol entry (original path)
   const symbol = {
     symbolKey: entry.symbolKey,
     name: entry.name,
