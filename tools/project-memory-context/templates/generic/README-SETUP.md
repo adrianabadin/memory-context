@@ -11,8 +11,8 @@ This project uses PMC (Project Memory Context) for persistent structured memory.
 # Check enrichment status
 {{PMC_BIN}} enrich-status
 
-# Run semantic enrichment for pending symbols
-{{PMC_BIN}} enrich .
+# Run semantic enrichment for pending symbols (non-blocking)
+{{PMC_BIN}} enrich . --background
 
 # Refresh project context memories
 {{PMC_BIN}} get-context --refresh

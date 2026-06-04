@@ -27,14 +27,11 @@ Run `{{PMC_BIN}} enrich-status` first.
 
 Report to the user: "PMC: N symbols pending enrichment — launching…"
 
-Launch via the Bash tool with `run_in_background: true`:
-
 ```bash
-{{PMC_BIN}} enrich .
+{{PMC_BIN}} enrich . --background
 ```
 
-⚠️ Do NOT use PowerShell `Start-Process -WindowStyle Hidden` — the hidden child process inherits
-a restricted shell environment, crashes silently, and leaves a stalled queue-state.
+⚠️ `--background` detaches cross-platform (Node.js `detached+unref`). Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
 
 **Step 3 — Concurrent watchdog + subagent drain**
 
@@ -47,7 +44,7 @@ Each iteration:
 
 2. **Crash check** — if `.state` is `stalled` or `failed` AND `.worklist.pending > 0`:
    - Increment `relaunchCounter`.
-   - If `relaunchCounter ≤ 3`: relaunch (`{{PMC_BIN}} enrich .` via Bash `run_in_background: true`);
+   - If `relaunchCounter ≤ 3`: relaunch `{{PMC_BIN}} enrich . --background`;
      report "PMC enrichment crashed — relaunched (attempt N/3)."; continue loop.
    - If `relaunchCounter > 3`: stop and report:
      "PMC enrichment crashed 3 times. Run `/pmc-doctor` or inspect the terminal for errors."

@@ -37,7 +37,7 @@ Detect changed source files, run incremental graph update, extract new/modified 
 
 ## After running
 
-- Without `--enrich`: run `{{PMC_BIN}} enrich .` then `{{PMC_BIN}} sync-context`.
+- Without `--enrich`: run `{{PMC_BIN}} enrich . --background` then `{{PMC_BIN}} sync-context`.
 - With `--enrich`: enrichment is already running in background; run `{{PMC_BIN}} sync-context` after it finishes.
 
 > `map-project --all` is only needed for full reinstall or to rebuild the graph from scratch.
