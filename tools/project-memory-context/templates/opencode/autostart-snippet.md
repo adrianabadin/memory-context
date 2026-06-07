@@ -25,4 +25,16 @@ This command handles everything deterministic in one shot:
 - **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `{{PMC_BIN}} sync-context` to persist new memories.
 - **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
 - **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
+
+## Context Retrieval Rules
+
+| Situation | Command | Depth |
+|-----------|---------|-------|
+| About to read a file | `{{PMC_BIN}} get-context <file>` | compact |
+| Working on a specific symbol | `{{PMC_BIN}} get-context <symbol>` | compact |
+| Need dependency information | `{{PMC_BIN}} get-context <symbol> extended dependencies` | extended |
+| Debugging complex issues | `{{PMC_BIN}} get-context <symbol> deep all` | deep |
+| Need raw source code | `{{PMC_BIN}} get-context <symbol> disk` | disk |
+| Quick project overview | `agent-memory_search "project context overview"` | — |
+| After code changes | `{{PMC_BIN}} refresh-context --enrich` then `{{PMC_BIN}} sync-context` | — |
 <!-- /pmc:autostart -->
