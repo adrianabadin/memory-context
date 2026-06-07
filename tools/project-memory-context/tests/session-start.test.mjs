@@ -11,6 +11,7 @@ import {
   launchEnrichmentIfNeeded,
   runSessionStartRuntime,
 } from '../src/session-start-runtime.mjs';
+import { runSessionStart } from '../cli/session-start.mjs';
 
 async function createSessionStartFixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-session-start-'));
@@ -154,4 +155,58 @@ test('launchEnrichmentIfNeeded returns launched*:false when worklist.pending ===
   assert.equal(launch.launchedWatchdog, false);
   assert.equal(launch.backend, 'detached-node');
   assert.equal(spawnCalled, false);
+});
+
+test('runSessionStart prints text output using the shared runtime result', async () => {
+  const writes = [];
+
+  await runSessionStart(['C:/repo'], {
+    stdout: { write: (chunk) => writes.push(chunk) },
+    runSessionStartRuntime: async () => ({
+      hasPmc: true,
+      status: {
+        state: 'idle',
+        worklist: { pending: 2, enriched: 7, errors: 1 },
+      },
+      launch: {
+        attempted: true,
+        launchedEnrichment: true,
+        launchedWatchdog: true,
+        backend: 'detached-node',
+      },
+      syncPending: 3,
+      subagentPending: 1,
+      overview: [{ kind: 'architecture-current', title: 'Architecture', summary: 'Plugin startup runtime.' }],
+      snapshot: null,
+      warnings: [],
+    }),
+  });
+
+  const output = writes.join('');
+  assert.match(output, /\*\*PMC enrichment:\*\* 7 symbols enriched · 2 pending, 1 errors · queue: idle/);
+  assert.match(output, /\*\*Launch:\*\* background enrich\/watchdog started via detached-node\./);
+  assert.match(output, /\*\*Sync:\*\* 3 pending/);
+  assert.match(output, /\*\*Architecture:\*\* Plugin startup runtime\./);
+});
+
+test('runSessionStart emits Claude Code hook payload when requested', async () => {
+  const writes = [];
+
+  await runSessionStart(['C:/repo', '--format=claude-code'], {
+    stdout: { write: (chunk) => writes.push(chunk) },
+    runSessionStartRuntime: async () => ({
+      hasPmc: true,
+      status: { state: 'idle', worklist: { pending: 0, enriched: 4, errors: 0 } },
+      launch: { attempted: false, launchedEnrichment: false, launchedWatchdog: false, backend: 'detached-node' },
+      syncPending: 0,
+      subagentPending: 0,
+      overview: [],
+      snapshot: null,
+      warnings: [],
+    }),
+  });
+
+  const payload = JSON.parse(writes.join('').trim());
+  assert.equal(payload.hookSpecificOutput.hookEventName, 'SessionStart');
+  assert.match(payload.hookSpecificOutput.additionalContext, /\*\*PMC enrichment:\*\* 4 symbols enriched/);
 });
