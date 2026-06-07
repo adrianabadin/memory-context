@@ -22,13 +22,11 @@ When the user types "/get-context", run:
 {{PMC_BIN}} get-context <target> [depth] [focus]
 ```
 
-When the user types "/enrich", launch enrichment (`--background` detaches cross-platform):
+When the user types "/enrich", launch enrichment:
 
 ```bash
-{{PMC_BIN}} enrich . --background
+{{PMC_BIN}} enrich .
 ```
-
-⚠️ Do NOT use `Start-Process -WindowStyle Hidden` — see Still-Alive watchdog below.
 
 When the user types "/enrich-status", run:
 
@@ -60,29 +58,25 @@ When the user types "/sanitize", run:
 {{PMC_BIN}} sanitize
 ```
 
-## Session autostart (MANDATORY)
+## Session Autostart
 
-On EVERY session start, BEFORE responding to the user, execute these steps IN ORDER:
+Cursor has no native SessionStart hook, so run this **once per session**, before responding
+to the user:
 
-1. **Check enrichment**: Read `.planning/project-memory-context/enrichment/worklist.json`. Count
-   entries with `status: "pending"` or `status: "stale"`. **Report the count** (e.g. "PMC: 12
-   symbols pending enrichment").
-   If count > 0:
-   ```bash
-   {{PMC_BIN}} enrich . --background
-   ```
-   ⚠️ Never use `Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
+```bash
+{{PMC_BIN}} session-start .
+```
 
-   Then run the **Still-Alive watchdog** (cap: 3 auto-relaunches):
-   - Periodically run `{{PMC_BIN}} enrich-status` and check `.state`.
-   - `running` → alive, keep waiting.
-   - `finished` → done, report completion summary.
-   - `stalled` or `failed` AND `.worklist.pending > 0` → crashed; relaunch `{{PMC_BIN}} enrich . --background`, report "PMC enrichment crashed — relaunched (attempt N/3)".
-   - After 3 failed relaunches: tell the user to run `/pmc-doctor`.
+This single command handles everything deterministic in one shot — no manual polling needed:
+- Checks enrichment status; launches background enrich + watchdog if needed
+- Reports pending sync operations (run `/sync-context` to apply)
+- Loads project context from materialized disk artifacts tagged `project-context` (no MCP round-trip)
+- Reports if LLM subagent drain is needed
 
-2. **Check sync-manifest**: Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If entries have `status: "pending"`, inform: "PMC has N pending sync operations. Run /sync-context."
-3. **Recall base context**: Search agent-memory with query "project context overview" and tags ["project-context"]. Summarize in ~500 tokens.
-4. **Remind**: "Use /get-context <target> before reading files."
+**If the session summary reports `subagentQueue.pending > 0`**, dispatch the `enrich` subagent
+to drain those entries — that is the only step that requires LLM involvement.
+
+**Remind**: use `/get-context <target>` before reading files.
 
 ## Mandatory Workflow (ENFORCED)
 

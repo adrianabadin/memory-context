@@ -38,7 +38,7 @@ test('installAgentTemplates writes a CLAUDE.md for claude-code', async () => {
     assert.match(claudeMd, /pmc init-project/);
     assert.match(claudeMd, /pmc sync-context/);
     assert.match(claudeMd, /pmc sanitize/);
-    assert.match(claudeMd, /run_in_background: true/);
+    assert.match(claudeMd, /pmc session-start/);
     assert.match(claudeMd, /pmc enrich \./);
     assert.doesNotMatch(claudeMd, /Start-Process -FilePath/);
     assert.doesNotMatch(claudeMd, /nohup pmc enrich/);
@@ -79,7 +79,7 @@ test('installAgentTemplates writes .cursorrules for cursor', async () => {
     assert.match(cursorRules, /pmc init-project/);
     assert.match(cursorRules, /pmc sync-context/);
     assert.match(cursorRules, /pmc sanitize/);
-    assert.match(cursorRules, /run_in_background: true/);
+    assert.match(cursorRules, /pmc session-start/);
     assert.match(cursorRules, /pmc enrich \./);
     assert.doesNotMatch(cursorRules, /Start-Process -FilePath/);
     assert.doesNotMatch(cursorRules, /nohup pmc enrich/);
@@ -319,14 +319,14 @@ test('Claude and Cursor snippets include PMC-first guidance and MCP tools', asyn
   assert.match(claudeSnippet, /pmc_query_project/);
   assert.match(claudeSnippet, /project-context/);
   assert.match(claudeSnippet, /\/get-context <target>/);
-  assert.match(claudeSnippet, /run_in_background: true/);
+  assert.match(claudeSnippet, /{{PMC_BIN}} session-start/);
   assert.match(claudeSnippet, /{{PMC_BIN}} enrich \./);
   assert.doesNotMatch(claudeSnippet, /Start-Process -FilePath/);
   assert.match(cursorSnippet, /PMC first, files second/);
   assert.match(cursorSnippet, /pmc_search_symbols/);
   assert.match(cursorSnippet, /project-context/);
   assert.match(cursorSnippet, /\/get-context <target>/);
-  assert.match(cursorSnippet, /run_in_background: true/);
+  assert.match(cursorSnippet, /{{PMC_BIN}} session-start/);
   assert.match(cursorSnippet, /{{PMC_BIN}} enrich \./);
   assert.doesNotMatch(cursorSnippet, /Start-Process -FilePath/);
 });

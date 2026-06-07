@@ -31,6 +31,42 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ENRICH_SCRIPT = join(__dirname, 'enrich-queue.mjs');
 const WATCHDOG_SCRIPT = join(__dirname, 'enrich-watchdog.mjs');
 
+/**
+ * Launch background enrichment + watchdog when the worklist has pending/stale
+ * symbols and no enrichment run is currently active.
+ *
+ * Shared by `pmc session-start` (CLI hook for Claude Code) and the opencode
+ * plugin's `config` hook — both need the exact same zero-token, idempotent
+ * launch logic so background processes are started deterministically instead
+ * of via LLM-driven `pty_spawn` (which crashes on Windows because `pmc`
+ * resolves to a non-spawnable `pmc.ps1` shim).
+ *
+ * Detached: inherits full PATH from the user shell (unlike
+ * `Start-Process -WindowStyle Hidden`, which crashes silently).
+ *
+ * Returns `{ launched: boolean, status }` — `launched` is true only when new
+ * processes were actually spawned.
+ */
+export async function launchEnrichmentIfNeeded(projectRoot, { status: statusOverride } = {}) {
+  let status = statusOverride;
+  if (!status) {
+    try {
+      status = await buildStatusReport({ projectRoot });
+    } catch {
+      return { launched: false, status: null };
+    }
+  }
+
+  const pending = status.worklist?.pending ?? 0;
+  if (pending > 0 && status.state !== 'running') {
+    spawnBackground(process.execPath, [ENRICH_SCRIPT, projectRoot], { cwd: projectRoot });
+    spawnBackground(process.execPath, [WATCHDOG_SCRIPT, projectRoot], { cwd: projectRoot });
+    return { launched: true, status };
+  }
+
+  return { launched: false, status };
+}
+
 /** Kinds to include in the context overview, in priority order. */
 const OVERVIEW_KINDS = [
   'architecture-current',
@@ -145,12 +181,7 @@ export async function runSessionStart(args = process.argv.slice(2)) {
   }
 
   // ── Launch enrich + watchdog if needed ───────────────────────────────────
-  const pending = status.worklist?.pending ?? 0;
-  if (pending > 0 && status.state !== 'running') {
-    // Detached: inherits full PATH from user shell (unlike Start-Process -WindowStyle Hidden)
-    spawnBackground(process.execPath, [ENRICH_SCRIPT, projectRoot], { cwd: projectRoot });
-    spawnBackground(process.execPath, [WATCHDOG_SCRIPT, projectRoot], { cwd: projectRoot });
-  }
+  await launchEnrichmentIfNeeded(projectRoot, { status });
 
   // ── Sync manifest ─────────────────────────────────────────────────────────
   const enrichmentDir = join(pmcDir, 'enrichment');

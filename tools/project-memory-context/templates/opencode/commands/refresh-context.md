@@ -23,16 +23,31 @@ Detect changed source files, run incremental graph update, extract new/modified 
 
 **Detect PTY:** Call `pty_list`. Success (even an empty list) → `HAS_PTY = true`. Failure or tool absent → `HAS_PTY = false`.
 
-**With PTY (preferred):**
-```
-pty_spawn:
-  command: "{{PMC_BIN}}"
-  args: ["refresh-context"]
-  title: "PMC Refresh Context"
-  notifyOnExit: true
-  description: "Incremental graph + worklist refresh"
-```
-Pass `args: ["refresh-context", "--enrich"]` instead when launching enrichment automatically (see Options below). Use `pty_read` to capture the refresh summary, `pty_kill` to close the session once it completes (this is a bounded, one-shot operation, not a persistent watcher).
+**With PTY (preferred):** `{{PMC_BIN}}` resolves to a `.ps1`/`.cmd` shim on Windows that
+PTY cannot spawn directly ("PTY spawn failed") — host it through a shell:
+
+- **Windows:**
+  ```
+  pty_spawn:
+    command: "cmd"
+    args: ["/d", "/s", "/c", "{{PMC_BIN}} refresh-context"]
+    title: "PMC Refresh Context"
+    notifyOnExit: true
+    description: "Incremental graph + worklist refresh"
+  ```
+- **macOS/Linux:**
+  ```
+  pty_spawn:
+    command: "{{PMC_BIN}}"
+    args: ["refresh-context"]
+    title: "PMC Refresh Context"
+    notifyOnExit: true
+    description: "Incremental graph + worklist refresh"
+  ```
+
+Append `--enrich` to the command line (Windows) or to `args` (POSIX) when launching enrichment
+automatically (see Options below). Use `pty_read` to capture the refresh summary, `pty_kill`
+to close the session once it completes (this is a bounded, one-shot operation, not a persistent watcher).
 
 **Without PTY (fallback):**
 ```bash

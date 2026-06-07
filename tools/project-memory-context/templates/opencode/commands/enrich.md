@@ -33,16 +33,29 @@ Report: "PMC: N symbols pending enrichment — launching…"
 
 **Detect PTY:** Call `pty_list`. Success (even an empty list) → `HAS_PTY = true`. Failure or tool absent → `HAS_PTY = false`.
 
-**With PTY (preferred):**
-```
-pty_spawn:
-  command: "{{PMC_BIN}}"
-  args: ["enrich", "."]
-  title: "PMC Enrichment"
-  notifyOnExit: true
-  description: "Background PMC enrichment queue"
-```
-This replaces the `--background` flag entirely — PTY already gives a non-blocking, inspectable, crash-recoverable session. Use `pty_read` to check progress and `pty_kill` + a fresh `pty_spawn` to relaunch on crash (see Step 3's relaunch logic, which applies regardless of launch method).
+**With PTY (preferred):** `{{PMC_BIN}}` resolves to a `.ps1`/`.cmd` shim on Windows that
+PTY cannot spawn directly ("PTY spawn failed") — host it through a shell:
+
+- **Windows:**
+  ```
+  pty_spawn:
+    command: "cmd"
+    args: ["/d", "/s", "/c", "{{PMC_BIN}} enrich ."]
+    title: "PMC Enrichment"
+    notifyOnExit: true
+    description: "Background PMC enrichment queue"
+  ```
+- **macOS/Linux:**
+  ```
+  pty_spawn:
+    command: "{{PMC_BIN}}"
+    args: ["enrich", "."]
+    title: "PMC Enrichment"
+    notifyOnExit: true
+    description: "Background PMC enrichment queue"
+  ```
+
+This replaces the `--background` flag entirely — PTY already gives a non-blocking, inspectable, crash-recoverable session. Use `pty_read` to check progress and `pty_kill` + a fresh `pty_spawn` (same platform-specific form) to relaunch on crash (see Step 3's relaunch logic, which applies regardless of launch method).
 
 **Without PTY (fallback):**
 ```bash
@@ -60,7 +73,7 @@ Run every **≥120 seconds**. Track `relaunchCounter` (cap: 3) and `inProgressSu
 
 1. **Apply completed subagents**: for each in `inProgressSubagents` that returned, write response to temp file → `{{PMC_BIN}} subagent-apply . --entry-id <id> --content-file <tmp>` → delete temp file → remove from set.
 
-2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch — with PTY, `pty_kill` the existing session and `pty_spawn` a fresh one with the same config as Step 2; without PTY, relaunch `{{PMC_BIN}} enrich . --background`. If > 3: stop and report.
+2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch — with PTY, `pty_kill` the existing session and `pty_spawn` a fresh one with the same platform-specific config as Step 2 (Windows: `command: "cmd", args: ["/d","/s","/c","{{PMC_BIN}} enrich ."]`; POSIX: `command: "{{PMC_BIN}}", args: ["enrich", "."]`); without PTY, relaunch `{{PMC_BIN}} enrich . --background`. If > 3: stop and report.
 
 3. **Drain**: if `.subagentQueue.pending > 0` AND `inProgressSubagents` < 3 → read `subagent-queue.json`, collect `status: "pending"` entries, fill slots up to 3. For each, launch subagent:
    ```

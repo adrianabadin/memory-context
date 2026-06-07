@@ -6,13 +6,13 @@ allowed-tools: Bash Read Write Agent
 
 # Enrichment — Ollama + Subagent Drain
 
-**Strategy:** Launch `pmc enrich .` (Ollama). Ollama automatically marks symbols >=5k tokens as `subagent-queued`. The watchdog drains that queue concurrently with 3 parallel subagents (1 symbol each, plain text), running every ≥120s while Ollama works.
+**Strategy:** Launch `{{PMC_BIN}} enrich .` (Ollama). Ollama automatically marks symbols >=5k tokens as `subagent-queued`. The watchdog drains that queue concurrently with 3 parallel subagents (1 symbol each, plain text), running every ≥120s while Ollama works.
 
 ---
 
 ## Step 1 — Check current state
 
-Run `pmc enrich-status` first.
+Run `{{PMC_BIN}} enrich-status` first.
 
 - `.state` is `running` AND `.worklist.pending > 0` → Ollama already active. Skip to **Step 3**.
 - `.state` is `finished` AND `.worklist.pending` is 0 AND `.subagentQueue.pending` is 0 → nothing to do. Report and stop.
@@ -26,7 +26,7 @@ Run `pmc enrich-status` first.
 Report: "PMC: N symbols pending enrichment — launching…"
 
 ```bash
-pmc enrich . --background
+{{PMC_BIN}} enrich . --background
 ```
 
 ⚠️ `--background` detaches the process cross-platform (Node.js `detached+unref`). Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
@@ -46,16 +46,16 @@ For each subagent in `inProgressSubagents` that has returned:
 cat > /tmp/enrich-<entry.id>.txt << 'EOF'
 <subagent plain text response>
 EOF
-pmc subagent-apply . --entry-id <entry.id> --content-file /tmp/enrich-<entry.id>.txt
+{{PMC_BIN}} subagent-apply . --entry-id <entry.id> --content-file /tmp/enrich-<entry.id>.txt
 rm /tmp/enrich-<entry.id>.txt
 ```
 Remove from `inProgressSubagents`.
 
 ### 3b — Crash check
 
-Run `pmc enrich-status`. If `.state` is `stalled` or `failed` AND `.worklist.pending > 0`:
+Run `{{PMC_BIN}} enrich-status`. If `.state` is `stalled` or `failed` AND `.worklist.pending > 0`:
 - Increment `relaunchCounter`.
-- If ≤ 3: relaunch `pmc enrich . --background`; report "PMC enrichment crashed — relaunched (N/3)."
+- If ≤ 3: relaunch `{{PMC_BIN}} enrich . --background`; report "PMC enrichment crashed — relaunched (N/3)."
 - If > 3: stop and report "PMC enrichment crashed 3 times. Run `/pmc-doctor`."
 
 ### 3c — Drain subagent queue
