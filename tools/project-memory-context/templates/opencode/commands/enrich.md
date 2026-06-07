@@ -4,6 +4,10 @@ description: "Launch enrichment for all pending symbols. Ollama processes all sy
 argument-hint: ""
 allowed-tools:
   - Bash
+  - pty_list
+  - pty_spawn
+  - pty_read
+  - pty_kill
 ---
 
 # Enrichment — Ollama + Subagent Drain
@@ -27,10 +31,23 @@ Run `{{PMC_BIN}} enrich-status` first.
 
 Report: "PMC: N symbols pending enrichment — launching…"
 
+**Detect PTY:** Call `pty_list`. Success (even an empty list) → `HAS_PTY = true`. Failure or tool absent → `HAS_PTY = false`.
+
+**With PTY (preferred):**
+```
+pty_spawn:
+  command: "{{PMC_BIN}}"
+  args: ["enrich", "."]
+  title: "PMC Enrichment"
+  notifyOnExit: true
+  description: "Background PMC enrichment queue"
+```
+This replaces the `--background` flag entirely — PTY already gives a non-blocking, inspectable, crash-recoverable session. Use `pty_read` to check progress and `pty_kill` + a fresh `pty_spawn` to relaunch on crash (see Step 3's relaunch logic, which applies regardless of launch method).
+
+**Without PTY (fallback):**
 ```bash
 {{PMC_BIN}} enrich . --background
 ```
-
 ⚠️ `--background` detaches the process cross-platform (Node.js `detached+unref`). Never use `PowerShell Start-Process -WindowStyle Hidden` — crashes silently, leaves stalled queue.
 
 ---
@@ -43,7 +60,7 @@ Run every **≥120 seconds**. Track `relaunchCounter` (cap: 3) and `inProgressSu
 
 1. **Apply completed subagents**: for each in `inProgressSubagents` that returned, write response to temp file → `{{PMC_BIN}} subagent-apply . --entry-id <id> --content-file <tmp>` → delete temp file → remove from set.
 
-2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch `{{PMC_BIN}} enrich . --background`. If > 3: stop and report.
+2. **Crash check**: if `.state` is `stalled`/`failed` AND `.worklist.pending > 0` → increment `relaunchCounter`. If ≤ 3: relaunch — with PTY, `pty_kill` the existing session and `pty_spawn` a fresh one with the same config as Step 2; without PTY, relaunch `{{PMC_BIN}} enrich . --background`. If > 3: stop and report.
 
 3. **Drain**: if `.subagentQueue.pending > 0` AND `inProgressSubagents` < 3 → read `subagent-queue.json`, collect `status: "pending"` entries, fill slots up to 3. For each, launch subagent:
    ```
