@@ -210,3 +210,29 @@ test('runSessionStart emits Claude Code hook payload when requested', async () =
   assert.equal(payload.hookSpecificOutput.hookEventName, 'SessionStart');
   assert.match(payload.hookSpecificOutput.additionalContext, /\*\*PMC enrichment:\*\* 4 symbols enriched/);
 });
+
+test('runSessionStart writes nothing and returns 0 when runtime reports hasPmc: false', async () => {
+  const writes = [];
+
+  const code = await runSessionStart(['C:/repo'], {
+    stdout: { write: (chunk) => writes.push(chunk) },
+    runSessionStartRuntime: async () => ({
+      hasPmc: false,
+      status: null,
+      launch: {
+        attempted: false,
+        launchedEnrichment: false,
+        launchedWatchdog: false,
+        backend: 'detached-node',
+      },
+      syncPending: 0,
+      subagentPending: 0,
+      overview: [],
+      snapshot: null,
+      warnings: [],
+    }),
+  });
+
+  assert.equal(code, 0);
+  assert.equal(writes.length, 0);
+});

@@ -61,6 +61,10 @@ export function formatSessionStartText(result) {
     }
   }
 
+  if (result.snapshot) {
+    parts.push(`**Snapshot:** ${result.snapshot.jsonPath}`);
+  }
+
   parts.push('');
   parts.push('> **Workflow:** `pmc get-context <target>` BEFORE reading files · `pmc refresh-context --enrich` after changes.');
   return parts.join('\n');
