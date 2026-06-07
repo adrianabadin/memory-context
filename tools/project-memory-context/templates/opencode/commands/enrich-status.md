@@ -4,6 +4,10 @@ description: Show enrichment progress — pending, enriched, stale, and failed s
 argument-hint: ""
 allowed-tools:
   - Bash
+  - pty_list
+  - pty_spawn
+  - pty_read
+  - pty_kill
 ---
 
 <objective>
@@ -11,11 +15,23 @@ Display the current enrichment queue status: how many symbols have been enriched
 </objective>
 
 <execution>
-Run:
+**Detect PTY:** Call `pty_list`. Success (even an empty list) → `HAS_PTY = true`. Failure or tool absent → `HAS_PTY = false`.
 
+**With PTY (preferred):**
+```
+pty_spawn:
+  command: "{{PMC_BIN}}"
+  args: ["enrich-status"]
+  title: "PMC Enrich Status"
+  notifyOnExit: true
+  description: "One-shot enrichment status check"
+```
+Use `pty_read` to capture the worklist summary output, then `pty_kill` to close the session — this is a one-shot check, not a persistent process.
+
+**Without PTY (fallback):**
 ```bash
 {{PMC_BIN}} enrich-status
 ```
 
-This shows the worklist summary with counts for pending, enriched, stale, and failed symbols.
+Either way, the output shows the worklist summary with counts for pending, enriched, stale, and failed symbols.
 </execution>
