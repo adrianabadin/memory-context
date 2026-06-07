@@ -18,6 +18,15 @@ const OVERVIEW_KINDS = [
   'dependencies-summary',
 ];
 
+function noLaunchResult(attempted) {
+  return {
+    attempted,
+    launchedEnrichment: false,
+    launchedWatchdog: false,
+    backend: 'detached-node',
+  };
+}
+
 async function readJsonSafe(filePath, readFileImpl = readFile) {
   try {
     return JSON.parse(await readFileImpl(filePath, 'utf8'));
@@ -52,25 +61,22 @@ export async function loadMaterializedOverview(projectRoot, deps = {}) {
     'materialized',
   );
 
-  const entries = [];
-  for (const kind of OVERVIEW_KINDS) {
-    const data = await readJsonSafe(join(materializedDir, `${kind}.json`), readFileImpl);
-    if (data?.title && data?.summary) {
-      entries.push({ kind, title: data.title, summary: data.summary });
-    }
-  }
-  return entries;
+  const entries = await Promise.all(
+    OVERVIEW_KINDS.map(async (kind) => {
+      const data = await readJsonSafe(join(materializedDir, `${kind}.json`), readFileImpl);
+      if (data?.title && data?.summary) {
+        return { kind, title: data.title, summary: data.summary };
+      }
+      return null;
+    }),
+  );
+  return entries.filter(Boolean);
 }
 
 export async function launchEnrichmentIfNeeded(projectRoot, status, deps = {}) {
   const pending = status.worklist?.pending ?? 0;
   if (pending <= 0 || status.state === 'running') {
-    return {
-      attempted: false,
-      launchedEnrichment: false,
-      launchedWatchdog: false,
-      backend: 'detached-node',
-    };
+    return noLaunchResult(false);
   }
 
   const spawnBackgroundImpl = deps.spawnBackground ?? spawnBackground;
@@ -91,15 +97,16 @@ export async function launchEnrichmentIfNeeded(projectRoot, status, deps = {}) {
 
 export function formatSessionStartSnapshotMarkdown(result) {
   const lines = [];
-  const worklist = result.status.worklist;
+  const worklist = result.status?.worklist;
+
+  lines.push('# PMC session-start snapshot');
+  lines.push('');
 
   if (worklist) {
     const details = [];
     if (worklist.pending > 0) details.push(`${worklist.pending} pending`);
     if (worklist.errors > 0) details.push(`${worklist.errors} errors`);
     const suffix = details.length ? ` (${details.join(', ')})` : '';
-    lines.push(`# PMC session-start snapshot`);
-    lines.push('');
     lines.push(`- Queue state: ${result.status.state}`);
     lines.push(`- Enriched symbols: ${worklist.enriched}${suffix}`);
   }
@@ -153,15 +160,12 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
       hasPmc: false,
       projectRoot: root,
       status: null,
-      launch: {
-        attempted: false,
-        launchedEnrichment: false,
-        launchedWatchdog: false,
-        backend: 'detached-node',
-      },
+      launch: noLaunchResult(false),
       syncPending: 0,
       subagentPending: 0,
       overview: [],
+      // Snapshot shape includes `dir` for convenience, but downstream consumers
+      // may also rely on `jsonPath` and `markdownPath` only (per spec example).
       snapshot: null,
       warnings: [],
     };
@@ -171,19 +175,21 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
   const overview = await loadMaterializedOverview(root, deps);
   const enrichmentDir = join(pmcDir, 'enrichment');
 
+  const warnings = [];
   let syncPending = 0;
   try {
     syncPending = getPending(await readSync(enrichmentDir)).length;
-  } catch {
-    syncPending = 0;
+  } catch (err) {
+    warnings.push(`sync-manifest read failed: ${err.message ?? err}`);
   }
 
-  const launch = await launchEnrichmentIfNeeded(root, status, deps).catch(() => ({
-    attempted: true,
-    launchedEnrichment: false,
-    launchedWatchdog: false,
-    backend: 'detached-node',
-  }));
+  let launch;
+  try {
+    launch = await launchEnrichmentIfNeeded(root, status, deps);
+  } catch (err) {
+    launch = noLaunchResult(true);
+    warnings.push(`launchEnrichmentIfNeeded failed: ${err.message ?? err}`);
+  }
 
   const result = {
     hasPmc: true,
@@ -194,14 +200,14 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
     subagentPending: status.subagentQueue?.pending ?? 0,
     overview,
     snapshot: null,
-    warnings: [],
+    warnings,
   };
 
   try {
     const snapshot = await writeSessionStartSnapshot(root, result, deps);
     result.snapshot = snapshot;
-  } catch {
-    result.warnings.push('session-start snapshot write failed');
+  } catch (err) {
+    result.warnings.push(`session-start snapshot write failed: ${err.message ?? err}`);
   }
 
   return result;

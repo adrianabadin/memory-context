@@ -1,12 +1,14 @@
 // tools/project-memory-context/tests/session-start.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import {
   getSessionStartSnapshotPaths,
+  launchEnrichmentIfNeeded,
   runSessionStartRuntime,
 } from '../src/session-start-runtime.mjs';
 
@@ -85,4 +87,71 @@ test('runSessionStartRuntime launches enrichment and watchdog only when pending 
   assert.equal(spawns.length, 2);
   assert.match(spawns[0].args[0].replace(/\\/g, '/'), /enrich-queue\.mjs$/);
   assert.match(spawns[1].args[0].replace(/\\/g, '/'), /enrich-watchdog\.mjs$/);
+});
+
+test('runSessionStartRuntime returns hasPmc: false and writes no snapshots when .planning/project-memory-context is missing', async () => {
+  const { projectRoot } = await createSessionStartFixture();
+  await rm(join(projectRoot, '.planning'), { recursive: true, force: true });
+
+  let buildStatusCalled = false;
+  const result = await runSessionStartRuntime(projectRoot, {
+    buildStatusReport: async () => {
+      buildStatusCalled = true;
+      return { state: 'idle', worklist: { pending: 0, enriched: 0, errors: 0 } };
+    },
+  });
+
+  assert.equal(result.hasPmc, false);
+  assert.equal(result.status, null);
+  assert.equal(result.snapshot, null);
+  assert.deepEqual(result.warnings, []);
+  assert.equal(buildStatusCalled, false);
+
+  const snapshotPaths = getSessionStartSnapshotPaths(projectRoot);
+  assert.equal(existsSync(snapshotPaths.jsonPath), false);
+  assert.equal(existsSync(snapshotPaths.markdownPath), false);
+});
+
+test('launchEnrichmentIfNeeded returns launched*:false when status.state === "running"', async () => {
+  await createSessionStartFixture();
+
+  let spawnCalled = false;
+  const launch = await launchEnrichmentIfNeeded(
+    join(tmpdir(), 'pmc-launch-skip-running'),
+    { state: 'running', worklist: { pending: 5, enriched: 1, errors: 0 } },
+    {
+      spawnBackground: () => {
+        spawnCalled = true;
+        return 1;
+      },
+    },
+  );
+
+  assert.equal(launch.attempted, false);
+  assert.equal(launch.launchedEnrichment, false);
+  assert.equal(launch.launchedWatchdog, false);
+  assert.equal(launch.backend, 'detached-node');
+  assert.equal(spawnCalled, false);
+});
+
+test('launchEnrichmentIfNeeded returns launched*:false when worklist.pending === 0', async () => {
+  await createSessionStartFixture();
+
+  let spawnCalled = false;
+  const launch = await launchEnrichmentIfNeeded(
+    join(tmpdir(), 'pmc-launch-skip-empty'),
+    { state: 'idle', worklist: { pending: 0, enriched: 12, errors: 0 } },
+    {
+      spawnBackground: () => {
+        spawnCalled = true;
+        return 1;
+      },
+    },
+  );
+
+  assert.equal(launch.attempted, false);
+  assert.equal(launch.launchedEnrichment, false);
+  assert.equal(launch.launchedWatchdog, false);
+  assert.equal(launch.backend, 'detached-node');
+  assert.equal(spawnCalled, false);
 });
