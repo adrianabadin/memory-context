@@ -1,0 +1,208 @@
+// tools/project-memory-context/src/session-start-runtime.mjs
+import { existsSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { buildStatusReport } from '../cli/status.mjs';
+import { spawnBackground } from './platform.mjs';
+import { readSyncManifest, getPendingEntries } from './sync-manifest.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CLI_DIR = join(__dirname, '..', 'cli');
+const OVERVIEW_KINDS = [
+  'architecture-current',
+  'module-minimap',
+  'structure-summary',
+  'stack-runtime',
+  'dependencies-summary',
+];
+
+async function readJsonSafe(filePath, readFileImpl = readFile) {
+  try {
+    return JSON.parse(await readFileImpl(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export function getSessionStartSnapshotPaths(projectRoot) {
+  const snapshotDir = join(
+    projectRoot,
+    '.planning',
+    'project-memory-context',
+    'runs',
+    'session-start',
+  );
+
+  return {
+    dir: snapshotDir,
+    jsonPath: join(snapshotDir, 'latest.json'),
+    markdownPath: join(snapshotDir, 'latest.md'),
+  };
+}
+
+export async function loadMaterializedOverview(projectRoot, deps = {}) {
+  const readFileImpl = deps.readFile ?? readFile;
+  const materializedDir = join(
+    projectRoot,
+    '.planning',
+    'project-memory-context',
+    'project-context',
+    'materialized',
+  );
+
+  const entries = [];
+  for (const kind of OVERVIEW_KINDS) {
+    const data = await readJsonSafe(join(materializedDir, `${kind}.json`), readFileImpl);
+    if (data?.title && data?.summary) {
+      entries.push({ kind, title: data.title, summary: data.summary });
+    }
+  }
+  return entries;
+}
+
+export async function launchEnrichmentIfNeeded(projectRoot, status, deps = {}) {
+  const pending = status.worklist?.pending ?? 0;
+  if (pending <= 0 || status.state === 'running') {
+    return {
+      attempted: false,
+      launchedEnrichment: false,
+      launchedWatchdog: false,
+      backend: 'detached-node',
+    };
+  }
+
+  const spawnBackgroundImpl = deps.spawnBackground ?? spawnBackground;
+  spawnBackgroundImpl(process.execPath, [join(CLI_DIR, 'enrich-queue.mjs'), projectRoot], {
+    cwd: projectRoot,
+  });
+  spawnBackgroundImpl(process.execPath, [join(CLI_DIR, 'enrich-watchdog.mjs'), projectRoot], {
+    cwd: projectRoot,
+  });
+
+  return {
+    attempted: true,
+    launchedEnrichment: true,
+    launchedWatchdog: true,
+    backend: 'detached-node',
+  };
+}
+
+export function formatSessionStartSnapshotMarkdown(result) {
+  const lines = [];
+  const worklist = result.status.worklist;
+
+  if (worklist) {
+    const details = [];
+    if (worklist.pending > 0) details.push(`${worklist.pending} pending`);
+    if (worklist.errors > 0) details.push(`${worklist.errors} errors`);
+    const suffix = details.length ? ` (${details.join(', ')})` : '';
+    lines.push(`# PMC session-start snapshot`);
+    lines.push('');
+    lines.push(`- Queue state: ${result.status.state}`);
+    lines.push(`- Enriched symbols: ${worklist.enriched}${suffix}`);
+  }
+
+  if (result.syncPending > 0) {
+    lines.push(`- Sync: ${result.syncPending} pending; run \`/sync-context\` to persist to agent-memory.`);
+  }
+
+  if (result.subagentPending > 0) {
+    lines.push(`- Subagent queue: ${result.subagentPending} pending`);
+  }
+
+  if (result.overview.length > 0) {
+    lines.push('');
+    lines.push('## Project context');
+    lines.push('');
+    for (const entry of result.overview) {
+      lines.push(`- **${entry.title}:** ${entry.summary}`);
+    }
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+export async function writeSessionStartSnapshot(projectRoot, result, deps = {}) {
+  const mkdirImpl = deps.mkdir ?? mkdir;
+  const writeFileImpl = deps.writeFile ?? writeFile;
+  const snapshotPaths = getSessionStartSnapshotPaths(projectRoot);
+
+  await mkdirImpl(snapshotPaths.dir, { recursive: true });
+  await writeFileImpl(snapshotPaths.jsonPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+  await writeFileImpl(
+    snapshotPaths.markdownPath,
+    formatSessionStartSnapshotMarkdown(result),
+    'utf8',
+  );
+
+  return snapshotPaths;
+}
+
+export async function runSessionStartRuntime(projectRoot = process.cwd(), deps = {}) {
+  const root = resolve(projectRoot);
+  const existsImpl = deps.existsSync ?? existsSync;
+  const buildStatus = deps.buildStatusReport ?? buildStatusReport;
+  const readSync = deps.readSyncManifest ?? readSyncManifest;
+  const getPending = deps.getPendingEntries ?? getPendingEntries;
+  const pmcDir = join(root, '.planning', 'project-memory-context');
+
+  if (!existsImpl(pmcDir)) {
+    return {
+      hasPmc: false,
+      projectRoot: root,
+      status: null,
+      launch: {
+        attempted: false,
+        launchedEnrichment: false,
+        launchedWatchdog: false,
+        backend: 'detached-node',
+      },
+      syncPending: 0,
+      subagentPending: 0,
+      overview: [],
+      snapshot: null,
+      warnings: [],
+    };
+  }
+
+  const status = await buildStatus({ projectRoot: root });
+  const overview = await loadMaterializedOverview(root, deps);
+  const enrichmentDir = join(pmcDir, 'enrichment');
+
+  let syncPending = 0;
+  try {
+    syncPending = getPending(await readSync(enrichmentDir)).length;
+  } catch {
+    syncPending = 0;
+  }
+
+  const launch = await launchEnrichmentIfNeeded(root, status, deps).catch(() => ({
+    attempted: true,
+    launchedEnrichment: false,
+    launchedWatchdog: false,
+    backend: 'detached-node',
+  }));
+
+  const result = {
+    hasPmc: true,
+    projectRoot: root,
+    status,
+    launch,
+    syncPending,
+    subagentPending: status.subagentQueue?.pending ?? 0,
+    overview,
+    snapshot: null,
+    warnings: [],
+  };
+
+  try {
+    const snapshot = await writeSessionStartSnapshot(root, result, deps);
+    result.snapshot = snapshot;
+  } catch {
+    result.warnings.push('session-start snapshot write failed');
+  }
+
+  return result;
+}
