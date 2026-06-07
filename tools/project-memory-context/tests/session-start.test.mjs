@@ -236,3 +236,30 @@ test('runSessionStart writes nothing and returns 0 when runtime reports hasPmc: 
   assert.equal(code, 0);
   assert.equal(writes.length, 0);
 });
+
+test('OpenCode plugin runs the shared session-start runtime during config()', async () => {
+  const events = [];
+
+  const plugin = await pluginFactory({
+    directory: 'C:/repo',
+    __testOverrides: {
+      readInstallState: async () => ({ projectRoot: 'C:/repo', memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db' }),
+      createController: () => ({
+        rehydrate: async () => { events.push('rehydrate'); },
+        onToolExecuteAfter: async () => {},
+      }),
+      runSessionStartRuntime: async (projectRoot, options) => {
+        events.push(`runtime:${projectRoot}:${options.mode}`);
+        return { hasPmc: true };
+      },
+    },
+  });
+
+  const cfg = {};
+  await plugin.config(cfg);
+
+  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
+  assert.deepEqual(events, ['rehydrate', 'runtime:C:/repo:opencode-plugin']);
+});
+
+import pluginFactory from '../plugin/index.mjs';

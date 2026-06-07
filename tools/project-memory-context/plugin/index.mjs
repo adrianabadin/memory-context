@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { buildInjectedPmcConfig } from '../src/plugin-config.mjs';
 import { createOpencodeRefreshHookController } from '../src/opencode-refresh-hook.mjs';
-import { launchEnrichmentIfNeeded } from '../cli/session-start.mjs';
+import { runSessionStartRuntime } from '../src/session-start-runtime.mjs';
 
 async function readInstallState(projectRoot) {
   try {
@@ -17,7 +17,7 @@ export default async ({ directory, __testOverrides } = {}) => {
   const readState = __testOverrides?.readInstallState ?? readInstallState;
   const createController = __testOverrides?.createController ??
     ((projectRoot) => createOpencodeRefreshHookController({ projectRoot }));
-  const launchEnrichment = __testOverrides?.launchEnrichmentIfNeeded ?? launchEnrichmentIfNeeded;
+  const runStartup = __testOverrides?.runSessionStartRuntime ?? runSessionStartRuntime;
 
   let controller = null;
 
@@ -35,15 +35,10 @@ export default async ({ directory, __testOverrides } = {}) => {
       controller = createController(directory, installState);
       await controller.rehydrate();
 
-      // Zero-token autostart: launch background enrichment + watchdog
-      // deterministically (Node `detached+unref`, full PATH) instead of
-      // relying on the LLM to `pty_spawn` them — that crashes on Windows
-      // because `pmc` resolves to a non-spawnable `pmc.ps1` shim.
-      // Errors must never block opencode startup.
       try {
-        await launchEnrichment(directory);
+        await runStartup(directory, { mode: 'opencode-plugin' });
       } catch {
-        // swallow — never block agent startup on enrichment launch failure
+        // Silent by design: PMC startup must never block OpenCode startup.
       }
     },
 
