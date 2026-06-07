@@ -34,6 +34,9 @@ This gives your AI agent persistent, recallable knowledge of your entire codebas
   - [`pmc sanitize`](#pmc-sanitize)
   - [`pmc project-context`](#pmc-project-context)
 - [Environment Variables](#environment-variables)
+- [OpenCode Session Startup](#opencode-session-startup)
+- [OpenCode Auto-Refresh Hook](#opencode-auto-refresh-hook)
+- [Recommended Optional Plugin: opencode-pty](#recommended-optional-plugin-opencode-pty)
 - [Project Structure](#project-structure)
 - [9 Base Project-Context Memories](#9-base-project-context-memories)
 - [Credits](#credits)
@@ -496,6 +499,85 @@ pmc project-context [--refresh]
 | `MEMORY_DECAY_HALF_LIFE` | No | `30` days (set `0` to disable) |
 | `ENABLE_HARDCOPY` | No | `true` to enable JSON file backup |
 | `HARDCOPY_PATH` | If hardcopy | Directory for JSON mirror files |
+
+---
+
+## OpenCode Session Startup
+
+When PMC is installed as an OpenCode plugin, plugin startup runs the same shared Node runtime that powers `pmc session-start`. This happens outside the model context window and handles the deterministic startup work without spending chat tokens.
+
+What it does:
+
+- reads PMC disk state and materialized project-context summaries
+- launches background `enrich-queue` plus `enrich-watchdog` when pending work exists
+- writes the latest startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` and `.planning/project-memory-context/runs/session-start/latest.md`
+
+Notes:
+
+- startup uses detached Node child processes today, not PTY tools
+- PTY is still recommended when an agent manually manages long-lived processes later in the session
+- if the plugin is disabled, the manual fallback is `pmc session-start .`
+
+---
+
+## OpenCode Auto-Refresh Hook
+
+When PMC is installed as an OpenCode plugin, the plugin listens to `tool.execute.after` for structured edit tools: `apply_patch`, `edit`, and `write`.
+
+Relevant edits are debounced for 5 minutes of inactivity. Once the debounce window expires, PMC launches a single background `pmc refresh-context --enrich` run for the current project.
+
+Notes:
+
+- shell-based file mutations from `bash` are intentionally excluded in v1
+- repeated edits collapse into one refresh run after the most recent write
+- pending work survives OpenCode restart through `.planning/project-memory-context/opencode-refresh-hook.json`
+- after installing or updating the plugin/config, restart OpenCode so the new plugin code is loaded
+
+---
+
+## Recommended Optional Plugin: opencode-pty
+
+[opencode-pty](https://github.com/shekohex/opencode-pty) is a community OpenCode plugin that adds interactive pseudo-terminal (PTY) management. It lets agents spawn long-running background processes (`pmc enrich`, dev servers, file watchers, etc.), stream their output on demand, send interactive input (Ctrl+C, prompts, keystrokes), and clean them up on exit.
+
+**Why PMC recommends it:** the recommended PMC workflow keeps `pmc enrich .` running in the background while the agent works on other tasks. Without PTY support that process is invisible to the agent — it cannot read progress, recover a stalled run, or react to prompts. The autostart block in `AGENTS.md` (watchdog poll + subagent drain) assumes PTY tools are available, and falls back to blind background `bash` otherwise. Install opencode-pty to get the full intended workflow.
+
+### Installation
+
+Add `opencode-pty` to the `plugin` array in your OpenCode configuration (project-level `.opencode/opencode.json` or global `~/.config/opencode/opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["opencode-pty"]
+}
+```
+
+OpenCode installs the plugin automatically on the next run. After saving the config, restart OpenCode so the plugin code is loaded.
+
+If you keep your OpenCode config under version control, commit this change so it stays in sync across machines.
+
+### Verifying
+
+Inside an OpenCode session, the following tools should be available:
+
+- `pty_spawn` — start a new background process with a command
+- `pty_list` — list active PTY sessions
+- `pty_read` — read buffered output from a session
+- `pty_write` — send input (e.g. `\\x03` for Ctrl+C)
+- `pty_kill` — terminate a session and free its buffer
+
+If they are missing, confirm the entry is in the `plugin` array, then restart OpenCode. Run `pmc doctor` to check that the rest of the environment (Ollama, graphifyy, memory DB) is healthy.
+
+### Updating
+
+OpenCode does not auto-update plugins. To upgrade opencode-pty:
+
+```bash
+rm -rf ~/.cache/opencode/node_modules/opencode-pty
+opencode
+```
+
+OpenCode reinstalls the latest version on the next start.
 
 ---
 

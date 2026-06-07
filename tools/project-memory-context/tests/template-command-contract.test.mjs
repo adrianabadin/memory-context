@@ -156,3 +156,21 @@ test('README environment variable docs match enrichment-config and setup-bootstr
   assert.doesNotMatch(readme, /pmc-local-model/);
   assert.match(readme, /agent-memory.*npx -y @aabadin\/agent-memory-mcp/);
 });
+
+test('opencode autostart snippet describes plugin startup and snapshot paths', () => {
+  const autostart = readTemplate('opencode/autostart-snippet.md');
+
+  assert.match(autostart, /OpenCode plugin/);
+  assert.match(autostart, /\{\{PMC_BIN\}\} session-start \./);
+  assert.match(autostart, /latest\.(json|md)/);
+  assert.doesNotMatch(autostart, /SessionStart hook configured/);
+  assert.doesNotMatch(autostart, /additionalContext/);
+});
+
+test('README explains OpenCode plugin startup and snapshot paths', () => {
+  const readme = readFileSync(join(packageRoot, 'README.md'), 'utf8');
+
+  assert.match(readme, /OpenCode Session Startup/);
+  assert.match(readme, /runs\/session-start\/latest\.json/);
+  assert.match(readme, /detached Node child processes today, not PTY tools/);
+});
