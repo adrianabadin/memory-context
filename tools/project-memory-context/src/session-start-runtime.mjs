@@ -203,9 +203,15 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
     warnings,
   };
 
+  const snapshotPaths = getSessionStartSnapshotPaths(root);
+  result.snapshot = {
+    dir: snapshotPaths.dir,
+    jsonPath: snapshotPaths.jsonPath,
+    markdownPath: snapshotPaths.markdownPath,
+  };
+
   try {
-    const snapshot = await writeSessionStartSnapshot(root, result, deps);
-    result.snapshot = snapshot;
+    await writeSessionStartSnapshot(root, result, deps);
   } catch (err) {
     result.warnings.push(`session-start snapshot write failed: ${err.message ?? err}`);
   }

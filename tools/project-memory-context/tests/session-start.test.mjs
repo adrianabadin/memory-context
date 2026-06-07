@@ -63,6 +63,8 @@ test('runSessionStartRuntime writes latest snapshot files and returns materializ
   const markdownSnapshot = await readFile(snapshotPaths.markdownPath, 'utf8');
 
   assert.equal(jsonSnapshot.status.worklist.enriched, 12);
+  assert.equal(jsonSnapshot.snapshot.jsonPath.endsWith('latest.json'), true);
+  assert.equal(jsonSnapshot.snapshot.markdownPath.endsWith('latest.md'), true);
   assert.match(markdownSnapshot, /Layered pipeline with plugin startup\./);
   assert.match(markdownSnapshot, /run `\/sync-context` to persist to agent-memory/i);
 });

@@ -2,15 +2,7 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  launchEnrichmentIfNeeded,
-  runSessionStartRuntime,
-} from '../src/session-start-runtime.mjs';
-
-// Re-exported for backwards compatibility with any external consumer
-// (e.g. the OpenCode plugin before Task 3 lands) that imports this
-// helper from the CLI module path.
-export { launchEnrichmentIfNeeded };
+import { runSessionStartRuntime } from '../src/session-start-runtime.mjs';
 
 function parseArgs(args) {
   const nonFlags = args.filter((arg) => !arg.startsWith('-'));
