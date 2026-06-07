@@ -12,6 +12,7 @@ import {
   runSessionStartRuntime,
 } from '../src/session-start-runtime.mjs';
 import { runSessionStart } from '../cli/session-start.mjs';
+import pluginFactory from '../plugin/index.mjs';
 
 async function createSessionStartFixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-session-start-'));
@@ -262,4 +263,25 @@ test('OpenCode plugin runs the shared session-start runtime during config()', as
   assert.deepEqual(events, ['rehydrate', 'runtime:C:/repo:opencode-plugin']);
 });
 
-import pluginFactory from '../plugin/index.mjs';
+test('OpenCode plugin config() swallows runtime errors so startup never fails', async () => {
+  const plugin = await pluginFactory({
+    directory: 'C:/repo',
+    __testOverrides: {
+      readInstallState: async () => ({
+        projectRoot: 'C:/repo',
+        memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db',
+      }),
+      createController: () => ({
+        rehydrate: async () => {},
+        onToolExecuteAfter: async () => {},
+      }),
+      runSessionStartRuntime: async () => {
+        throw new Error('boom');
+      },
+    },
+  });
+
+  const cfg = {};
+  await assert.doesNotReject(() => plugin.config(cfg));
+  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
+});
