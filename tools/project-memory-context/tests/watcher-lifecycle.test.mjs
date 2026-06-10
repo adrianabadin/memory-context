@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -47,7 +47,6 @@ test('readWatchPidRecord returns null on missing or corrupt file', async () => {
   assert.equal(await readWatchPidRecord(root), null);
   await writeWatchPidRecord(root, { pid: 1, projectRoot: root, startedAt: 'x', lastHeartbeat: 'x' });
   // Corrupt it manually
-  const { writeFile } = await import('node:fs/promises');
   await writeFile(getWatchPidPath(root), 'not-json', 'utf8');
   assert.equal(await readWatchPidRecord(root), null);
   await rm(root, { recursive: true, force: true });
@@ -79,6 +78,9 @@ test('isWatcherAlive: alive only when pid alive AND projectRoot matches AND hear
   const aliveDeps = { now: nowMs, isPidAlive: () => true };
 
   assert.equal(isWatcherAlive(base, root, aliveDeps), true);
+  // exact boundary: heartbeat aged exactly WATCH_HEARTBEAT_STALE_MS is still alive (<=)
+  const exactBoundary = new Date(nowMs - WATCH_HEARTBEAT_STALE_MS).toISOString();
+  assert.equal(isWatcherAlive({ ...base, lastHeartbeat: exactBoundary }, root, aliveDeps), true);
   // pid dead
   assert.equal(isWatcherAlive(base, root, { now: nowMs, isPidAlive: () => false }), false);
   // projectRoot mismatch (PID reuse by another project's watcher)
