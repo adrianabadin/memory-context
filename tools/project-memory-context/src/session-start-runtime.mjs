@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { buildStatusReport } from '../cli/status.mjs';
 import { spawnBackground } from './platform.mjs';
 import { readSyncManifest, getPendingEntries } from './sync-manifest.mjs';
+import { isWatcherAlive, readWatchPidRecord } from './watcher-lifecycle.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_DIR = join(__dirname, '..', 'cli');
@@ -95,6 +96,33 @@ export async function launchEnrichmentIfNeeded(projectRoot, status, deps = {}) {
   };
 }
 
+// Always launch: refresh-context is hash-incremental, so a no-change run
+// finishes in seconds. CLI_DIR lives inside this package — when installed
+// globally, that IS the global package (requirement: run from global install).
+export function launchRefreshContext(projectRoot, deps = {}) {
+  const spawnBackgroundImpl = deps.spawnBackground ?? spawnBackground;
+  spawnBackgroundImpl(
+    process.execPath,
+    [join(CLI_DIR, 'refresh-context.mjs'), projectRoot, '--enrich'],
+    { cwd: projectRoot },
+  );
+  return { launchedRefresh: true, backend: 'detached-node' };
+}
+
+export async function launchWatcherIfNeeded(projectRoot, deps = {}) {
+  const record = await readWatchPidRecord(projectRoot, deps);
+  if (isWatcherAlive(record, projectRoot, deps)) {
+    return { launchedWatcher: false, watcherPid: record.pid, backend: 'detached-node' };
+  }
+  const spawnBackgroundImpl = deps.spawnBackground ?? spawnBackground;
+  const watcherPid = spawnBackgroundImpl(
+    process.execPath,
+    [join(CLI_DIR, 'watch.mjs'), projectRoot],
+    { cwd: projectRoot },
+  );
+  return { launchedWatcher: true, watcherPid, backend: 'detached-node' };
+}
+
 export function formatSessionStartSnapshotMarkdown(result) {
   const lines = [];
   const worklist = result.status?.worklist;
@@ -117,6 +145,13 @@ export function formatSessionStartSnapshotMarkdown(result) {
 
   if (result.subagentPending > 0) {
     lines.push(`- Subagent queue: ${result.subagentPending} pending`);
+  }
+
+  if (result.watcher) {
+    lines.push(`- Watcher: ${result.watcher.launchedWatcher ? 'launched' : 'already running'}${result.watcher.watcherPid ? ` (pid ${result.watcher.watcherPid})` : ''}`);
+  }
+  if (result.refresh?.launchedRefresh) {
+    lines.push('- Refresh: refresh-context --enrich launched in background');
   }
 
   if (result.overview.length > 0) {
@@ -161,6 +196,8 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
       projectRoot: root,
       status: null,
       launch: noLaunchResult(false),
+      refresh: { launchedRefresh: false, backend: 'detached-node' },
+      watcher: { launchedWatcher: false, watcherPid: null, backend: 'detached-node' },
       syncPending: 0,
       subagentPending: 0,
       overview: [],
@@ -191,11 +228,29 @@ export async function runSessionStartRuntime(projectRoot = process.cwd(), deps =
     warnings.push(`launchEnrichmentIfNeeded failed: ${err.message ?? err}`);
   }
 
+  let refresh;
+  try {
+    refresh = launchRefreshContext(root, deps);
+  } catch (err) {
+    refresh = { launchedRefresh: false, backend: 'detached-node' };
+    warnings.push(`launchRefreshContext failed: ${err.message ?? err}`);
+  }
+
+  let watcher;
+  try {
+    watcher = await launchWatcherIfNeeded(root, deps);
+  } catch (err) {
+    watcher = { launchedWatcher: false, watcherPid: null, backend: 'detached-node' };
+    warnings.push(`launchWatcherIfNeeded failed: ${err.message ?? err}`);
+  }
+
   const result = {
     hasPmc: true,
     projectRoot: root,
     status,
     launch,
+    refresh,
+    watcher,
     syncPending,
     subagentPending: status.subagentQueue?.pending ?? 0,
     overview,
