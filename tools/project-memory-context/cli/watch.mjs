@@ -112,6 +112,9 @@ async function stopCommand(projectRoot) {
     return;
   }
   try {
+    // On Windows this is TerminateProcess: the child's SIGTERM handler never
+    // runs, so ITS pid-file cleanup is skipped — that's why we remove the pid
+    // file here, from the stopping process.
     process.kill(record.pid);
     log(`Stopped watcher (pid ${record.pid}).`);
   } catch (err) {
@@ -136,7 +139,7 @@ async function detachCommand(projectRoot) {
   while (Date.now() < deadline) {
     await new Promise((res) => setTimeout(res, 200));
     const record = await readWatchPidRecord(projectRoot);
-    if (record && isPidAlive(record.pid)) {
+    if (isWatcherAlive(record, projectRoot)) {
       log(`Watcher started in background (pid ${record.pid}).`);
       return;
     }
@@ -160,10 +163,17 @@ async function runForeground(projectRoot) {
   // First tick writes the pid file immediately and evaluates inherited pending.
   await runtime.tick();
 
+  // Ownership re-check: if two watchers started simultaneously, the last pid-file
+  // writer wins; everyone else must exit WITHOUT touching the winner's pid file.
+  const ownership = await readWatchPidRecord(projectRoot);
+  if (ownership && ownership.pid !== process.pid) {
+    log(`Another watcher took ownership (pid ${ownership.pid}). Exiting.`);
+    return;
+  }
+
   const watcher = watch(projectRoot, { recursive: true }, (eventType, filename) => {
     runtime.onFsEvent(filename).catch(() => {});
   });
-  watcher.on('error', (err) => log(`Watcher error: ${err.message}`));
 
   const interval = setInterval(() => {
     runtime.tick().catch((err) => log(`tick error: ${err.message}`));
@@ -174,6 +184,14 @@ async function runForeground(projectRoot) {
     watcher.close();
     removeWatchPidFile(projectRoot).finally(() => process.exit(0));
   };
+
+  watcher.on('error', (err) => {
+    // A dead watch backend would leave a heartbeat-only zombie that never
+    // refreshes. Exit instead; the next session-start relaunches a healthy one.
+    log(`Watcher backend error: ${err.message}. Exiting so it can be relaunched.`);
+    shutdown();
+  });
+
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 

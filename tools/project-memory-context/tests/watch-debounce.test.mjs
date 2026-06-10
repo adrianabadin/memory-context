@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -56,5 +57,13 @@ test('writeWatchPending + readWatchPending round-trip; read tolerates missing/co
   assert.deepEqual(await readWatchPending(root), { 'src/a.mjs': 111 });
   await writeFile(getWatchPendingPath(root), '{broken', 'utf8');
   assert.deepEqual(await readWatchPending(root), {});
+  await rm(root, { recursive: true, force: true });
+});
+
+test('writeWatchPending leaves no temp file behind (atomic rename)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pmc-watch-debounce-'));
+  await writeWatchPending(root, { 'src/a.mjs': 1 });
+  assert.equal(existsSync(`${getWatchPendingPath(root)}.tmp`), false);
+  assert.deepEqual(await readWatchPending(root), { 'src/a.mjs': 1 });
   await rm(root, { recursive: true, force: true });
 });

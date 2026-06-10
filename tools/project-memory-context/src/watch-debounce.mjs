@@ -1,5 +1,5 @@
 // tools/project-memory-context/src/watch-debounce.mjs
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 export const WATCH_QUIET_MS = 5 * 60 * 1000;
@@ -42,7 +42,10 @@ export async function readWatchPending(projectRoot, deps = {}) {
 export async function writeWatchPending(projectRoot, pending, deps = {}) {
   const mkdirImpl = deps.mkdir ?? mkdir;
   const writeFileImpl = deps.writeFile ?? writeFile;
+  const renameImpl = deps.rename ?? rename;
   const pendingPath = getWatchPendingPath(projectRoot);
+  const tempPath = `${pendingPath}.tmp`;
   await mkdirImpl(dirname(pendingPath), { recursive: true });
-  await writeFileImpl(pendingPath, `${JSON.stringify(pending, null, 2)}\n`, 'utf8');
+  await writeFileImpl(tempPath, `${JSON.stringify(pending, null, 2)}\n`, 'utf8');
+  await renameImpl(tempPath, pendingPath);
 }
