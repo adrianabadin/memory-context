@@ -14,6 +14,7 @@ import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs'
 import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
 import { appendSubagentQueue } from '../src/subagent-queue.mjs';
 import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
+import { isPidAlive } from '../src/watcher-lifecycle.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -477,6 +478,19 @@ export async function finalizeQueueState(input) {
   await writeQueueState(input);
 }
 
+// Conservative staleness window: an enrichment heartbeat older than this means
+// the previous queue is presumed dead and a new one may start.
+export const QUEUE_GUARD_STALE_MS = 5 * 60 * 1000;
+
+export function shouldSkipQueueStart(queueState, { now = Date.now(), selfPid = process.pid, isPidAlive: pidAlive = isPidAlive } = {}) {
+  if (!queueState || queueState.status !== 'running') return false;
+  if (queueState.pid === selfPid) return false;
+  if (!pidAlive(queueState.pid)) return false;
+  const heartbeatMs = Date.parse(queueState.heartbeatAt ?? '');
+  if (!Number.isFinite(heartbeatMs)) return false;
+  return now - heartbeatMs <= QUEUE_GUARD_STALE_MS;
+}
+
 async function checkpointSave() {
   if (!_worklistFile) return;
   console.error('\n[checkpoint] Saving progress...');
@@ -506,6 +520,15 @@ async function main() {
 
   const worklistFile = resolve(enrichmentDir, 'worklist.json');
   const symbolIndexFile = resolve(enrichmentDir, 'symbol-index.json');
+  const queueStateFile = resolve(enrichmentDir, 'queue-state.json');
+  _queueStateFile = queueStateFile;
+
+  let existingQueueState = null;
+  try { existingQueueState = await loadJson(queueStateFile); } catch {}
+  if (shouldSkipQueueStart(existingQueueState)) {
+    console.error(`[queue] Another enrichment queue is already running (pid ${existingQueueState.pid}); exiting.`);
+    return;
+  }
 
   _worklistFile = worklistFile;
   _symbolIndexFile = symbolIndexFile;
@@ -527,9 +550,6 @@ async function main() {
   _enrichmentDir = enrichmentDir;
   _worklist = worklist;
   _symbolIndex = symbolIndex;
-
-  const queueStateFile = resolve(enrichmentDir, 'queue-state.json');
-  _queueStateFile = queueStateFile;
 
   for (const entry of worklist) {
     if (entry.status === 'enriched' && entry.memoryId) {
