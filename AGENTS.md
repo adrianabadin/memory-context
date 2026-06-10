@@ -64,104 +64,45 @@ Use Bash only for quick synchronous commands (<10s): `pmc get-context`, `pmc enr
 ---
 
 <!-- pmc:autostart -->
-## Session autostart (MANDATORY)
+## PMC Session Autostart
 
-On EVERY session start, BEFORE responding to the user, execute these steps IN ORDER:
+PMC installs an auto-loaded OpenCode plugin at `.opencode/plugins/pmc.mjs`. On every OpenCode startup the plugin runs a zero-token Node runtime that: launches `refresh-context --enrich` in the background (hash-incremental), launches background enrichment + watchdog if pending symbols exist, ensures a single detached file watcher per project (5-minute per-file quiet debounce → automatic refresh + enrich), and writes the startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` / `latest.md`. Nothing blocks the session; check `pmc watch . --status` or the snapshot to inspect state.
 
-### Step 0: Detect PTY plugin
+**If the PMC plugin is not installed or is disabled**, run this once per session:
 
-See **PTY Plugin Policy** above. Determine `HAS_PTY` for the rest of this sequence.
-
-### Step 1: Check enrichment status and launch
-
-Read `.planning/project-memory-context/enrichment/worklist.json`.
-Count entries with `status: "pending"` or `status: "stale"`. **Report the count to the user**
-(e.g. "PMC: 12 symbols pending enrichment").
-
-If count > 0, launch enrichment:
-
-**With PTY (preferred):**
-```
-pty_spawn:
-  command: "node"
-  args: ["tools/project-memory-context/cli/enrich-queue.mjs", "."]
-  title: "PMC Enrichment"
-  notifyOnExit: true
-  description: "Background PMC enrichment queue"
-```
-For consumer projects (no `tools/` dir): `command: "pmc"`, `args: ["enrich", "."]` — use the **globally-installed** `pmc` binary (resolved via PATH), NOT `npx`. `npx` downloads the package into a temp cache and tries to delete it on exit; since `enrich` is a long-running process that keeps native modules (e.g. `tree-sitter-cli`) open, Windows locks those files and npx's cleanup fails with `EBUSY`/`EPERM` errors. If `pmc` is not found in PATH, tell the user to run `npm install -g @aabadin/project-memory-context` rather than falling back to `npx` for this long-running launch.
-
-After spawning, start the **PTY-based watchdog** (Step 1a).
-
-**Without PTY (fallback):**
 ```bash
-pmc enrich . --background
+pmc session-start .
 ```
-Emit the blocking-Bash reminder. Do NOT use PowerShell `Start-Process -WindowStyle Hidden` — it inherits a restricted PATH, crashes silently, and stalls for ~90s.
 
-### Step 1a: PTY-based watchdog (when HAS_PTY = true)
+Do not manually recreate startup checks in the chat if the plugin already handled startup.
 
-Run a **concurrent watchdog + subagent drain** loop after spawning enrichment.
-Cap: 3 auto-relaunches. Poll every **>=120 seconds**:
+This command handles everything deterministic in one shot:
+- Checks enrichment status; launches background enrich + watchdog if needed
+- Reports pending sync operations (run `/sync-context` to apply)
+- Loads project context from materialized disk artifacts (no MCP round-trip)
+- Reports if LLM subagent drain is needed
+- Ensures the file watcher is running (PID + heartbeat tracked; `pmc watch . --status` / `--stop` to manage)
 
-1. `pty_read` on the enrichment session — scan for errors or progress.
-2. Run `pmc enrich-status` (Bash, quick); read `.state`, `.worklist.pending`, `.subagentQueue.pending`.
-3. State handling:
-   - `running` → alive. Check subagent queue (see below). Wait >=120s.
-   - `finished` AND `.subagentQueue.pending` = 0 → **done**. Report completion summary, stop watchdog.
-   - `finished` AND `.subagentQueue.pending > 0` → keep looping to drain remaining subagents.
-   - `stalled` or `failed` AND `.worklist.pending > 0` → **crashed**:
-     - `pty_kill` the dead session (with `cleanup: true`).
-     - `pty_spawn` a new enrichment session.
-     - Report: "PMC enrichment crashed — relaunched (attempt N/3)".
-   - After 3 failed relaunches: tell the user to run `/pmc-doctor`.
-4. On `<pty_exited>` notification with non-zero exit code → treat as crash, apply step 3 crash logic.
+**If the session summary reports `subagentQueue.pending > 0`**, dispatch the `enrich` subagent to drain those entries — that is the only step that requires LLM involvement.
 
-**Without PTY (fallback watchdog):**
-Poll `pmc enrich-status` every >=120s via Bash. On `stalled`/`failed`, relaunch via Bash.
+## Mandatory PMC Workflow (ENFORCED)
 
-**Concurrent subagent drain** — on every poll iteration, if `.subagentQueue.pending > 0`:
-- Read `enrichment/subagent-queue.json`; take up to 3 entries with `status: "pending"`.
-- For each: dispatch a Task subagent with `entry.prompt` → write response to temp file →
-  run `pmc subagent-apply . --entry-id <id> --content-file <tmpfile>` → delete temp file.
-- This runs **concurrently** with the Ollama CLI — do not wait for Ollama to finish first.
+- **BEFORE reading any source file**: Run `pmc get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.
+- **AFTER implementing code changes**: Run `pmc refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `pmc sync-context` to persist new memories.
+- **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
+- **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
 
-### Step 2: Launch file watcher via PTY (when HAS_PTY = true)
+## Context Retrieval Rules
 
-Spawn the file watcher as a persistent background PTY session:
-
-```
-pty_spawn:
-  command: "node"
-  args: ["tools/project-memory-context/cli/watch.mjs", "."]
-  title: "PMC File Watcher"
-  notifyOnExit: true
-  description: "Watches files, debounced refresh-context --enrich"
-```
-For consumer projects: `command: "pmc"`, `args: ["watch", "."]` — use the **globally-installed** `pmc` binary (resolved via PATH), NOT `npx`. Same reasoning as the enrich launch above: `watch` is a persistent process holding native modules open, and `npx`'s post-run cache cleanup fails with `EBUSY`/`EPERM` on Windows when those files are still locked. If `pmc` is not found in PATH, tell the user to run `npm install -g @aabadin/project-memory-context` rather than falling back to `npx`.
-
-This process uses a built-in 2-second debounce: when source files change (`.ts`, `.tsx`, `.mjs`, `.js`, `.jsx`, `.cs`), it waits 2 seconds of inactivity, then runs `pmc refresh-context --enrich` automatically. The agent does **not** need to manually trigger refresh-context after edits — the watcher handles it.
-
-**Crash recovery:** If the watcher PTY exits (`<pty_exited>` notification), **restart it immediately** with a new `pty_spawn`. No relaunch cap — the watcher is lightweight and should always be running.
-
-**Without PTY:** The opencode-refresh-hook plugin handles this automatically via the `tool.execute.after` hook with a 5-minute debounce. No agent action needed, but the agent loses visibility into when refreshes happen and has no crash recovery.
-
-### Step 3: Check sync-manifest
-
-Read `.planning/project-memory-context/enrichment/sync-manifest.json`. If `entries` contains any element with `status: "pending"`, surface: "PMC has N pending sync operations. Run `/sync-context` to apply them."
-
-### Step 4: Recall base context
-
-Call `agent-memory_search` with `query: "project context overview"` and `tags: ["project-context"]`. Present a brief summary (~500 tokens) to establish session context.
-
-### Step 5: Remind
-
-"Use `/get-context <target>` for structural deep-dive BEFORE reading files."
-
-### Step 6: Load PMC workflow rules
-
-Read and apply the `pmc-skill` skill instructions (`.agents/skills/pmc-skill/SKILL.md`). These rules govern how you interact with PMC throughout the session — query PMC before reading files, available commands, MCP tools, and enrichment launch rules.
-
+| Situation | Command | Depth |
+|-----------|---------|-------|
+| About to read a file | `pmc get-context <file>` | compact |
+| Working on a specific symbol | `pmc get-context <symbol>` | compact |
+| Need dependency information | `pmc get-context <symbol> extended dependencies` | extended |
+| Debugging complex issues | `pmc get-context <symbol> deep all` | deep |
+| Need raw source code | `pmc get-context <symbol> disk` | disk |
+| Quick project overview | `agent-memory_search "project context overview"` | — |
+| After code changes | `pmc refresh-context --enrich` then `pmc sync-context` | — |
 <!-- /pmc:autostart -->
 
 ---

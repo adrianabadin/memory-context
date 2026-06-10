@@ -1,7 +1,7 @@
 <!-- pmc:autostart -->
 ## PMC Session Autostart
 
-When PMC is installed as an OpenCode plugin, session initialization is executed by the plugin in a zero-token Node runtime during startup. The plugin reads PMC disk state, launches background enrichment/watchdog if needed, and writes the latest startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` and `.planning/project-memory-context/runs/session-start/latest.md`.
+PMC installs an auto-loaded OpenCode plugin at `.opencode/plugins/pmc.mjs`. On every OpenCode startup the plugin runs a zero-token Node runtime that: launches `refresh-context --enrich` in the background (hash-incremental), launches background enrichment + watchdog if pending symbols exist, ensures a single detached file watcher per project (5-minute per-file quiet debounce → automatic refresh + enrich), and writes the startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` / `latest.md`. Nothing blocks the session; check `{{PMC_BIN}} watch . --status` or the snapshot to inspect state.
 
 **If the PMC plugin is not installed or is disabled**, run this once per session:
 
@@ -16,6 +16,7 @@ This command handles everything deterministic in one shot:
 - Reports pending sync operations (run `/sync-context` to apply)
 - Loads project context from materialized disk artifacts (no MCP round-trip)
 - Reports if LLM subagent drain is needed
+- Ensures the file watcher is running (PID + heartbeat tracked; `{{PMC_BIN}} watch . --status` / `--stop` to manage)
 
 **If the session summary reports `subagentQueue.pending > 0`**, dispatch the `enrich` subagent to drain those entries — that is the only step that requires LLM involvement.
 
