@@ -16,5 +16,5 @@ export const PMCPlugin = async ({ directory, __testOverrides } = {}) => {
 
   return {};
 };
-
-export default PMCPlugin;
+// No default export on purpose: OpenCode's loader may invoke every function
+// export (including `default`), which would run startup twice per session.
