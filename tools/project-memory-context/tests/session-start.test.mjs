@@ -15,7 +15,7 @@ import {
 } from '../src/session-start-runtime.mjs';
 import { writeWatchPidRecord } from '../src/watcher-lifecycle.mjs';
 import { runSessionStart } from '../cli/session-start.mjs';
-import pluginFactory from '../plugin/index.mjs';
+import { PMCPlugin } from '../plugin/index.mjs';
 
 async function createSessionStartFixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-session-start-'));
@@ -247,52 +247,29 @@ test('runSessionStart writes nothing and returns 0 when runtime reports hasPmc: 
   assert.equal(writes.length, 0);
 });
 
-test('OpenCode plugin runs the shared session-start runtime during config()', async () => {
-  const events = [];
-
-  const plugin = await pluginFactory({
-    directory: 'C:/repo',
+test('PMCPlugin runs session-start runtime on initialization and returns hooks object', async () => {
+  const calls = [];
+  const hooks = await PMCPlugin({
+    directory: '/proj',
     __testOverrides: {
-      readInstallState: async () => ({ projectRoot: 'C:/repo', memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db' }),
-      createController: () => ({
-        rehydrate: async () => { events.push('rehydrate'); },
-        onToolExecuteAfter: async () => {},
-      }),
-      runSessionStartRuntime: async (projectRoot, options) => {
-        events.push(`runtime:${projectRoot}:${options.mode}`);
-        return { hasPmc: true };
-      },
+      runSessionStartRuntime: async (root, opts) => { calls.push({ root, opts }); },
     },
   });
-
-  const cfg = {};
-  await plugin.config(cfg);
-
-  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
-  assert.deepEqual(events, ['rehydrate', 'runtime:C:/repo:opencode-plugin']);
+  assert.deepEqual(calls, [{ root: '/proj', opts: { mode: 'opencode-plugin' } }]);
+  assert.equal(typeof hooks, 'object');
+  // Refresh hook eliminated: the FS watcher replaces tool.execute.after
+  assert.equal(hooks['tool.execute.after'], undefined);
+  assert.equal(hooks.config, undefined);
 });
 
-test('OpenCode plugin config() swallows runtime errors so startup never fails', async () => {
-  const plugin = await pluginFactory({
-    directory: 'C:/repo',
+test('PMCPlugin swallows runtime errors so OpenCode startup never fails', async () => {
+  const hooks = await PMCPlugin({
+    directory: '/proj',
     __testOverrides: {
-      readInstallState: async () => ({
-        projectRoot: 'C:/repo',
-        memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db',
-      }),
-      createController: () => ({
-        rehydrate: async () => {},
-        onToolExecuteAfter: async () => {},
-      }),
-      runSessionStartRuntime: async () => {
-        throw new Error('boom');
-      },
+      runSessionStartRuntime: async () => { throw new Error('disk exploded'); },
     },
   });
-
-  const cfg = {};
-  await assert.doesNotReject(() => plugin.config(cfg));
-  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
+  assert.equal(typeof hooks, 'object');
 });
 
 test('launchRefreshContext spawns detached refresh-context --enrich from package cli dir', () => {

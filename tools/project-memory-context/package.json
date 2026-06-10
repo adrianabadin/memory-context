@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.mjs",
     "./platform": "./src/platform.mjs",
-    "./retrieval": "./src/retrieval/query-engine.mjs"
+    "./retrieval": "./src/retrieval/query-engine.mjs",
+    "./plugin": "./plugin/index.mjs"
   },
   "bin": {
     "pmc": "bin/pmc.mjs",
