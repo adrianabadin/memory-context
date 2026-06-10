@@ -163,3 +163,23 @@ test('installAgentTemplates(opencode) merges MCP config into .opencode/opencode.
   await rm(projectRoot, { recursive: true, force: true });
   await rm(globalConfigDir, { recursive: true, force: true });
 });
+
+test('installOpencode overwrites a stale $schema in existing opencode.json', async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-installer-schema-'));
+  const globalConfigDir = await mkdtemp(join(tmpdir(), 'pmc-installer-global-'));
+
+  await mkdir(join(projectRoot, '.opencode'), { recursive: true });
+  await writeFile(
+    join(projectRoot, '.opencode', 'opencode.json'),
+    JSON.stringify({ $schema: 'https://wrong.example.com/config.json', theme: 'dark' }),
+  );
+
+  await installAgentTemplates({ projectRoot, agent: 'opencode', globalConfigDir, packageRoot });
+
+  const config = JSON.parse(await readFile(join(projectRoot, '.opencode', 'opencode.json'), 'utf8'));
+  assert.equal(config.$schema, 'https://opencode.ai/config.json');
+  assert.equal(config.theme, 'dark');
+
+  await rm(projectRoot, { recursive: true, force: true });
+  await rm(globalConfigDir, { recursive: true, force: true });
+});

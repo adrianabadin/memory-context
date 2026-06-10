@@ -135,8 +135,10 @@ async function writeOpencodeProjectConfig({ projectRoot, installState }) {
 
   const injected = buildInjectedPmcConfig({ installState });
   const merged = {
-    $schema: 'https://opencode.ai/config.json',
     ...existing,
+    // Installer-owned field: always set the canonical schema, even if the
+    // existing config carries a stale or wrong one.
+    $schema: 'https://opencode.ai/config.json',
     mcp: { ...(existing.mcp ?? {}), ...injected.mcp },
   };
 
