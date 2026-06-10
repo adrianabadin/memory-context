@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -118,4 +118,48 @@ test('installAgentTemplates(claude-code) still works without globalConfigDir', a
     // CLAUDE.md in project should still be created
     assert.ok(existsSync(join(projectRoot, 'CLAUDE.md')));
   });
+});
+
+// ─── opencode plugin + MCP config ───────────────────────────────────────────
+
+test('installAgentTemplates(opencode) writes auto-load plugin wrapper to .opencode/plugins/pmc.mjs', async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-installer-plugin-'));
+  const globalConfigDir = await mkdtemp(join(tmpdir(), 'pmc-installer-global-'));
+
+  await installAgentTemplates({ projectRoot, agent: 'opencode', globalConfigDir, packageRoot });
+
+  const pluginPath = join(projectRoot, '.opencode', 'plugins', 'pmc.mjs');
+  const content = await readFile(pluginPath, 'utf8');
+  assert.match(content, /export const PMCPlugin/);
+  // Placeholder resolved to an absolute file:// URL pointing at this package's plugin entry
+  assert.match(content, /file:\/\/.*plugin\/index\.mjs/);
+  assert.doesNotMatch(content, /\{\{PMC_PLUGIN_IMPORT\}\}/);
+
+  await rm(projectRoot, { recursive: true, force: true });
+  await rm(globalConfigDir, { recursive: true, force: true });
+});
+
+test('installAgentTemplates(opencode) merges MCP config into .opencode/opencode.json preserving existing keys', async () => {
+  const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-installer-mcp-'));
+  const globalConfigDir = await mkdtemp(join(tmpdir(), 'pmc-installer-global-'));
+
+  // Pre-existing user config must survive the merge
+  await mkdir(join(projectRoot, '.opencode'), { recursive: true });
+  await writeFile(
+    join(projectRoot, '.opencode', 'opencode.json'),
+    JSON.stringify({ theme: 'dark', mcp: { 'user-server': { type: 'local', command: ['x'] } } }),
+  );
+
+  await installAgentTemplates({ projectRoot, agent: 'opencode', globalConfigDir, packageRoot });
+
+  const config = JSON.parse(await readFile(join(projectRoot, '.opencode', 'opencode.json'), 'utf8'));
+  assert.equal(config.$schema, 'https://opencode.ai/config.json');
+  assert.equal(config.theme, 'dark');
+  assert.ok(config.mcp['user-server']);
+  assert.ok(config.mcp['pmc-query']);
+  assert.ok(config.mcp['pmc-agent-memory']);
+  assert.equal(config.mcp['pmc-query'].environment.PMC_PROJECT_ROOT, projectRoot);
+
+  await rm(projectRoot, { recursive: true, force: true });
+  await rm(globalConfigDir, { recursive: true, force: true });
 });
