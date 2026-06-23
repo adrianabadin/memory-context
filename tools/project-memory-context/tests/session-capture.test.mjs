@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rmSync, existsSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { rmSync, existsSync, readFileSync, writeFileSync, statSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -59,9 +59,8 @@ test('sanitizeArgs() masks bearer tokens, api_key, and password fields', () => {
 
 test('Queue rotation at >=1MB renames old file and starts fresh', () => {
   resetQueue();
+  mkdirSync(tmp, { recursive: true });
   // Pre-fill queue file to exactly 1MB boundary (>= 1MB triggers rotation)
-  const oneByte = JSON.stringify({ type: 'prompt', ts: 0, content: 'x' }) + '\n';
-  // Build a file >= 1MB
   writeFileSync(queuePath, 'x'.repeat(1_048_576));
   const beforeSize = statSync(queuePath).size;
   assert.ok(beforeSize >= 1_048_576);
@@ -69,7 +68,9 @@ test('Queue rotation at >=1MB renames old file and starts fresh', () => {
   appendToQueue(queuePath, { type: 'prompt', ts: 99, content: 'rotated' });
 
   // Old file renamed to pmc-capture-queue.{ts}.jsonl
-  const rotatedFiles = require_rotated_files(tmp);
+  const rotatedFiles = readdirSync(tmp).filter(
+    (f) => f.startsWith('pmc-capture-queue.') && f.endsWith('.jsonl') && f !== 'pmc-capture-queue.jsonl'
+  );
   assert.ok(rotatedFiles.length >= 1, 'expected a rotated archive file');
   // New queue file exists and is fresh (small, contains only the new event)
   assert.equal(existsSync(queuePath), true);
@@ -117,11 +118,3 @@ test('Hook payloads match expected schema for prompt and tool_call', () => {
   resetQueue();
 });
 
-// helper: list rotated archive files
-function require_rotated_files(dir) {
-  const { readdirSync } = require('node:fs');
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter(
-    (f) => f.startsWith('pmc-capture-queue.') && f.endsWith('.jsonl') && f !== 'pmc-capture-queue.jsonl'
-  );
-}
