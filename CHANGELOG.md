@@ -2,6 +2,21 @@
 
 All notable changes to the PMC toolchain are documented in this file.
 
+## [Unreleased] — Symbol-Linked Memory Context
+
+### Added
+
+- **Soft symbol links** (implemented in `agent-memory-mcp/src/sqlite-store.ts`): optional `symbol_key` (`lang|path|kind|scope|name|arity`) on `memories` and all 4 session-ledger tables. Survives graph rebuilds; unresolved keys soft-miss (empty result, never an error).
+- **Symbol MCP tools** (implemented in `agent-memory-mcp/src/tools.ts`): `attach_symbol` (upsert a symbol key onto a memory/session item), `get_by_symbol` (retrieve all records linked to a symbol), `enrich_symbols` (per-symbol enrichment batch — unknown keys soft-miss without failing the batch).
+- **Project-scoped session retrieval** (implemented in `agent-memory-mcp/src/sqlite-store.ts`): session rows carry `project_id`; `search_sessions` is **default-deny** for legacy null-project rows unless `includeLegacy: true`. `set_session_context` backfills `project_id` on existing rows (idempotent).
+- **get-context semantic composition** (implemented in `tools/project-memory-context/cli/context.mjs`, `src/retrieval/query-engine.mjs`, `src/retrieval/context-renderer-v1.mjs`): `pmc get-context <symbol>` composes a **Semantic Memory** section from `symbol_key`-linked memories. New `cli/memory-store-loader.mjs` opens the agent-memory DB read-only via `node:sqlite` (build-independent, legacy-DB-safe). Depth-aware rendering (compact = 200 chars, extended/deep = full, disk = full + source).
+- **Lock-tolerant retrieval** (implemented in `tools/project-memory-context/cli/lock-retry.mjs`, `src/graph-store/graph-db.mjs`): `withLockRetry` (WAL + `busy_timeout=5000` + 3-attempt exponential backoff with stale fallback) wraps enrichment reads.
+- **Schema v7**: `symbol_key` on `memories`; `project_id`/`symbol_key` on all 4 session tables; indexes on every new column.
+
+### Changed
+
+- `parseSearchQuery` now accepts `projectId` and `includeLegacy` and flows them through to project-scoped session search (previously `projectId` was rejected).
+
 ## [Unreleased] — PMC Sleep Mode, Gradual Forgetting & Semantic Search
 
 ### Added

@@ -113,6 +113,7 @@ The agent-memory-mcp package exposes these tools (registered on the `pmc-agent-m
 **Session Context**: `set_session_context`, `get_session_context`
 **Session Ledger**: `store_session_prompt`, `store_session_response`, `store_session_tool_call`, `store_session_summary`, `get_session`, `list_sessions`, `link_prompt_to_memory`
 **Session Forget/Purge**: `forget_session_item`, `purge_session_item`
+**Symbol Links**: `attach_symbol`, `get_by_symbol`, `enrich_symbols`
 **Global Context**: `register_project`, `sync_project_metadata`, `record_error`, `search_global_errors`, `merge_projects`
 
 ### PMC Query Tools
@@ -140,8 +141,42 @@ The agent-memory-mcp database uses incremental schema migrations via `PRAGMA use
 | v4 | `memory_gists`, `memory_decay_log` tables; `activation_score`/`memory_state`/`last_reinforced_at` on `memories` |
 | v5 | `memory_revive_reviews`, `global_promotion_log` tables; `non_forgettable` on `memories` |
 | v6 | `gist_id`/`confidence` on `memory_revive_reviews` |
+| v7 | `symbol_key` on `memories`; `project_id`/`symbol_key` on all 4 session tables; indexes on every new column |
 
 All migrations use `addColumnIfMissing` and `CREATE TABLE IF NOT EXISTS` — idempotent and backward-compatible.
+
+## Symbol-Linked Memory
+
+Memories and session-ledger rows carry an optional `symbol_key` — a **soft foreign key** (`lang|path|kind|scope|name|arity`) that links a record to a code symbol. It is soft by design: it survives destructive graph rebuilds (the graph owns no memory rows), and a renamed or removed symbol yields a **soft-miss** (empty result, never an error) rather than breaking retrieval.
+
+| Concern | Behavior |
+|---------|----------|
+| Durability | `symbol_key` is stored on the `memories`/session rows; graph rebuilds never null or rewrite it |
+| Soft-miss | Querying an unresolved key returns `[]`, not an error; sibling keys still resolve |
+| Project scope | Session rows carry `project_id`; project-scoped session search is **default-deny** (legacy null-project rows excluded unless `includeLegacy: true`) |
+| Backfill | `set_session_context(sessionId, projectId)` backfills `project_id` on existing rows of that session (idempotent — never overwrites a non-null value) |
+
+### Symbol MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `attach_symbol` | Attach a `symbol_key` to an existing memory or session item (upsert — overwrites prior key) |
+| `get_by_symbol` | Return memories + session items linked to a `symbol_key`; sources default to `['memory', 'session_summary']` |
+| `enrich_symbols` | Fetch semantic enrichment for one or more symbols; returns one per-symbol result (`{ symbolKey, found, raw?, structured? }`) — unknown keys soft-miss without failing the batch |
+
+### get-context Composition
+
+`pmc get-context <symbol>` composes structural graph data with **linked semantic memory** keyed by the durable `symbol_key`. `cli/context.mjs` `main()` opens the agent-memory SQLite DB read-only (via `cli/memory-store-loader.mjs`, built on `node:sqlite` — build-independent and legacy-DB-safe), forwards it to the query engine, and the renderer emits a **Semantic Memory** section. Reads are wrapped in lock-tolerant retry (`cli/lock-retry.mjs`: WAL + `busy_timeout=5000` + 3-attempt exponential backoff with stale fallback).
+
+Depth controls the rendering:
+
+| Depth | Semantic Memory | Source slice |
+|-------|-----------------|--------------|
+| compact | first 200 chars of linked memories | — |
+| extended / deep | full linked memory content | — |
+| disk | full linked memory content | included |
+
+If the agent-memory DB is unconfigured (no `.mcp.json`) or pre-v7 (no `symbol_key` column), composition degrades gracefully: no Semantic Memory section, no crash.
 
 ## On-Disk State
 
