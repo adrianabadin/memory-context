@@ -1,3 +1,25 @@
+// tools/project-memory-context/src/session-capture.mjs
+// OpenCode session-capture hooks + synchronous JSONL queue.
+//
+// Secret-redaction patterns (applied BEFORE any queue write):
+//   1. Chat content: `<private>...</private>` segments are replaced with the
+//      literal `[REDACTED]` (case-insensitive, dot-all). This matches the
+//      convention used by agents that wrap sensitive spans in <private> tags.
+//   2. Tool args: every key whose lowercase name CONTAINS one of the sensitive
+//      fragments — `authorization`, `api_key`, `apikey`, `password`, `secret`,
+//      `token` — has its value replaced with `***REDACTED***`. Matching is
+//      recursive (arrays + nested objects) and depth-capped at 5 to bound
+//      traversal. A JSON-string `args` value is parsed first; a non-JSON
+//      string is passed through untouched (never throws).
+//   3. Tool results: bounded to a 200-char `resultSummary`; the full result is
+//      NOT queued, so large/secrets-bearing payloads are truncated before they
+//      ever reach disk.
+//
+// The queue file (`pmc-capture-queue.jsonl`) is appended synchronously
+// (`appendFileSync`) so a process crash mid-session cannot lose already-captured
+// rows. Rotation triggers at 1 MiB: the live file is renamed to
+// `pmc-capture-queue.<timestamp>.jsonl` and a fresh live file starts. The
+// drainer reads rotated archives oldest-first (see cli/capture-drain.mjs).
 import { appendFileSync, statSync, renameSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 

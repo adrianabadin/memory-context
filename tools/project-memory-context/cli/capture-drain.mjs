@@ -12,6 +12,41 @@
 //   - Retry transient failures 3x with exponential backoff (100ms, 200ms, 400ms).
 //   - Exit cleanly when the queue is empty and idle for 30s.
 //   - Release the lock on every exit path.
+//
+// Lock semantics:
+//   - `acquireLock` uses `writeFileSync(..., { flag: 'wx' })` for an atomic
+//     create. On EEXIST it reads the holder PID and probes liveness with
+//     `kill(pid, 0)`. A dead/stale holder allows the lock to be stolen; a live
+//     holder makes the drainer exit silently (`exitReason: 'locked'`).
+//   - `releaseLock` is best-effort and idempotent (a missing lock on exit is
+//     not fatal). It is called from a `finally` block so every exit path
+//     (success, error, idle, locked-after-steal) releases the lock.
+//
+// Batch semantics:
+//   - Up to `DEFAULT_BATCH_SIZE` (100) entries are read per cycle, oldest
+//     first across rotated archives + the live file. After a batch is
+//     processed, the remaining entries are atomically rewritten into the live
+//     queue (tmp-write → rename, with a Windows unlink-then-rename fallback)
+//     and rotated archives are deleted. An empty result file is unlinked so
+//     "queue empty" is observable on disk.
+//
+// Retry semantics:
+//   - `withRetry` attempts the operation once, then retries up to
+//     `DEFAULT_RETRIES` (3) times with `DEFAULT_BACKOFF` ([100, 200, 400] ms).
+//     If every attempt fails the last error is rethrown. `runDrain` does NOT
+//     rewrite the queue on that path, so the failed entry stays in the queue
+//     for the next drain run (no data loss).
+//
+// Windows EBUSY mitigation (two layers):
+//   1. Driver layer — `createLedgerOnlyStore` opens SQLite in WAL mode and
+//      sets `PRAGMA busy_timeout = 5000`, so transient `SQLITE_BUSY`/EBUSY
+//      from concurrent access by the main agent process retries inside SQLite
+//      for up to 5s before surfacing.
+//   2. Application layer — `withRetry` wraps each entry write in 3 retries
+//      with exponential backoff (100ms, 200ms, 400ms). A persistent failure
+//      after both layers preserves the entry in the queue for the next run.
+//   The two layers compose: driver retry first, then application retry, then
+//   queue preservation. No data loss on transient or persistent lock errors.
 
 import {
   existsSync,
