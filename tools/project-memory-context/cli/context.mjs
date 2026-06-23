@@ -9,6 +9,7 @@ import { createQueryEngine, focusToEdgeTypes } from '../src/retrieval/query-engi
 import { resolveTarget } from '../src/retrieval/target-resolver.mjs';
 import { renderTargetContext } from '../src/retrieval/context-renderer-v1.mjs';
 import { getSymbolSource } from '../src/retrieval/source-cache.mjs';
+import { loadMemoryStore } from './memory-store-loader.mjs';
 
 async function fileExists(filePath) {
   try {
@@ -151,7 +152,7 @@ function groupEdges(edges, edgeTypes) {
   return result;
 }
 
-export function buildRenderInput(engine, resolved, { depth, focus }) {
+export async function buildRenderInput(engine, resolved, { depth, focus }) {
   const edgeTypes = focusToEdgeTypes(focus);
   let summary = [];
   let target = {};
@@ -161,13 +162,14 @@ export function buildRenderInput(engine, resolved, { depth, focus }) {
 
   switch (resolved.mode) {
     case 'symbol': {
-      const ctx = engine.querySymbolContext({ symbolKey: resolved.symbolKey, depth });
+      const ctx = await engine.querySymbolContext({ symbolKey: resolved.symbolKey, depth });
       target = {
         mode: 'symbol',
         name: ctx.target?.name,
         filePath: ctx.target?.filePath,
         range: ctx.target?.range ?? null,
         codeHash: ctx.target?.codeHash ?? null,
+        linkedMemories: ctx.target?.linkedMemories ?? [],
       };
       summary = [`Symbol: ${ctx.target?.name || resolved.target} (${ctx.target?.kind || 'unknown'})`];
       relevant = (ctx.neighbors || []).map((n) => ({
@@ -191,7 +193,7 @@ export function buildRenderInput(engine, resolved, { depth, focus }) {
       break;
     }
     case 'file': {
-      const ctx = engine.queryFileContext({ filePath: resolved.target, depth });
+      const ctx = await engine.queryFileContext({ filePath: resolved.target, depth });
       target = { mode: 'file', filePath: resolved.target };
       summary = ctx.symbols && ctx.symbols.length > 0
         ? ctx.symbols.map((s) => `${s.name || 'unknown'} (${s.kind || 'symbol'})`)
@@ -228,7 +230,7 @@ export function buildRenderInput(engine, resolved, { depth, focus }) {
   };
 }
 
-export async function runTargetContext({ projectRoot, target, explicitMode, depth, focus, artifacts }) {
+export async function runTargetContext({ projectRoot, target, explicitMode, depth, focus, artifacts, memoryStore }) {
   const ownedArtifacts = artifacts == null;
   const artfs = artifacts ?? await loadArtifacts(projectRoot);
   try {
@@ -238,11 +240,12 @@ export async function runTargetContext({ projectRoot, target, explicitMode, dept
       worklist: artfs.worklist,
       enrichmentDir: join(projectRoot, '.planning', 'project-memory-context', 'enrichment'),
       projectSlug: 'project',
+      memoryStore,
     });
 
     const resolved = resolveTarget({ engine, explicitMode, target });
 
-    const input = buildRenderInput(engine, resolved, { depth, focus });
+    const input = await buildRenderInput(engine, resolved, { depth, focus });
 
     // When depth is 'disk' and we resolved a single symbol, fetch the source slice.
     if (depth === 'disk' && resolved.mode === 'symbol' && input.target?.filePath && input.target?.range) {
@@ -303,7 +306,7 @@ function printHelp() {
   console.log('  pmc get-context . --refresh');
 }
 
-export async function main(args = process.argv.slice(2)) {
+export async function main(args = process.argv.slice(2), { memoryStoreLoader = loadMemoryStore } = {}) {
   const parsed = parseArgs(args);
 
   if (parsed.help) {
@@ -362,6 +365,10 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   const artifacts = await loadArtifacts(projectRoot);
+  // Open a read-only agent-memory store so get-context can compose
+  // symbol-linked Semantic Memory. Loader never throws — it returns null when
+  // agent-memory is unconfigured, leaving the structural context intact.
+  const memoryStore = await memoryStoreLoader(projectRoot);
   try {
     const { output, resolved } = await runTargetContext({
       projectRoot,
@@ -370,6 +377,7 @@ export async function main(args = process.argv.slice(2)) {
       depth: parsed.depth,
       focus: parsed.focus,
       artifacts,
+      memoryStore,
     });
 
     const nodeIdsToMark = [];
@@ -388,6 +396,9 @@ export async function main(args = process.argv.slice(2)) {
   } finally {
     if (typeof artifacts.graphStore?.close === 'function') {
       artifacts.graphStore.close();
+    }
+    if (typeof memoryStore?.close === 'function') {
+      memoryStore.close();
     }
   }
 }

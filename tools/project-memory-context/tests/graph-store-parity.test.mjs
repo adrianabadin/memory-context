@@ -74,15 +74,15 @@ test('createQueryEngine accepts new graphStore param', () => {
 // ── Parity: traversal ────────────────────────────────────────────────────────
 
 function parityTest(label, fn) {
-  test(`parity — ${label}`, () => {
+  test(`parity — ${label}`, async () => {
     const inmem = createQueryEngine({ graph: GRAPH, symbolIndex: {}, worklist: [] });
     const sqlite = createQueryEngine({
       graphStore: makeSqliteStore(GRAPH),
       symbolIndex: {},
       worklist: [],
     });
-    const inmemResult = fn(inmem);
-    const sqliteResult = fn(sqlite);
+    const inmemResult = await fn(inmem);
+    const sqliteResult = await fn(sqlite);
     assert.deepEqual(
       nodeIds(inmemResult),
       nodeIds(sqliteResult),
@@ -115,12 +115,12 @@ parityTest('traverse filter imports only', (e) =>
   e.traverseGraph({ nodeIds: ['n4'], maxHops: 2, edgeTypes: ['imports'] }));
 
 // queryFileContext returns { symbols, neighbors, edges } — adapt to the nodeIds helper shape
-parityTest('queryFileContext src/user.ts', (e) => {
-  const r = e.queryFileContext({ filePath: 'src/user.ts', depth: 'compact' });
+parityTest('queryFileContext src/user.ts', async (e) => {
+  const r = await e.queryFileContext({ filePath: 'src/user.ts', depth: 'compact' });
   return { nodes: r.neighbors, edges: r.edges };
 });
 
-parityTest('queryFileContext src/post.ts deep', (e) => {
-  const r = e.queryFileContext({ filePath: 'src/post.ts', depth: 'deep' });
+parityTest('queryFileContext src/post.ts deep', async (e) => {
+  const r = await e.queryFileContext({ filePath: 'src/post.ts', depth: 'deep' });
   return { nodes: r.neighbors, edges: r.edges };
 });

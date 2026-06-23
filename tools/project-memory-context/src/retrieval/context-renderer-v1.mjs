@@ -77,5 +77,15 @@ export function renderTargetContext({ summary = [], target = {}, relevant = [], 
     }
   }
 
+  // ── Semantic Memory (linked memories from symbol links) ─────────
+  if (target.linkedMemories?.length > 0) {
+    lines.push('');
+    lines.push('Semantic Memory');
+    for (const mem of target.linkedMemories) {
+      const typeTag = mem.type ? ` (${mem.type})` : '';
+      lines.push(`- ${mem.content}${typeTag}`);
+    }
+  }
+
   return lines.join('\n');
 }

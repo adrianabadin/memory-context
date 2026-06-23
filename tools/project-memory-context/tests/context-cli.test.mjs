@@ -477,7 +477,7 @@ test('findProjectRoot returns null outside PMC project', async () => {
   }
 });
 
-test('buildRenderInput symbol mode produces expected shape', () => {
+test('buildRenderInput symbol mode produces expected shape', async () => {
   const sk = 'ts|src/engine.mjs||function|createEngine|0';
   const engine = createQueryEngine({
     graph: {
@@ -499,7 +499,7 @@ test('buildRenderInput symbol mode produces expected shape', () => {
   });
 
   const resolved = { mode: 'symbol', target: 'createEngine', symbolKey: sk };
-  const input = buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
 
   assert.equal(input.target.mode, 'symbol');
   assert.equal(input.target.name, 'createEngine');
@@ -510,7 +510,7 @@ test('buildRenderInput symbol mode produces expected shape', () => {
   assert.equal(input.metadata.focus, 'all');
 });
 
-test('buildRenderInput symbol-ambiguous mode lists candidates', () => {
+test('buildRenderInput symbol-ambiguous mode lists candidates', async () => {
   const engine = createQueryEngine({
     graph: { nodes: [], links: [] },
     symbolIndex: {},
@@ -527,7 +527,7 @@ test('buildRenderInput symbol-ambiguous mode lists candidates', () => {
       'ts|src/b.mjs||function|render|1',
     ],
   };
-  const input = buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
 
   assert.equal(input.target.mode, 'symbol-ambiguous');
   assert.equal(input.target.name, 'render');
@@ -535,7 +535,7 @@ test('buildRenderInput symbol-ambiguous mode lists candidates', () => {
   assert.equal(input.relevant.length, 2);
 });
 
-test('buildRenderInput file mode produces expected shape', () => {
+test('buildRenderInput file mode produces expected shape', async () => {
   const sk1 = 'ts|src/auth.ts||function|login|0';
   const engine = createQueryEngine({
     graph: {
@@ -557,7 +557,7 @@ test('buildRenderInput file mode produces expected shape', () => {
   });
 
   const resolved = { mode: 'file', target: 'src/auth.ts' };
-  const input = buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
 
   assert.equal(input.target.mode, 'file');
   assert.equal(input.target.filePath, 'src/auth.ts');
@@ -565,7 +565,7 @@ test('buildRenderInput file mode produces expected shape', () => {
   assert.ok(input.relations.some(r => r.kind === 'calls'), 'should have calls relation');
 });
 
-test('buildRenderInput query mode produces minimal result', () => {
+test('buildRenderInput query mode produces minimal result', async () => {
   const engine = createQueryEngine({
     graph: { nodes: [], links: [] },
     symbolIndex: {},
@@ -575,7 +575,7 @@ test('buildRenderInput query mode produces minimal result', () => {
   });
 
   const resolved = { mode: 'query', target: 'how auth works' };
-  const input = buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
 
   assert.equal(input.target.mode, 'query');
   assert.equal(input.target.value, 'how auth works');
@@ -583,7 +583,7 @@ test('buildRenderInput query mode produces minimal result', () => {
   assert.equal(input.relations.length, 0);
 });
 
-test('buildRenderInput symbol-missing mode shows no-match result', () => {
+test('buildRenderInput symbol-missing mode shows no-match result', async () => {
   const engine = createQueryEngine({
     graph: { nodes: [], links: [] },
     symbolIndex: {},
@@ -593,7 +593,7 @@ test('buildRenderInput symbol-missing mode shows no-match result', () => {
   });
 
   const resolved = { mode: 'symbol-missing', target: 'UnknownSymbol' };
-  const input = buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
 
   assert.equal(input.target.mode, 'symbol-missing');
   assert.equal(input.target.name, 'UnknownSymbol');

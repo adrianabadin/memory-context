@@ -317,7 +317,7 @@ test('traverseGraph returns empty for unknown seed nodes', () => {
   assert.equal(result.depth_reached, 0);
 });
 
-test('querySymbolContext returns enrichment and structural neighbors for a symbol', () => {
+test('querySymbolContext returns enrichment and structural neighbors for a symbol', async () => {
   const engine = createQueryEngine({
     graph: {
       nodes: [
@@ -342,7 +342,7 @@ test('querySymbolContext returns enrichment and structural neighbors for a symbo
     ],
   });
 
-  const result = engine.querySymbolContext({ symbolKey: 'ts|src/mod.ts|class|exported|MyClass|0', depth: 'compact' });
+  const result = await engine.querySymbolContext({ symbolKey: 'ts|src/mod.ts|class|exported|MyClass|0', depth: 'compact' });
   assert.equal(result.target.symbolKey, 'ts|src/mod.ts|class|exported|MyClass|0');
   assert.equal(result.target.graphNodeId, 'n_class');
   assert.ok(result.neighbors.length >= 1);
@@ -350,7 +350,7 @@ test('querySymbolContext returns enrichment and structural neighbors for a symbo
   assert.ok(result.neighbors.some((n) => n.graphNodeId === 'n_import'));
 });
 
-test('queryFileContext returns all symbols in a file with neighbors', () => {
+test('queryFileContext returns all symbols in a file with neighbors', async () => {
   const engine = createQueryEngine({
     graph: {
       nodes: [
@@ -373,14 +373,14 @@ test('queryFileContext returns all symbols in a file with neighbors', () => {
     ],
   });
 
-  const result = engine.queryFileContext({ filePath: 'src/mod.ts', depth: 'compact' });
+  const result = await engine.queryFileContext({ filePath: 'src/mod.ts', depth: 'compact' });
   assert.equal(result.symbols.length, 2);
   assert.ok(result.symbols.some((s) => s.name === 'MyClass'));
   assert.ok(result.symbols.some((s) => s.name === 'run'));
   assert.ok(result.neighbors.length >= 1);
 });
 
-test('queryImpactScope returns inbound dependents', () => {
+test('queryImpactScope returns inbound dependents', async () => {
   const engine = createQueryEngine({
     graph: {
       nodes: [
@@ -401,7 +401,7 @@ test('queryImpactScope returns inbound dependents', () => {
     worklist: [],
   });
 
-  const result = engine.queryImpactScope({ symbolKeys: ['ts|src/a.ts|function|exported|target|0'], depth: 'compact' });
+  const result = await engine.queryImpactScope({ symbolKeys: ['ts|src/a.ts|function|exported|target|0'], depth: 'compact' });
   assert.equal(result.target.symbolKey, 'ts|src/a.ts|function|exported|target|0');
   assert.equal(result.dependents.length, 2);
   assert.ok(result.dependents.some((d) => d.graphNodeId === 'n_caller1'));
