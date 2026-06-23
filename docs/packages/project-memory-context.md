@@ -73,20 +73,15 @@ Used with `get-context`:
 | `deep` | Full traversal with all available detail |
 | `disk` | Raw source code of the target |
 
-### `pmc impact` Output
+### Impact Analysis
 
-`pmc impact` is the pre-commit blast-radius report. It does not modify any on-disk state.
+Impact (blast-radius) analysis is available as a focus mode within `get-context`:
 
-| Field | Meaning |
-|-------|---------|
-| `changedFiles` | Files git sees as changed (modified or untracked), filtered to extensions PMC indexes |
-| `changedSymbols` | Symbols whose codeHash drifted from the worklist |
-| `unindexedFiles` | Changed files not in the PMC worklist |
-| `impact` | Downstream dependents grouped by hop distance (1 = direct caller, 2+ = transitive) |
-| `summary.direct` | Count of drifted symbols with at least one downstream dependent |
-| `summary.transitive` | Count of dependents at distance >= 2 |
+```bash
+pmc get-context <target> extended impact
+```
 
-Flags: `--max-depth <N>` (default 3, max 8), `--json` (raw object). Also available as MCP tool `pmc_impact(maxDepth?)`.
+This returns downstream dependents grouped by hop distance. A standalone `pmc impact` CLI command and `pmc_impact` MCP tool are planned but not yet implemented.
 
 ## PMC MCP Query Tools
 
@@ -100,7 +95,6 @@ The PMC query server (`pmc-query-server`) exposes these tools:
 | `pmc_get_dependencies` | `symbol` | Symbol list | List symbols the given symbol key depends on |
 | `pmc_get_context` | `target`, `depth?` (`compact`/`extended`/`deep`), `focus?` | Structured context | Structured context for a symbol, file, or query |
 | `pmc_trace_paths` | `symbol`, `direction?` (`in`/`out`/`both`), `maxDepth?` (1-8) | Path trace | Trace upstream/downstream symbol paths with bidirectional BFS |
-| `pmc_impact` | `maxDepth?` (1-8) | Impact report | Map uncommitted changes to blast radius across the PMC graph |
 
 > **Note**: A unified `pmc` MCP server that composes both query and memory tools is planned but not yet implemented. The composable query module (`mcp/query-tools.mjs`) already exists and exports `registerQueryTools()` for future composition. Currently, query tools are served by `pmc-query-server` and memory tools by `pmc-agent-memory`.
 

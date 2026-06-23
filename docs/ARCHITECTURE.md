@@ -127,7 +127,6 @@ The PMC query server exposes:
 | `pmc_get_dependencies` | List symbols a given symbol depends on |
 | `pmc_get_context` | Structured context for a symbol, file, or query |
 | `pmc_trace_paths` | Trace upstream/downstream symbol paths |
-| `pmc_impact` | Map uncommitted changes to blast radius |
 
 ## Schema Migrations
 
