@@ -118,3 +118,61 @@ test('Hook payloads match expected schema for prompt and tool_call', () => {
   resetQueue();
 });
 
+// --- T-006 REFACTOR: edge cases ---
+
+test('Append succeeds when queue file is exactly at the 1MB boundary', () => {
+  resetQueue();
+  mkdirSync(tmp, { recursive: true });
+  writeFileSync(queuePath, 'x'.repeat(1_048_576));
+  assert.equal(statSync(queuePath).size, 1_048_576);
+  appendToQueue(queuePath, { type: 'prompt', ts: 1, content: 'boundary' });
+  // Exactly 1MB is >= threshold -> rotation fires; new file holds the new entry
+  const newLines = readFileSync(queuePath, 'utf8').trim().split('\n');
+  assert.equal(newLines.length, 1);
+  assert.equal(JSON.parse(newLines[0]).content, 'boundary');
+  resetQueue();
+});
+
+test('Nil/null projectId falls back to unknown', () => {
+  resetQueue();
+  const hooks = buildHooks('sess-3', null, queuePath);
+  hooks['chat.message']({ content: 'msg' });
+  const line = JSON.parse(readFileSync(queuePath, 'utf8').trim());
+  assert.equal(line.projectId, 'unknown');
+  assert.equal(line.sessionId, 'sess-3');
+  resetQueue();
+});
+
+test('Deeply nested secrets in tool args are still redacted', () => {
+  const safe = sanitizeArgs({
+    level1: { level2: { level3: { api_key: 'deep-secret', keep: 'visible' } } },
+    list: [{ token: 'tok-1' }, { normal: 'ok' }],
+  });
+  const parsed = JSON.parse(safe);
+  assert.equal(parsed.level1.level2.level3.api_key, '***REDACTED***');
+  assert.equal(parsed.level1.level2.level3.keep, 'visible');
+  assert.equal(parsed.list[0].token, '***REDACTED***');
+  assert.equal(parsed.list[1].normal, 'ok');
+});
+
+test('Rotation filename is deterministic and timestamp-based', () => {
+  resetQueue();
+  mkdirSync(tmp, { recursive: true });
+  writeFileSync(queuePath, 'x'.repeat(1_048_576));
+  const before = Date.now();
+  appendToQueue(queuePath, { type: 'prompt', ts: 0, content: 'rotate' });
+  const after = Date.now();
+  const rotated = readdirSync(tmp).find(
+    (f) => /^pmc-capture-queue\.\d+\.jsonl$/.test(f)
+  );
+  assert.ok(rotated, 'expected a timestamp-suffixed rotated file matching pmc-capture-queue.<digits>.jsonl');
+  const ts = Number(rotated.match(/pmc-capture-queue\.(\d+)\.jsonl/)[1]);
+  assert.ok(ts >= before && ts <= after, 'rotation timestamp falls within the append window');
+  resetQueue();
+});
+
+test('sanitizeContent with no <private> tags passes through unchanged', () => {
+  const text = 'just a normal message with no redactions needed';
+  assert.equal(sanitizeContent(text), text);
+});
+
