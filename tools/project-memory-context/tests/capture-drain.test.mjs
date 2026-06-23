@@ -248,10 +248,12 @@ test('T-007 #3b: runDrain processes a full queue, calls store methods, and trunc
       { type: 'response', ts: 3, sessionId: 's', projectId: 'p', promptId: 'p1', fullResponse: 'resp' },
     ]);
 
+    let clock = 0;
     const result = await runDrain(root, {
       storeFactory: async () => store,
-      now: () => 0,
-      sleep: async () => {},
+      now: () => clock,
+      sleep: async (ms) => { clock += ms; },
+      pollIntervalMs: 5_000,
       idleTimeoutMs: 30_000,
     });
 
@@ -285,11 +287,13 @@ test('T-007 #3c: runDrain batches max 100 per cycle across 150 entries', async (
     }));
     writeLines(qPath, entries);
 
+    let clock = 0;
     const result = await runDrain(root, {
       storeFactory: async () => store,
       batchSize: 100,
-      now: () => 0,
-      sleep: async () => {},
+      now: () => clock,
+      sleep: async (ms) => { clock += ms; },
+      pollIntervalMs: 5_000,
       idleTimeoutMs: 30_000,
     });
 
@@ -342,18 +346,21 @@ test('T-007 #4c: runDrain retries a transient store failure via backoff and stil
     const { store, calls } = createMockStore({ failFirstN: 2, method: 'storeSessionPrompt' });
     const sleeps = [];
     writeLines(qPath, [{ type: 'prompt', ts: 1, sessionId: 's', projectId: 'p', content: 'retry-me' }]);
+    let clock = 0;
 
     const result = await runDrain(root, {
       storeFactory: async () => store,
-      now: () => 0,
-      sleep: async (ms) => { sleeps.push(ms); },
+      now: () => clock,
+      sleep: async (ms) => { sleeps.push(ms); clock += ms; },
+      pollIntervalMs: 5_000,
       idleTimeoutMs: 30_000,
     });
 
     assert.equal(result.processed, 1);
     assert.equal(calls.storeSessionPrompt.length, 1);
-    // Two failures → two backoff sleeps (100, 200) before the successful third attempt.
-    assert.deepEqual(sleeps, [100, 200]);
+    // Two failures → two backoff sleeps (100, 200) before the successful third
+    // attempt. Subsequent sleeps are the idle poll interval, not backoff.
+    assert.deepEqual(sleeps.slice(0, 2), [100, 200]);
   } finally {
     clean(root);
   }
