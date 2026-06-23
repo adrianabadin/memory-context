@@ -307,9 +307,10 @@ export async function runDrain(projectRoot, options = {}) {
   }
 
   const storeFactory = options.storeFactory ?? defaultStoreFactory;
-  const store = await storeFactory(dbPath);
+  let store = null;
   let processed = 0;
   try {
+    store = await storeFactory(dbPath);
     let lastNonEmptyMs = now();
 
     while (true) {
@@ -338,7 +339,7 @@ export async function runDrain(projectRoot, options = {}) {
     }
   } finally {
     try {
-      store.close();
+      if (store && typeof store.close === 'function') store.close();
     } catch {
       // Best-effort close.
     }

@@ -393,3 +393,105 @@ test('T-007 #5: runDrain exits with exitReason "idle" when queue is empty and id
     clean(root);
   }
 });
+
+// ── T-009 REFACTOR: Windows resilience + error-path cleanup ──────────────
+
+test('T-009 #1: lock is released when storeFactory throws (error exit path)', async () => {
+  const root = makeRoot();
+  const lockPath = lockPathOf(root);
+  try {
+    await assert.rejects(
+      runDrain(root, {
+        storeFactory: async () => { throw new Error('DB open failed'); },
+        now: () => 0,
+        sleep: async () => {},
+      }),
+      /DB open failed/,
+    );
+    assert.equal(existsSync(lockPath), false, 'lock MUST be released on the error path');
+  } finally {
+    clean(root);
+  }
+});
+
+test('T-009 #2: lock is released and the queue is preserved when a store call persistently fails', async () => {
+  const root = makeRoot();
+  const qPath = queuePathOf(root);
+  const lockPath = lockPathOf(root);
+  writeLines(qPath, [{ type: 'prompt', ts: 1, sessionId: 's', projectId: 'p', content: 'doomed' }]);
+  try {
+    const { store } = createMockStore({ failFirstN: 99, method: 'storeSessionPrompt' });
+    await assert.rejects(
+      runDrain(root, {
+        storeFactory: async () => store,
+        now: () => 0,
+        sleep: async () => {},
+        retries: 3,
+        backoff: [1, 1, 1],
+      }),
+      /SQLITE_BUSY: transient/,
+    );
+    assert.equal(existsSync(lockPath), false, 'lock released after persistent failure');
+    // The unprocessed entry MUST remain in the queue for the next drain run.
+    const lines = readFileSync(qPath, 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1);
+    assert.equal(JSON.parse(lines[0]).content, 'doomed');
+  } finally {
+    clean(root);
+  }
+});
+
+test('T-009 #3: atomic rewrite leaves no .tmp file behind after a successful drain', async () => {
+  const root = makeRoot();
+  const qPath = queuePathOf(root);
+  try {
+    const { store } = createMockStore();
+    writeLines(qPath, [{ type: 'prompt', ts: 1, sessionId: 's', projectId: 'p', content: 'x' }]);
+    let clock = 0;
+    await runDrain(root, {
+      storeFactory: async () => store,
+      now: () => clock,
+      sleep: async (ms) => { clock += ms; },
+      pollIntervalMs: 5_000,
+      idleTimeoutMs: 30_000,
+    });
+    const leftover = readdirSync(join(root, '.opencode')).filter((f) => f.endsWith('.tmp'));
+    assert.deepEqual(leftover, [], 'no .tmp file must remain after atomic rewrite');
+    assert.equal(existsSync(qPath), false, 'empty queue file removed after drain');
+  } finally {
+    clean(root);
+  }
+});
+
+test('T-009 #4: rotated-file matching is resilient to platform path separators in queuePath', () => {
+  const root = makeRoot();
+  // Build the queue path with path.join so it uses the native separator
+  // (backslashes on Windows). Matching must be filename-based, not path-based.
+  const qPath = join(root, '.opencode', 'pmc-capture-queue.jsonl');
+  try {
+    writeLines(join(root, '.opencode', 'pmc-capture-queue.1500.jsonl'), [
+      { type: 'prompt', ts: 1, content: 'rot' },
+    ]);
+    writeLines(qPath, [{ type: 'prompt', ts: 2, content: 'live' }]);
+
+    const batch = readQueueBatch(qPath, 100);
+    assert.equal(batch.length, 2);
+    assert.equal(batch[0].content, 'rot');
+    assert.equal(batch[1].content, 'live');
+  } finally {
+    clean(root);
+  }
+});
+
+test('T-009 #5: releaseLock is a no-op when the lock file is already gone', () => {
+  const root = makeRoot();
+  const lockPath = lockPathOf(root);
+  try {
+    // No lock file created — release must not throw.
+    assert.doesNotThrow(() => releaseLock(lockPath));
+    assert.equal(existsSync(lockPath), false);
+  } finally {
+    clean(root);
+  }
+});
+
