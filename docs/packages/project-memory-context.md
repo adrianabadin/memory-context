@@ -208,13 +208,12 @@ The watcher:
 
 Sleep mode runs PMC maintenance during idle windows without competing with active user work.
 
-> **Status**: Sleep mode is implemented as TypeScript modules in `agent-memory-mcp/src/` (`sleep-run.ts`, `sleep-watch.ts`, `sleep-config.ts`). CLI wrappers in `tools/project-memory-context/cli/` are pending. The modules are usable programmatically but not yet exposed as `pmc` subcommands.
-
-### Commands (Planned)
+### Commands
 
 | Command | Purpose | Example |
 |---------|---------|---------|
-| `sleep-run` | One-shot maintenance pipeline with checkpointing | `pmc sleep-run` |
+| `sleep-config` | Read, validate, or edit the global sleep config | `pmc sleep-config show` |
+| `sleep-run` | One-shot maintenance pipeline with checkpointing | `pmc sleep-run --db ./memory.db` |
 | `sleep-watch` | Idle daemon that monitors CPU/idle state and spawns sleep-run when eligible | `pmc sleep-watch` |
 
 ### How It Works
