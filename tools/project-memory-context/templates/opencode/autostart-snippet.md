@@ -20,6 +20,65 @@ This command handles everything deterministic in one shot:
 
 **If the session summary reports `subagentQueue.pending > 0`**, dispatch the `enrich` subagent to drain those entries — that is the only step that requires LLM involvement.
 
+## Memory Protocol — Deterministic Triggers
+
+Follow these triggers without being asked. Use the exact, fully-qualified tool names below — never abbreviated or generic names.
+
+### Session lifecycle
+
+- **Session start**: call `pmc-agent-memory_set_session_context` once.
+- **Before reading source / changing code**: run `{{PMC_BIN}} get-context <target>` (default depth `compact`).
+- **After implementing code changes**: run `{{PMC_BIN}} refresh-context --enrich` (PTY-first when available, otherwise Bash) then `{{PMC_BIN}} sync-context`.
+- **Session close**: call `pmc-agent-memory_store_session_summary`.
+- **Before AND after compaction**: call `pmc-agent-memory_store_session_summary` immediately to persist the pre-compaction state, then call `pmc-agent-memory_recall` to recover prior context before continuing.
+
+### Plugin-active exception (do NOT duplicate auto-capture)
+
+When the PMC OpenCode plugin is active, do **NOT** manually call these three auto-captured tools:
+
+- `pmc-agent-memory_store_session_prompt`
+- `pmc-agent-memory_store_session_response`
+- `pmc-agent-memory_store_session_tool_call`
+
+All other memory tools remain your manual responsibility.
+
+### Save triggers → `pmc-agent-memory_store`
+
+Call `pmc-agent-memory_store` IMMEDIATELY after any of these, without being asked:
+
+- Bug fix completed (include root cause)
+- Architecture or design decision made
+- Tool or library choice made with tradeoffs
+- Non-obvious discovery about the codebase
+- Configuration change or environment setup
+- Pattern established (naming, structure, convention)
+- User preference or constraint learned
+
+### Search triggers (local vs global)
+
+| Scope | When | Tools (exact names) |
+|-------|------|---------------------|
+| Local (current project) | Before reading source, changing code, or answering project-structure questions | `pmc-agent-memory_recall`, `pmc-agent-memory_search`, `pmc-agent-memory_find_related`, `pmc-agent-memory_list_recent` |
+| Global (cross-project) | User recalls prior work, conventions, fixes, or patterns that may live outside this project | `pmc-agent-memory_search_global_errors` (read), `pmc-agent-memory_record_error` (write, after a fix) |
+
+### Error tracking
+
+- **BEFORE debugging anything non-trivial**: call `pmc-agent-memory_search_global_errors` to check for a known fix.
+- **AFTER resolving an error**: call `pmc-agent-memory_record_error` to persist the root cause and fix for future sessions.
+
+### Topic keys (evolving topics)
+
+- For an evolving topic, call `pmc-agent-memory_suggest_topic_key` then `pmc-agent-memory_upsert_topic_alias` so future updates reuse the same key instead of creating duplicates.
+- To look up an existing topic, call `pmc-agent-memory_resolve_topic`.
+
+### Memory lifecycle
+
+- When a stored memory becomes stale or obsolete, call `pmc-agent-memory_update_memory_status` to mark it — do not silently leave outdated facts as trusted context.
+
+### Project registration (install/setup only — NOT agent runtime)
+
+`pmc-agent-memory_register_project` and `pmc-agent-memory_sync_project_metadata` run during PMC install/bootstrap. Do **NOT** call them from agent runtime; the install/setup flow already handles project registration.
+
 ## Mandatory PMC Workflow (ENFORCED)
 
 - **BEFORE reading any source file**: Run `{{PMC_BIN}} get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.

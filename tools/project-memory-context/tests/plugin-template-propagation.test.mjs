@@ -15,9 +15,8 @@ import { pathToFileURL } from 'node:url';
 import { renderTemplate } from '../src/template-installer.mjs';
 
 const TEMPLATE_PATH = join(
-  process.cwd(),
-  'tools',
-  'project-memory-context',
+  import.meta.dirname,
+  '..',
   'templates',
   'opencode',
   'plugins',

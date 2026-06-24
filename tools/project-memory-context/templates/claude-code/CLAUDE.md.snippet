@@ -88,4 +88,11 @@ to drain those entries — that is the only step that requires LLM involvement.
 - Default depth: `compact`. `extended`/`deep` only on explicit request.
 - `map-project --all` only for full reinstall or ground-up graph rebuild — not needed for routine changes.
 
+## Memory Protocol — Deterministic Triggers
+
+The complete deterministic Memory Protocol — including the plugin-active exception, the 7-event save triggers, the local/global search table, the post-compaction recovery, the global error tracking rules, the topic-key/alias flow, and the memory-lifecycle rules — lives in **`pmc-skill`**. Load the skill before the first memory/session call; it owns the tool names and triggers.
+
+- **Skill location** (this project): `~/.claude/skills/pmc-skill/SKILL.md` (global) or `.claude/skills/pmc-skill/SKILL.md` (project-scoped)
+- **Skill location** (global config): `~/.claude/skills/pmc-skill/SKILL.md`
+
 <!-- /pmc:init -->

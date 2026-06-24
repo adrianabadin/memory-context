@@ -1,6 +1,6 @@
 {
   "name": "@aabadin/project-memory-context",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Portable project memory context CLI — bootstraps semantic enrichment workflows for any AI coding agent.",
   "license": "GPL-3.0-or-later",
   "type": "module",

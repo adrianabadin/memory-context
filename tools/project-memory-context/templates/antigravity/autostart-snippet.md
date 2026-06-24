@@ -39,5 +39,11 @@ to drain those entries — that is the only step that requires LLM involvement.
 | Quick project overview | `agent-memory_search "project context overview"` | — |
 | After code changes | `{{PMC_BIN}} refresh-context --enrich` then `{{PMC_BIN}} sync-context` | — |
 
-**Load PMC workflow rules**: The `pmc-skill` skill (`.agents/skills/pmc-skill/SKILL.md`) governs how you interact with PMC throughout the session.
+## Memory Protocol — Deterministic Triggers
+
+The complete deterministic Memory Protocol — including the plugin-active exception, the 7-event save triggers, the local/global search table, the post-compaction recovery, the global error tracking rules, the topic-key/alias flow, and the memory-lifecycle rules — lives in **`pmc-skill`**. Load the skill before the first memory/session call; it owns the tool names and triggers.
+
+- **Skill location** (this project): `.agents/skills/pmc-skill/SKILL.md`
+- **Skill location** (global config): `~/.config/opencode/skills/pmc-skill/SKILL.md` (OpenCode) / `~/.claude/skills/pmc-skill/SKILL.md` (Claude Code)
+
 <!-- /pmc:autostart -->
