@@ -253,6 +253,7 @@ test('PMCPlugin runs session-start runtime on initialization and returns hooks o
     directory: '/proj',
     __testOverrides: {
       runSessionStartRuntime: async (root, opts) => { calls.push({ root, opts }); },
+      spawnBackground: () => 0,
     },
   });
   assert.deepEqual(calls, [{ root: '/proj', opts: { mode: 'opencode-plugin' } }]);
@@ -267,6 +268,7 @@ test('PMCPlugin swallows runtime errors so OpenCode startup never fails', async 
     directory: '/proj',
     __testOverrides: {
       runSessionStartRuntime: async () => { throw new Error('disk exploded'); },
+      spawnBackground: () => 0,
     },
   });
   assert.equal(typeof hooks, 'object');
