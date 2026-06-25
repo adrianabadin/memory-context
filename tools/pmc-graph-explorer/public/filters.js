@@ -9,7 +9,8 @@ export function initFilters(state, communities) {
   communities.forEach((c) => {
     const row = document.createElement("label");
     row.className = "filter-row";
-    row.innerHTML = `<input type="checkbox" checked data-community="${c}"><span class="filter-dot" style="background:${COMMUNITY_COLORS_MAP(c)}"></span>Community ${c}`;
+    const communityName = state.communityNames?.[String(c)] ?? `Community ${c}`;
+    row.innerHTML = `<input type="checkbox" checked data-community="${c}"><span class="filter-dot" style="background:${COMMUNITY_COLORS_MAP(c)}"></span>${communityName}`;
     row.querySelector("input").addEventListener("change", (e) => {
       if (e.target.checked) {
         state.enabledCommunities.add(c);
