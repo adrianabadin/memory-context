@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { detectAgentType, installAgentTemplates } from '../src/template-installer.mjs';
 import { resolveConfigDirs } from '../src/platform.mjs';
 
@@ -79,6 +79,42 @@ Options:
     globalConfigDir: agent === 'opencode' ? globalConfig : undefined,
   });
   log(`Skills updated for ${agent}.`);
+
+  // Write .mcp.json for Claude Code / Cursor (OpenCode uses .opencode/opencode.json)
+  if (agent === 'claude-code' || agent === 'cursor') {
+    const mcpPath = join(targetRoot, '.mcp.json');
+    let existing = {};
+    try {
+      existing = JSON.parse(readFileSync(mcpPath, 'utf8'));
+    } catch {}
+
+    const planningBase = resolve(targetRoot, '.planning', 'project-memory-context');
+    const memoryDbPath = resolve(planningBase, 'memory-db');
+
+    const mcpConfig = {
+      mcpServers: {
+        ...(existing.mcpServers ?? {}),
+        'agent-memory': {
+          command: 'npx',
+          args: ['-y', '@aabadin/agent-memory-mcp'],
+          env: {
+            MEMORY_DB_PATH: memoryDbPath,
+          },
+        },
+        'pmc-query': {
+          command: 'npx',
+          args: ['--yes', '--package', '@aabadin/project-memory-context', 'pmc-query-server'],
+          env: {
+            PMC_PROJECT_ROOT: resolve(targetRoot),
+          },
+        },
+      },
+    };
+
+    writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, 2)}\n`, 'utf8');
+    log(`Written .mcp.json with agent-memory and pmc-query MCP servers`);
+  }
+
   log('Done.');
 }
 
