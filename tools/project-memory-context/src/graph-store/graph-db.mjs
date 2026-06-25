@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS edges (
   target   TEXT NOT NULL,
   relation TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS community_names (
+  community_id TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  created_at   TEXT,
+  updated_at   TEXT
+);
 CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source, relation);
 CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target, relation);
 CREATE INDEX IF NOT EXISTS idx_nodes_file   ON nodes(source_file);
@@ -193,6 +199,42 @@ export function createSqliteGraphStore(db) {
     },
 
     traverse,
+
+    // ── Community names ────────────────────────────────────────────────────────
+
+    upsertCommunityName(communityId, name) {
+      const id = String(communityId);
+      const now = new Date().toISOString();
+      // Preserve created_at on update; only refresh updated_at.
+      db.prepare(
+        `INSERT INTO community_names (community_id, name, created_at, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(community_id) DO UPDATE SET
+           name = excluded.name,
+           updated_at = excluded.updated_at`,
+      ).run(id, name, now, now);
+    },
+
+    getCommunityName(communityId) {
+      const id = String(communityId);
+      const row = db
+        .prepare('SELECT name FROM community_names WHERE community_id = ?')
+        .get(id);
+      return row ? row.name : null;
+    },
+
+    getAllCommunityNames() {
+      return db
+        .prepare(
+          'SELECT community_id, name, created_at, updated_at FROM community_names ORDER BY community_id',
+        )
+        .all();
+    },
+
+    deleteCommunityName(communityId) {
+      const id = String(communityId);
+      db.prepare('DELETE FROM community_names WHERE community_id = ?').run(id);
+    },
 
     close() {
       db.close();
