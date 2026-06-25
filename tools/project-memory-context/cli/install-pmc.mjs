@@ -36,6 +36,103 @@ export function installPmcTools({ sourceRoot, targetRoot }) {
   return { cliFiles: 0, srcFiles: 0, templateFiles: 0 };
 }
 
+/**
+ * Write .mcp.json for Claude Code / Cursor with agent-memory and pmc-query servers.
+ * Merges with existing config to preserve any user-added servers.
+ */
+function writeMcpJson(targetRoot) {
+  const mcpPath = join(targetRoot, '.mcp.json');
+  let existing = {};
+  try {
+    existing = JSON.parse(readFileSync(mcpPath, 'utf8'));
+  } catch {}
+
+  const planningBase = resolve(targetRoot, '.planning', 'project-memory-context');
+  const memoryDbPath = resolve(planningBase, 'memory-db');
+
+  const mcpConfig = {
+    mcpServers: {
+      ...(existing.mcpServers ?? {}),
+      'agent-memory': {
+        command: 'npx',
+        args: ['-y', '@aabadin/agent-memory-mcp'],
+        env: {
+          MEMORY_DB_PATH: memoryDbPath,
+        },
+      },
+      'pmc-query': {
+        command: 'npx',
+        args: ['--yes', '--package', '@aabadin/project-memory-context', 'pmc-query-server'],
+        env: {
+          PMC_PROJECT_ROOT: resolve(targetRoot),
+        },
+      },
+    },
+  };
+
+  writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, 2)}\n`, 'utf8');
+  log(`Written .mcp.json with agent-memory and pmc-query MCP servers`);
+}
+
+/**
+ * Write .opencode/opencode.json with MCP servers for OpenCode.
+ * Merges with existing config to preserve plugins, skills, etc.
+ */
+function writeOpencodeMcpJson(targetRoot) {
+  const configPath = join(targetRoot, '.opencode', 'opencode.json');
+  let existing = {};
+  try {
+    existing = JSON.parse(readFileSync(configPath, 'utf8'));
+  } catch {}
+
+  const planningBase = resolve(targetRoot, '.planning', 'project-memory-context');
+  const memoryDbPath = resolve(planningBase, 'memory-db');
+
+  const mcpConfig = {
+    ...existing,
+    $schema: 'https://opencode.ai/config.json',
+    mcp: {
+      ...(existing.mcp ?? {}),
+      'pmc-query': {
+        type: 'local',
+        command: ['npx', '--yes', '--package', '@aabadin/project-memory-context', 'pmc-query-server'],
+        enabled: true,
+        environment: {
+          PMC_PROJECT_ROOT: resolve(targetRoot),
+        },
+      },
+      'pmc-agent-memory': {
+        type: 'local',
+        command: ['npx', '-y', '@aabadin/agent-memory-mcp'],
+        enabled: true,
+        environment: {
+          MEMORY_DB_PATH: memoryDbPath,
+          EMBEDDING_MODEL: 'Xenova/bge-m3',
+          EMBEDDING_DIMENSIONS: '1024',
+          EMBEDDING_POOLING: 'cls',
+        },
+      },
+    },
+  };
+
+  mkdirSync(dirname(configPath), { recursive: true });
+  writeFileSync(configPath, `${JSON.stringify(mcpConfig, null, 2)}\n`, 'utf8');
+  log(`Written .opencode/opencode.json with pmc-query and pmc-agent-memory MCP servers`);
+}
+
+/**
+ * Detect ALL agent markers present in the project (not just the primary one).
+ * This ensures MCP configs are written for every agent the user might use.
+ */
+function detectAllAgents(targetRoot) {
+  const agents = [];
+  if (existsSync(join(targetRoot, '.opencode'))) agents.push('opencode');
+  if (existsSync(join(targetRoot, '.claude')) || existsSync(join(targetRoot, 'CLAUDE.md'))) agents.push('claude-code');
+  if (existsSync(join(targetRoot, '.cursor')) || existsSync(join(targetRoot, '.cursorrules'))) agents.push('cursor');
+  if (existsSync(join(targetRoot, '.agents'))) agents.push('antigravity');
+  return agents.length > 0 ? agents : ['generic'];
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -70,49 +167,26 @@ Options:
   installPmcTools({ sourceRoot, targetRoot });
   log('Created .planning/project-memory-context/ directory structure');
 
-  const agent = detectAgentType(targetRoot);
-  log(`Detected agent: ${agent} — updating skills (force overwrite)…`);
+  // Detect ALL agents present, not just the primary one
+  const agents = detectAllAgents(targetRoot);
+  const primaryAgent = detectAgentType(targetRoot);
+  log(`Detected agents: ${agents.join(', ')} (primary: ${primaryAgent})`);
+
+  // Install templates for the primary agent
   const { globalConfig } = resolveConfigDirs(targetRoot);
   await installAgentTemplates({
     projectRoot: targetRoot,
-    agent,
-    globalConfigDir: agent === 'opencode' ? globalConfig : undefined,
+    agent: primaryAgent,
+    globalConfigDir: primaryAgent === 'opencode' ? globalConfig : undefined,
   });
-  log(`Skills updated for ${agent}.`);
+  log(`Skills updated for ${primaryAgent}.`);
 
-  // Write .mcp.json for Claude Code / Cursor (OpenCode uses .opencode/opencode.json)
-  if (agent === 'claude-code' || agent === 'cursor') {
-    const mcpPath = join(targetRoot, '.mcp.json');
-    let existing = {};
-    try {
-      existing = JSON.parse(readFileSync(mcpPath, 'utf8'));
-    } catch {}
-
-    const planningBase = resolve(targetRoot, '.planning', 'project-memory-context');
-    const memoryDbPath = resolve(planningBase, 'memory-db');
-
-    const mcpConfig = {
-      mcpServers: {
-        ...(existing.mcpServers ?? {}),
-        'agent-memory': {
-          command: 'npx',
-          args: ['-y', '@aabadin/agent-memory-mcp'],
-          env: {
-            MEMORY_DB_PATH: memoryDbPath,
-          },
-        },
-        'pmc-query': {
-          command: 'npx',
-          args: ['--yes', '--package', '@aabadin/project-memory-context', 'pmc-query-server'],
-          env: {
-            PMC_PROJECT_ROOT: resolve(targetRoot),
-          },
-        },
-      },
-    };
-
-    writeFileSync(mcpPath, `${JSON.stringify(mcpConfig, null, 2)}\n`, 'utf8');
-    log(`Written .mcp.json with agent-memory and pmc-query MCP servers`);
+  // Write MCP configs for ALL detected agents
+  if (agents.includes('claude-code') || agents.includes('cursor')) {
+    writeMcpJson(targetRoot);
+  }
+  if (agents.includes('opencode')) {
+    writeOpencodeMcpJson(targetRoot);
   }
 
   log('Done.');
