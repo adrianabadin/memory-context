@@ -67,6 +67,24 @@ export function createSyncEntry({ action, keyTag, content, category, tags, sourc
   };
 }
 
+/**
+ * Build a pending upsert sync entry for a named graph community, so the
+ * community name is persisted into agent-memory by `pmc sync-context`.
+ *
+ * @param {{ communityId: string|number, name: string, projectSlug?: string }} input
+ */
+export function createCommunitySyncEntry({ communityId, name, projectSlug }) {
+  const id = String(communityId);
+  return createSyncEntry({
+    action: 'upsert',
+    keyTag: `key:community:${id}`,
+    content: `## Community ${id}: ${name}\n\nDescriptive name for graph community ${id}.`,
+    category: 'architecture',
+    tags: ['community', `community:${id}`, `project:${projectSlug ?? 'project'}`],
+    source: 'name-communities',
+  });
+}
+
 export async function appendSyncEntry(enrichmentDir, entry) {
   return withManifestLock(enrichmentDir, async () => {
     const manifest = await readSyncManifest(enrichmentDir);

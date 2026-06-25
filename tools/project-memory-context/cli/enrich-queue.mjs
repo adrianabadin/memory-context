@@ -13,7 +13,7 @@ import { countPromptTokens, estimateTokens } from '../src/providers/ollama-token
 import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs';
 import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
 import { appendSubagentQueue } from '../src/subagent-queue.mjs';
-import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
+import { appendSyncEntries, appendSyncEntry, createCommunitySyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 import { isPidAlive } from '../src/watcher-lifecycle.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -778,6 +778,14 @@ async function main() {
     console.error(`[queue] ${summary.subagentQueued} symbol(s) routed to subagent-queue.json — run /enrich skill to process them (up to 5 Task subagents in parallel).`);
   }
 
+  // Post-enrichment hook: name graph communities (graceful — never blocks the queue).
+  const naming = await maybeNameCommunities({ projectRoot: PROJECT_ROOT, enrichmentDir, summary });
+  if (naming.ran) {
+    console.error(`[queue] Community naming — named: ${naming.result.named}, skipped: ${naming.result.skipped}, failed: ${naming.result.failed}`);
+  } else if (naming.reason === 'error') {
+    console.error(`[queue] WARN: community naming failed: ${naming.error}`);
+  }
+
   console.log(JSON.stringify({
     complete: summary.pending === 0 && summary.subagentQueued === 0,
     total: worklist.length,
@@ -825,6 +833,84 @@ export async function maybeLaunchRetryErrors({
 
   await spawnRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath });
   return { launched: true, reason: 'spawned', stdoutPath, stderrPath };
+}
+
+/**
+ * Post-enrichment hook: name graph communities via GLM-4-Flash, but only when
+ * this run actually enriched at least one symbol. Always resolves (never throws)
+ * so a naming failure cannot break the enrichment queue.
+ *
+ * @param {{
+ *   projectRoot: string,
+ *   enrichmentDir: string,
+ *   summary: { enriched?: number },
+ *   runNaming?: (spec: { projectRoot: string, enrichmentDir: string }) => Promise<object>,
+ * }} input
+ * @returns {Promise<{ ran: boolean, reason?: string, result?: object, error?: string }>}
+ */
+export async function maybeNameCommunities({
+  projectRoot,
+  enrichmentDir,
+  summary,
+  runNaming = runCommunityNaming,
+}) {
+  if ((summary?.enriched ?? 0) === 0) {
+    return { ran: false, reason: 'nothing-enriched' };
+  }
+
+  try {
+    const result = await runNaming({ projectRoot, enrichmentDir });
+    return { ran: true, result };
+  } catch (err) {
+    return { ran: false, reason: 'error', error: err.message };
+  }
+}
+
+/**
+ * Default community-naming runner: opens graph.db, runs the naming pipeline,
+ * and appends a sync-manifest upsert entry per named community so the names are
+ * persisted into agent-memory on the next `pmc sync-context`.
+ */
+async function runCommunityNaming({ projectRoot, enrichmentDir }) {
+  const graphDir = resolve(projectRoot, '.planning/project-memory-context/graph');
+  const dbPath = resolve(graphDir, 'graph.db');
+  const jsonPath = resolve(graphDir, 'graph.json');
+
+  const { existsSync } = await import('node:fs');
+  if (!existsSync(dbPath) || !existsSync(jsonPath)) {
+    return { named: 0, skipped: 0, failed: 0, reason: 'no-graph' };
+  }
+
+  const { openGraphDb } = await import('../src/graph-store/graph-db.mjs');
+  const { fetchCommunities, nameCommunities, API_KEY_ENV } = await import('./name-communities.mjs');
+  const { DatabaseSync } = await import('node:sqlite');
+
+  const store = openGraphDb(dbPath, jsonPath);
+  const rawDb = new DatabaseSync(dbPath);
+  store.fetchCommunities = () => fetchCommunities(rawDb);
+
+  try {
+    const result = await nameCommunities(store, { apiKey: process.env[API_KEY_ENV] });
+
+    // Persist each stored community name to the sync manifest for agent-memory.
+    if (result.named > 0) {
+      const entries = store.getAllCommunityNames().map((row) =>
+        createCommunitySyncEntry({
+          communityId: row.community_id,
+          name: row.name,
+          projectSlug: PROJECT_SLUG,
+        }),
+      );
+      if (entries.length > 0) {
+        await appendSyncEntries(enrichmentDir, entries);
+      }
+    }
+
+    return result;
+  } finally {
+    rawDb.close();
+    store.close();
+  }
 }
 
 async function launchRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath }) {
