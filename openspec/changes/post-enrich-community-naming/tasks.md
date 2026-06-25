@@ -43,9 +43,9 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Integration — Hooks + Exposure
 
-- [ ] 3.1 Modify `tools/project-memory-context/cli/enrich-queue.mjs` — import and invoke `name-communities` after worklist processing completes
-- [ ] 3.2 Modify `tools/project-memory-context/cli/get-context.mjs` — query `getAllCommunityNames()` and include community name in output when available
-- [ ] 3.3 Update sync-manifest generation to include community names for agent-memory persistence
+- [x] 3.1 Modify `tools/project-memory-context/cli/enrich-queue.mjs` — added `maybeNameCommunities` post-enrich hook (runs only when symbols enriched, never throws) invoked at end of `main()`
+- [x] 3.2 Expose community names in get-context — `query-engine.mjs` resolves the target's community name via `getAllCommunityNames()`, surfaced through `context.mjs` (actual path; `cli/get-context.mjs` does not exist) and rendered in `context-renderer-v1.mjs`
+- [x] 3.3 Update sync-manifest generation to include community names — `createCommunitySyncEntry` in `src/sync-manifest.mjs`, appended per named community by the enrich-queue hook
 
 ## Phase 4: Testing + Verification
 
@@ -53,4 +53,4 @@ Chain strategy: stacked-to-main
 - [x] 4.2 Unit test for `truncateSymbols` — verify truncation logic for communities >50 members (`tests/name-communities.test.mjs`)
 - [x] 4.3 Integration test for DB round-trip — upsert and retrieve community names (`tests/community-names-db.test.mjs`)
 - [x] 4.4 Integration test for naming pipeline — end-to-end with mocked API (`tests/name-communities.test.mjs` `nameCommunities` cases)
-- [ ] 4.5 Verify `get-context` output includes community names when present  ← PR 2 (depends on get-context exposure, Phase 3.2)
+- [x] 4.5 Verify `get-context` output includes community names when present — `context-cli.test.mjs` (`get-context output surfaces the community name for a named community`, plus renderer + `buildRenderInput` cases)
