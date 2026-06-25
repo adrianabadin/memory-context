@@ -169,6 +169,8 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
         filePath: ctx.target?.filePath,
         range: ctx.target?.range ?? null,
         codeHash: ctx.target?.codeHash ?? null,
+        communityId: ctx.target?.communityId ?? null,
+        communityName: ctx.target?.communityName ?? null,
         linkedMemories: ctx.target?.linkedMemories ?? [],
       };
       summary = [`Symbol: ${ctx.target?.name || resolved.target} (${ctx.target?.kind || 'unknown'})`];

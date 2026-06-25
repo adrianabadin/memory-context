@@ -22,6 +22,7 @@ export function renderTargetContext({ summary = [], target = {}, relevant = [], 
   if (target.value != null) lines.push(`  value: ${target.value}`);
   if (target.filePath != null) lines.push(`  filePath: ${target.filePath}`);
   if (target.range != null) lines.push(`  range: ${target.range.startLine}-${target.range.endLine}`);
+  if (target.communityName != null) lines.push(`  community: ${target.communityName}`);
 
   lines.push('Relevant');
   if (relevant.length > 0) {

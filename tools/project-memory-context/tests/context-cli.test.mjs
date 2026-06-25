@@ -373,6 +373,34 @@ test('renderTargetContext renders relations with items comma-separated', () => {
   assert.ok(result.includes('depends-on: b, c, d'));
 });
 
+test('renderTargetContext renders community name in the Target section when present', () => {
+  const input = {
+    summary: [],
+    target: { mode: 'symbol', name: 'openGraphDb', communityName: 'Graph Storage', communityId: '1' },
+    relevant: [],
+    relations: [],
+    nextReads: [],
+    metadata: { depth: 'compact', focus: 'all' },
+  };
+  const result = renderTargetContext(input);
+
+  assert.ok(result.includes('community: Graph Storage'), `expected community name in output:\n${result}`);
+});
+
+test('renderTargetContext omits community line when no name is present', () => {
+  const input = {
+    summary: [],
+    target: { mode: 'symbol', name: 'openGraphDb' },
+    relevant: [],
+    relations: [],
+    nextReads: [],
+    metadata: { depth: 'compact', focus: 'all' },
+  };
+  const result = renderTargetContext(input);
+
+  assert.ok(!result.includes('community:'), `should not render community line:\n${result}`);
+});
+
 // --- context CLI target-aware tests ---
 
 import { parseArgs, findProjectRoot, buildRenderInput, runTargetContext } from '../cli/context.mjs';
@@ -1031,6 +1059,93 @@ test('renderTargetContext shows error when source fetch failed', () => {
   assert.ok(result.includes('Source (disk)'), 'missing source heading');
   assert.ok(result.includes('ENOENT'), 'missing error message');
 });
+
+// --- community name exposure (task 3.2 / 4.5) ---
+
+import { openGraphDb } from '../src/graph-store/graph-db.mjs';
+
+test('buildRenderInput symbol mode includes community name from the graph store', async () => {
+  const sk = 'ts|src/db.mjs||function|openGraphDb|0';
+  const graphStore = openInMemoryStoreWithCommunity();
+  const engine = createQueryEngine({
+    graphStore,
+    symbolIndex: {
+      [sk]: { graphNodeId: 'n1', memoryId: 'mem-1', status: 'enriched' },
+    },
+    worklist: [],
+    enrichmentDir: '/tmp/enrich',
+    projectSlug: 'test',
+  });
+
+  const resolved = { mode: 'symbol', target: 'openGraphDb', symbolKey: sk };
+  const input = await buildRenderInput(engine, resolved, { depth: 'compact', focus: 'all' });
+
+  assert.equal(input.target.communityName, 'Graph Storage');
+  assert.equal(String(input.target.communityId), '7');
+});
+
+test('get-context output surfaces the community name for a named community', async () => {
+  const sk = 'ts|src/db.mjs||function|openGraphDb|0';
+  const projectRoot = await mkdtemp(join(os.tmpdir(), 'pmc-comm-ctx-'));
+  const pmcRoot = join(projectRoot, '.planning', 'project-memory-context');
+  await mkdir(join(pmcRoot, 'graph'), { recursive: true });
+  await mkdir(join(pmcRoot, 'enrichment'), { recursive: true });
+  await writeFile(
+    join(pmcRoot, 'install.json'),
+    JSON.stringify({ installedAt: '2026-06-25T00:00:00.000Z', version: '0.1.0' }),
+    'utf8',
+  );
+  const graph = {
+    nodes: [{ id: 'n1', label: 'openGraphDb', source_file: 'src/db.mjs', community: 7, degree: 5 }],
+    links: [],
+  };
+  await writeFile(join(pmcRoot, 'graph', 'graph.json'), JSON.stringify(graph), 'utf8');
+  await writeFile(
+    join(pmcRoot, 'enrichment', 'symbol-index.json'),
+    JSON.stringify({ [sk]: { graphNodeId: 'n1', memoryId: 'mem-1', status: 'enriched' } }),
+    'utf8',
+  );
+  await writeFile(join(pmcRoot, 'enrichment', 'worklist.json'), JSON.stringify([]), 'utf8');
+
+  // Persist a community name into graph.db before querying.
+  const seedStore = openGraphDb(join(pmcRoot, 'graph', 'graph.db'), join(pmcRoot, 'graph', 'graph.json'));
+  seedStore.upsertCommunityName('7', 'Graph Storage');
+  seedStore.close();
+
+  try {
+    const { output } = await runTargetContext({
+      projectRoot,
+      target: 'openGraphDb',
+      explicitMode: 'symbol',
+      depth: 'compact',
+      focus: 'all',
+    });
+
+    assert.ok(output.includes('community: Graph Storage'), `output missing community name:\n${output}`);
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+function openInMemoryStoreWithCommunity() {
+  // Minimal store implementing the surface the engine needs plus community-name lookup.
+  const node = { id: 'n1', label: 'openGraphDb', source_file: 'src/db.mjs', community: 7, degree: 5 };
+  return {
+    getNode(id) {
+      return id === 'n1' ? node : null;
+    },
+    getNodesByFile() {
+      return [];
+    },
+    traverse() {
+      return { nodes: [node], edges: [], depth_reached: 0 };
+    },
+    getAllCommunityNames() {
+      return [{ community_id: '7', name: 'Graph Storage' }];
+    },
+    close() {},
+  };
+}
 
 test('loadArtifacts wraps corrupt JSON with clear error', async () => {
   const projectRoot = await mkdtemp(join(os.tmpdir(), 'pmc-corr-'));

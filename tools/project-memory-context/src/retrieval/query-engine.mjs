@@ -99,10 +99,41 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     };
   }
 
+  // Build a community-id → name lookup once per engine. Returns an empty map
+  // when the store does not expose community names (e.g. in-memory store).
+  let _communityNameMap = null;
+  function communityNameFor(communityId) {
+    if (communityId == null) return null;
+    if (_communityNameMap === null) {
+      _communityNameMap = new Map();
+      if (typeof store.getAllCommunityNames === 'function') {
+        try {
+          for (const row of store.getAllCommunityNames() ?? []) {
+            _communityNameMap.set(String(row.community_id), row.name);
+          }
+        } catch {
+          // Missing table or query failure → no community names available.
+        }
+      }
+    }
+    return _communityNameMap.get(String(communityId)) ?? null;
+  }
+
+  function attachCommunity(target) {
+    if (!target.graphNodeId || typeof store.getNode !== 'function') return target;
+    const node = store.getNode(target.graphNodeId);
+    const communityId = node?.community ?? null;
+    if (communityId == null) return target;
+    const communityName = communityNameFor(communityId);
+    if (!communityName) return target;
+    return { ...target, communityId, communityName };
+  }
+
   async function querySymbolContext({ symbolKey, depth }) {
     const config = createDepthConfig(depth);
-    const target = await buildSymbolInfo(symbolKey);
+    let target = await buildSymbolInfo(symbolKey);
     if (!target.graphNodeId) return { target, neighbors: [], edges: [], depth_reached: 0 };
+    target = attachCommunity(target);
 
     const traversal = traverseGraph({ nodeIds: [target.graphNodeId], maxHops: config.maxHops });
     const neighbors = [];
