@@ -1,27 +1,72 @@
 import { existsSync, readdirSync, copyFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { execFile, spawn, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 import { resolveGraphify, resolvePythonBin } from './platform.mjs';
 
 const COPY_FILES = new Set(['graph.json', 'graph.metadata.json', 'graph.html', 'GRAPH_REPORT.md']);
 
 /**
+ * Default timeout (ms) for a single graphify update run.
+ * Chosen generously so a healthy run on a large repo can complete,
+ * but small enough that a stuck graphify does not block the agent.
+ */
+export const DEFAULT_GRAPHIFY_TIMEOUT_MS = 60_000;
+
+/**
+ * Terminate the child process and (on Windows) its descendants.
+ * Best-effort — never throws.
+ *
+ * @param {import('node:child_process').ChildProcess | undefined} child
+ * @returns {Promise<void>}
+ */
+export async function killProcessTree(child) {
+  const pid = child?.pid;
+  if (!pid) return;
+  if (process.platform === 'win32') {
+    // Best-effort: signal the immediate child first (fast path that the
+    // test can observe), then escalate to taskkill to terminate the
+    // full process tree (children, console host, etc.).
+    try { child.kill(); } catch { /* ignore */ }
+    await new Promise((resolve) => {
+      execFile('taskkill', ['/PID', String(pid), '/T', '/F'], () => resolve());
+    });
+    return;
+  }
+  try { child.kill('SIGTERM'); } catch { /* ignore */ }
+  setTimeout(() => {
+    try { child.kill('SIGKILL'); } catch { /* ignore */ }
+  }, 500).unref?.();
+}
+
+/**
  * Run `graphify update <projectRoot>` incrementally (AST only, no LLM).
  * Copies relevant output files from `graphify-out/` to `.planning/project-memory-context/graph/`.
  *
+ * Always returns a Promise. On hang it returns within `timeoutMs` and the
+ * child process tree is terminated; the caller is never blocked indefinitely.
+ *
  * @param {string} projectRoot - Absolute path to the project root.
- * @param {{ log?: (msg: string) => void, graphOutDir?: string }} options
- * @returns {Promise<{ ran: boolean, copied: string[] }>}
- *   `ran: false` when graphify is not installed (graceful degradation, no throw).
+ * @param {{
+ *   log?: (msg: string) => void,
+ *   graphOutDir?: string,
+ *   spawnImpl?: typeof import('node:child_process').spawn,
+ *   resolveGraphifyFn?: () => string,
+ *   timeoutMs?: number,
+ * }} options
+ * @returns {Promise<{ ran: boolean, copied: string[], timedOut?: boolean }>}
+ *   `ran: false` when graphify is not installed, exits non-zero, or times out.
  */
 export async function runGraphifyUpdate(projectRoot, options = {}) {
   const log = options.log ?? ((msg) => console.error(`[graphify-runner] ${msg}`));
+  const spawnImpl = options.spawnImpl ?? spawn;
+  const resolveGraphifyFn = options.resolveGraphifyFn ?? resolveGraphify;
+  const timeoutMs = options.timeoutMs ?? DEFAULT_GRAPHIFY_TIMEOUT_MS;
 
   let graphifyExe;
   try {
-    graphifyExe = resolveGraphify();
+    graphifyExe = resolveGraphifyFn();
   } catch {
     log('graphify not found — skipping incremental graph update. Install with `pip install graphifyy` or set PMC_GRAPHIFY_PATH.');
     return { ran: false, copied: [] };
@@ -34,13 +79,20 @@ export async function runGraphifyUpdate(projectRoot, options = {}) {
   log(`Running graphify update (incremental AST)...`);
   log(`  Executable: ${graphifyExe}`);
 
-  const result = spawnSync(graphifyExe, ['update', projectRoot], {
+  const child = spawnImpl(graphifyExe, ['update', projectRoot], {
     cwd: projectRoot,
     stdio: 'inherit',
   });
 
-  if (result.status !== 0) {
-    log(`  graphify update exited with code ${result.status} — continuing without graph refresh.`);
+  const exit = await waitForChild(child, { timeoutMs, log });
+
+  if (exit.timedOut) {
+    log(`  graphify update timed out after ${timeoutMs}ms — continuing without graph refresh.`);
+    return { ran: false, copied: [], timedOut: true };
+  }
+
+  if (exit.code !== 0) {
+    log(`  graphify update exited with code ${exit.code} — continuing without graph refresh.`);
     return { ran: false, copied: [] };
   }
 
@@ -69,6 +121,45 @@ export async function runGraphifyUpdate(projectRoot, options = {}) {
   }
 
   return { ran: true, copied };
+}
+
+/**
+ * Resolve the child process to a final outcome.
+ * - On 'close' or 'error' returns { code } (1 for spawn-time errors).
+ * - On timeout, kills the process tree and returns { timedOut: true }.
+ * Always settles; never hangs.
+ *
+ * @param {import('node:child_process').ChildProcess} child
+ * @param {{ timeoutMs: number, log: (msg: string) => void }} cfg
+ * @returns {Promise<{ code: number | null, timedOut?: boolean }>}
+ */
+function waitForChild(child, { timeoutMs, log }) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      resolve(value);
+    };
+
+    child.once('error', (err) => {
+      log(`  graphify spawn error: ${err.message}`);
+      finish({ code: 1 });
+    });
+    child.once('close', (code) => finish({ code: code ?? 0 }));
+
+    let timeoutHandle = null;
+    if (timeoutMs > 0) {
+      timeoutHandle = setTimeout(() => {
+        log(`  graphify update exceeded ${timeoutMs}ms — killing process tree.`);
+        killProcessTree(child)
+          .catch(() => { /* best-effort */ })
+          .finally(() => finish({ code: null, timedOut: true }));
+      }, timeoutMs);
+      if (typeof timeoutHandle.unref === 'function') timeoutHandle.unref();
+    }
+  });
 }
 
 /**

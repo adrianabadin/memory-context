@@ -67,3 +67,36 @@ test('writeWatchPending leaves no temp file behind (atomic rename)', async () =>
   assert.deepEqual(await readWatchPending(root), { 'src/a.mjs': 1 });
   await rm(root, { recursive: true, force: true });
 });
+
+// Windows race: mkdir resolves but dir is not yet visible for rename on first attempt.
+// writeWatchPending must retry mkdir+rename once on ENOENT from rename.
+test('writeWatchPending retries mkdir+rename on ENOENT (Windows race simulation)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'pmc-watch-debounce-'));
+  let mkdirCalls = 0;
+  let renameCalls = 0;
+
+  // mkdir succeeds every time
+  const mkdirImpl = async (p, opts) => {
+    mkdirCalls++;
+    const { mkdir: realMkdir } = await import('node:fs/promises');
+    return realMkdir(p, opts);
+  };
+
+  // rename fails ENOENT on first call, succeeds on second
+  const renameImpl = async (src, dst) => {
+    renameCalls++;
+    if (renameCalls === 1) {
+      const err = Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' });
+      throw err;
+    }
+    const { rename: realRename } = await import('node:fs/promises');
+    return realRename(src, dst);
+  };
+
+  await writeWatchPending(root, { 'src/a.mjs': 99 }, { mkdir: mkdirImpl, rename: renameImpl });
+
+  assert.ok(renameCalls >= 2, `rename should be called at least twice; was ${renameCalls}`);
+  assert.ok(mkdirCalls >= 2, `mkdir should be called at least twice on retry; was ${mkdirCalls}`);
+  assert.deepEqual(await readWatchPending(root), { 'src/a.mjs': 99 });
+  await rm(root, { recursive: true, force: true });
+});

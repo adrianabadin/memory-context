@@ -45,7 +45,19 @@ export async function writeWatchPending(projectRoot, pending, deps = {}) {
   const renameImpl = deps.rename ?? rename;
   const pendingPath = getWatchPendingPath(projectRoot);
   const tempPath = `${pendingPath}.tmp`;
-  await mkdirImpl(dirname(pendingPath), { recursive: true });
+  const dir = dirname(pendingPath);
+  await mkdirImpl(dir, { recursive: true });
   await writeFileImpl(tempPath, `${JSON.stringify(pending, null, 2)}\n`, 'utf8');
-  await renameImpl(tempPath, pendingPath);
+  try {
+    await renameImpl(tempPath, pendingPath);
+  } catch (err) {
+    // Windows race: mkdir may resolve before the directory is visible to the
+    // rename syscall. Retry mkdir once and try again before giving up.
+    if (err.code === 'ENOENT') {
+      await mkdirImpl(dir, { recursive: true });
+      await renameImpl(tempPath, pendingPath);
+    } else {
+      throw err;
+    }
+  }
 }

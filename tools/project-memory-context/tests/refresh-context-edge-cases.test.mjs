@@ -366,6 +366,88 @@ test('15. Non-ASCII file path characters', async () => {
     assert.equal(wl[0].name, 'hola');
     assert.ok(wl[0].filePath.includes('español'), 'filePath preserves unicode characters');
   });
-
   await rm(T, { recursive: true });
+});
+
+// ---------------------------------------------------------------------------
+// 16. trySyncProjectToGlobal does not hang when MCP connect stalls
+// ---------------------------------------------------------------------------
+test('16. trySyncProjectToGlobal times out when MCP connect never resolves', async () => {
+  const T = tmp('sync-stall');
+  await setupDirs(T);
+
+  // Provide a valid .mcp.json so the function proceeds to the client step.
+  await writeFile(
+    join(T, '.mcp.json'),
+    JSON.stringify({
+      mcpServers: { 'agent-memory': { command: 'node', args: ['fake.js'] } },
+    }),
+    'utf-8',
+  );
+
+  // Fake client whose connect() never resolves. This simulates a stalled
+  // agent-memory MCP handshake — the exact production failure mode that
+  // previously blocked refresh indefinitely.
+  let connectCalls = 0;
+  const stallingClient = {
+    connect: () => { connectCalls++; return new Promise(() => {}); },
+    callTool: async () => { throw new Error('should not reach callTool while connect is stalled'); },
+    close: async () => {},
+  };
+
+  const { trySyncProjectToGlobal } = await import('../cli/refresh-context.mjs');
+  const dirs = {
+    enrichment: join(T, '.planning', 'project-memory-context', 'enrichment'),
+    graph: join(T, '.planning', 'project-memory-context', 'graph'),
+    projectContextMarkdown: join(T, '.planning', 'project-memory-context', 'project-context', 'markdown'),
+  };
+
+  const start = Date.now();
+  await trySyncProjectToGlobal(T, dirs, { timeoutMs: 250, client: stallingClient });
+  const elapsed = Date.now() - start;
+
+  assert.equal(connectCalls, 1, 'connect must be attempted exactly once');
+  assert.ok(elapsed < 5_000, `must return promptly, took ${elapsed}ms`);
+  await rm(T, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// 17. trySyncProjectToGlobal succeeds when MCP client is fast
+// ---------------------------------------------------------------------------
+test('17. trySyncProjectToGlobal completes quickly with a fast fake client', async () => {
+  const T = tmp('sync-fast');
+  await setupDirs(T);
+
+  await writeFile(
+    join(T, '.mcp.json'),
+    JSON.stringify({
+      mcpServers: { 'agent-memory': { command: 'node', args: ['fake.js'] } },
+    }),
+    'utf-8',
+  );
+
+  const callOrder = [];
+  const fastClient = {
+    connect: async () => { callOrder.push('connect'); },
+    callTool: async ({ name }) => { callOrder.push(name); return {}; },
+    close: async () => { callOrder.push('close'); },
+  };
+
+  const { trySyncProjectToGlobal } = await import('../cli/refresh-context.mjs');
+  const dirs = {
+    enrichment: join(T, '.planning', 'project-memory-context', 'enrichment'),
+    graph: join(T, '.planning', 'project-memory-context', 'graph'),
+    projectContextMarkdown: join(T, '.planning', 'project-memory-context', 'project-context', 'markdown'),
+  };
+
+  const start = Date.now();
+  await trySyncProjectToGlobal(T, dirs, { timeoutMs: 2_000, client: fastClient });
+  const elapsed = Date.now() - start;
+
+  assert.ok(elapsed < 2_000, `fast sync should complete quickly, took ${elapsed}ms`);
+  assert.ok(callOrder.includes('connect'), 'connect must be called');
+  assert.ok(callOrder.includes('register_project'), 'register_project must be called');
+  assert.ok(callOrder.includes('sync_project_metadata'), 'sync_project_metadata must be called');
+  assert.ok(callOrder.includes('close'), 'client must be closed');
+  await rm(T, { recursive: true, force: true });
 });

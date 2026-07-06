@@ -2,7 +2,6 @@
 import { resolve, dirname, basename, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
 import { hashSymbol } from '../src/hash.mjs';
 
 import { ensureProjectMemoryContextDirs, readJsonArtifact, writeJsonArtifact } from '../src/artifacts.mjs';
@@ -10,8 +9,10 @@ import { extractTopLevelSymbols } from '../src/symbol-extractor.mjs';
 import { attachGraphNodeIds } from '../src/graph-node-resolver.mjs';
 import { appendSyncEntries, createSyncEntry, clearManifest } from '../src/sync-manifest.mjs';
 import { spawnBackground } from '../src/platform.mjs';
+import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const IS_MAIN = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 const PROJECT_ROOT = resolve(process.argv[2] || process.cwd());
 
 function log(msg) { console.error(`[sanitize] ${msg}`); }
@@ -22,14 +23,6 @@ function safeKey(key) {
 
 function codeHash(content) {
   return hashSymbol(content);
-}
-
-function getGraphifyExe() {
-  if (process.platform === 'win32') {
-    const localAppData = process.env.LOCALAPPDATA || resolve(process.env.APPDATA || '', '..', 'Local');
-    return resolve(localAppData, 'Programs', 'Python', 'Python313', 'Scripts', 'graphify.exe');
-  }
-  return 'graphify';
 }
 
 async function findSourceFiles(projectRoot) {
@@ -54,36 +47,6 @@ async function findSourceFiles(projectRoot) {
   return results;
 }
 
-async function runGraphifyUpdate(projectRoot) {
-  const graphifyExe = getGraphifyExe();
-  const graphifyOutDir = resolve(projectRoot, 'graphify-out');
-  const graphOutDir = resolve(projectRoot, '.planning', 'project-memory-context', 'graph');
-
-  log('Running graphify update (structural AST)...');
-  const r = spawnSync(graphifyExe, ['update', projectRoot], {
-    cwd: projectRoot,
-    stdio: 'inherit',
-  });
-
-  if (r.status !== 0) {
-    log(`WARNING: graphify update failed (code ${r.status}). Continuing with existing graph.`);
-    return false;
-  }
-
-  try {
-    const files = await readdir(graphifyOutDir);
-    for (const f of files) {
-      if (f === 'graph.json' || f === 'graph.metadata.json' || f === 'graph.html' || f === 'GRAPH_REPORT.md') {
-        const { copyFileSync } = await import('node:fs');
-        copyFileSync(resolve(graphifyOutDir, f), resolve(graphOutDir, f));
-      }
-    }
-  } catch { /* graphify-out may not exist */ }
-
-  log('Graphify update complete.');
-  return true;
-}
-
 async function extractCurrentSymbols(projectRoot, files) {
   const allSymbols = [];
   for (const file of files) {
@@ -101,21 +64,36 @@ async function extractCurrentSymbols(projectRoot, files) {
   return allSymbols;
 }
 
-async function sanitize() {
-  log(`Target: ${PROJECT_ROOT}`);
-  const projectSlug = basename(PROJECT_ROOT).toLowerCase();
-  const dirs = await ensureProjectMemoryContextDirs(PROJECT_ROOT);
+async function sanitize(options = {}) {
+  const projectRoot = options.projectRoot ?? PROJECT_ROOT;
+  log(`Target: ${projectRoot}`);
+  const projectSlug = basename(projectRoot).toLowerCase();
+  const dirs = await ensureProjectMemoryContextDirs(projectRoot);
 
-  await runGraphifyUpdate(PROJECT_ROOT);
+  // runGraphifyUpdate is the shared async runner from src/graphify-runner.mjs.
+  // It honors a default timeout (so a stuck graphify cannot block sanitize
+  // indefinitely) and never throws — it warns and continues on every failure.
+  const graphifyOptions = { log };
+  if (options.graphifyTimeoutMs != null) graphifyOptions.timeoutMs = options.graphifyTimeoutMs;
+  if (options.spawnImpl) graphifyOptions.spawnImpl = options.spawnImpl;
+  if (options.resolveGraphifyFn) graphifyOptions.resolveGraphifyFn = options.resolveGraphifyFn;
+  const graphifyResult = await runGraphifyUpdate(projectRoot, graphifyOptions);
+  if (graphifyResult.timedOut) {
+    log('Graphify update timed out — continuing with existing graph.');
+  } else if (!graphifyResult.ran) {
+    log('Graphify update skipped (binary missing or exited non-zero) — continuing with existing graph.');
+  } else if (graphifyResult.copied.length > 0) {
+    log(`Graphify update copied: ${graphifyResult.copied.join(', ')}`);
+  }
 
   const graph = await readJsonArtifact(resolve(dirs.graph, 'graph.json'), { nodes: [], edges: [] });
 
   log('Scanning source files...');
-  const files = await findSourceFiles(PROJECT_ROOT);
+  const files = await findSourceFiles(projectRoot);
   log(`Found ${files.length} source files.`);
 
   log('Extracting symbols...');
-  const currentSymbols = await extractCurrentSymbols(PROJECT_ROOT, files);
+  const currentSymbols = await extractCurrentSymbols(projectRoot, files);
   const resolvedSymbols = attachGraphNodeIds({ symbols: currentSymbols, graph });
   log(`Extracted ${resolvedSymbols.length} symbols.`);
 
@@ -208,11 +186,13 @@ async function sanitize() {
   log(`Sync-manifest operations: ${syncOps.length} (deletes for stale/removed)`);
   log('');
 
-  if (pendingCount > 0) {
+  if (pendingCount > 0 && !options.skipBackgroundEnrich) {
     const enrichCli = resolve(__dirname, 'enrich.mjs');
-    const launchedPid = spawnBackground(process.execPath, [enrichCli, PROJECT_ROOT], { cwd: PROJECT_ROOT });
+    const launchedPid = spawnBackground(process.execPath, [enrichCli, projectRoot], { cwd: projectRoot });
     log(`Background enrichment launched via spawnBackground (pid=${launchedPid})`);
-    log(`  ${process.execPath} ${enrichCli} ${PROJECT_ROOT}`);
+    log(`  ${process.execPath} ${enrichCli} ${projectRoot}`);
+  } else if (pendingCount > 0 && options.skipBackgroundEnrich) {
+    log(`Skipping background enrichment (skipBackgroundEnrich=true, ${pendingCount} pending).`);
   }
 
   const result = {
@@ -226,9 +206,14 @@ async function sanitize() {
     syncOps: syncOps.length,
   };
   console.log(JSON.stringify(result, null, 2));
+  return result;
 }
 
-sanitize().catch(err => {
-  console.error('[sanitize] FATAL:', err.message);
-  process.exit(1);
-});
+if (IS_MAIN) {
+  sanitize().catch(err => {
+    console.error('[sanitize] FATAL:', err.message);
+    process.exit(1);
+  });
+}
+
+export { sanitize };
