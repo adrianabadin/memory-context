@@ -30,7 +30,7 @@ export function updateSidebar(node, state) {
 
       <div class="node-detail-label">Community</div>
       <div class="node-detail-value">
-        <span class="badge badge-community" style="background:${COMMUNITY_COLORS_MAP(node.community)}">Community ${node.community}</span>
+        <span class="badge badge-community" style="background:${COMMUNITY_COLORS_MAP(node.community)}">${escapeHtml(state.communityNames?.[String(node.community)] ?? `Community ${node.community}`)}</span>
       </div>
 
       <div class="node-detail-label">Enrichment</div>

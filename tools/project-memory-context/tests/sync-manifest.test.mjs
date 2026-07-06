@@ -16,6 +16,7 @@ import {
   markEntriesSynced,
   removeSyncedEntries,
   clearManifest,
+  createCommunitySyncEntry,
 } from '../src/sync-manifest.mjs';
 
 let tmpDir;
@@ -74,6 +75,34 @@ describe('sync-manifest', () => {
       assert.deepEqual(entry.tags, []);
       assert.equal(entry.source, 'unknown');
       assert.equal(entry.symbolKey, null);
+    });
+  });
+
+  describe('createCommunitySyncEntry', () => {
+    it('builds an upsert entry for a named community', () => {
+      const entry = createCommunitySyncEntry({
+        communityId: '7',
+        name: 'Graph Storage',
+        projectSlug: 'memory-context',
+      });
+
+      assert.equal(entry.action, 'upsert');
+      assert.equal(entry.key_tag, 'key:community:7');
+      assert.match(entry.content, /Graph Storage/);
+      assert.ok(entry.tags.includes('community'));
+      assert.ok(entry.tags.includes('project:memory-context'));
+      assert.equal(entry.source, 'name-communities');
+      assert.equal(entry.status, 'pending');
+    });
+
+    it('coerces a numeric community id to a stable string key', () => {
+      const entry = createCommunitySyncEntry({
+        communityId: 3,
+        name: 'Retrieval Layer',
+        projectSlug: 'demo',
+      });
+
+      assert.equal(entry.key_tag, 'key:community:3');
     });
   });
 

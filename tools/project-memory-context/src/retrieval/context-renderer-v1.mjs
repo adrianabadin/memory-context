@@ -22,6 +22,7 @@ export function renderTargetContext({ summary = [], target = {}, relevant = [], 
   if (target.value != null) lines.push(`  value: ${target.value}`);
   if (target.filePath != null) lines.push(`  filePath: ${target.filePath}`);
   if (target.range != null) lines.push(`  range: ${target.range.startLine}-${target.range.endLine}`);
+  if (target.communityName != null) lines.push(`  community: ${target.communityName}`);
 
   lines.push('Relevant');
   if (relevant.length > 0) {
@@ -74,6 +75,16 @@ export function renderTargetContext({ summary = [], target = {}, relevant = [], 
       if (source.fresh === true) {
         lines.push(`  ✅ fresh (hash verified)`);
       }
+    }
+  }
+
+  // ── Semantic Memory (linked memories from symbol links) ─────────
+  if (target.linkedMemories?.length > 0) {
+    lines.push('');
+    lines.push('Semantic Memory');
+    for (const mem of target.linkedMemories) {
+      const typeTag = mem.type ? ` (${mem.type})` : '';
+      lines.push(`- ${mem.content}${typeTag}`);
     }
   }
 

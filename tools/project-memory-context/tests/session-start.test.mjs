@@ -9,10 +9,13 @@ import { tmpdir } from 'node:os';
 import {
   getSessionStartSnapshotPaths,
   launchEnrichmentIfNeeded,
+  launchRefreshContext,
+  launchWatcherIfNeeded,
   runSessionStartRuntime,
 } from '../src/session-start-runtime.mjs';
+import { writeWatchPidRecord } from '../src/watcher-lifecycle.mjs';
 import { runSessionStart } from '../cli/session-start.mjs';
-import pluginFactory from '../plugin/index.mjs';
+import { PMCPlugin } from '../plugin/index.mjs';
 
 async function createSessionStartFixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-session-start-'));
@@ -45,6 +48,7 @@ test('runSessionStartRuntime writes latest snapshot files and returns materializ
       worklist: { pending: 0, enriched: 12, errors: 0 },
       subagentQueue: { pending: 2 },
     }),
+    spawnBackground: () => 0,
   });
 
   assert.equal(result.hasPmc, true);
@@ -88,9 +92,12 @@ test('runSessionStartRuntime launches enrichment and watchdog only when pending 
   assert.equal(result.launch.launchedEnrichment, true);
   assert.equal(result.launch.launchedWatchdog, true);
   assert.equal(result.launch.backend, 'detached-node');
-  assert.equal(spawns.length, 2);
-  assert.match(spawns[0].args[0].replace(/\\/g, '/'), /enrich-queue\.mjs$/);
-  assert.match(spawns[1].args[0].replace(/\\/g, '/'), /enrich-watchdog\.mjs$/);
+  // 4 total: enrich-queue, enrich-watchdog (from launchEnrichmentIfNeeded)
+  //        + refresh-context, watch.mjs (from launchRefreshContext / launchWatcherIfNeeded)
+  assert.equal(spawns.length, 4);
+  const spawnedArgs = spawns.map((s) => s.args[0].replace(/\\/g, '/'));
+  assert.ok(spawnedArgs.some((a) => /enrich-queue\.mjs$/.test(a)), 'enrich-queue should have been spawned');
+  assert.ok(spawnedArgs.some((a) => /enrich-watchdog\.mjs$/.test(a)), 'enrich-watchdog should have been spawned');
 });
 
 test('runSessionStartRuntime returns hasPmc: false and writes no snapshots when .planning/project-memory-context is missing', async () => {
@@ -240,50 +247,89 @@ test('runSessionStart writes nothing and returns 0 when runtime reports hasPmc: 
   assert.equal(writes.length, 0);
 });
 
-test('OpenCode plugin runs the shared session-start runtime during config()', async () => {
-  const events = [];
-
-  const plugin = await pluginFactory({
-    directory: 'C:/repo',
+test('PMCPlugin runs session-start runtime on initialization and returns hooks object', async () => {
+  const calls = [];
+  const hooks = await PMCPlugin({
+    directory: '/proj',
     __testOverrides: {
-      readInstallState: async () => ({ projectRoot: 'C:/repo', memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db' }),
-      createController: () => ({
-        rehydrate: async () => { events.push('rehydrate'); },
-        onToolExecuteAfter: async () => {},
-      }),
-      runSessionStartRuntime: async (projectRoot, options) => {
-        events.push(`runtime:${projectRoot}:${options.mode}`);
-        return { hasPmc: true };
-      },
+      runSessionStartRuntime: async (root, opts) => { calls.push({ root, opts }); },
+      spawnBackground: () => 0,
     },
   });
-
-  const cfg = {};
-  await plugin.config(cfg);
-
-  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
-  assert.deepEqual(events, ['rehydrate', 'runtime:C:/repo:opencode-plugin']);
+  assert.deepEqual(calls, [{ root: '/proj', opts: { mode: 'opencode-plugin' } }]);
+  assert.equal(typeof hooks, 'object');
+  // Refresh hook eliminated: the FS watcher replaces tool.execute.after
+  assert.equal(hooks['tool.execute.after'], undefined);
+  assert.equal(hooks.config, undefined);
 });
 
-test('OpenCode plugin config() swallows runtime errors so startup never fails', async () => {
-  const plugin = await pluginFactory({
-    directory: 'C:/repo',
+test('PMCPlugin swallows runtime errors so OpenCode startup never fails', async () => {
+  const hooks = await PMCPlugin({
+    directory: '/proj',
     __testOverrides: {
-      readInstallState: async () => ({
-        projectRoot: 'C:/repo',
-        memoryDbPath: 'C:/repo/.planning/project-memory-context/memory.db',
-      }),
-      createController: () => ({
-        rehydrate: async () => {},
-        onToolExecuteAfter: async () => {},
-      }),
-      runSessionStartRuntime: async () => {
-        throw new Error('boom');
-      },
+      runSessionStartRuntime: async () => { throw new Error('disk exploded'); },
+      spawnBackground: () => 0,
     },
   });
+  assert.equal(typeof hooks, 'object');
+});
 
-  const cfg = {};
-  await assert.doesNotReject(() => plugin.config(cfg));
-  assert.equal(cfg.mcp['pmc-agent-memory'].enabled, true);
+test('launchRefreshContext spawns detached refresh-context --enrich from package cli dir', () => {
+  const spawns = [];
+  const result = launchRefreshContext('/proj', {
+    spawnBackground: (cmd, args, opts) => { spawns.push({ cmd, args, opts }); return 111; },
+  });
+  assert.equal(result.launchedRefresh, true);
+  assert.equal(result.backend, 'detached-node');
+  assert.equal(spawns.length, 1);
+  assert.equal(spawns[0].cmd, process.execPath);
+  assert.match(spawns[0].args[0].replace(/\\/g, '/'), /cli\/refresh-context\.mjs$/);
+  assert.equal(spawns[0].args[1], '/proj');
+  assert.equal(spawns[0].args[2], '--enrich');
+  assert.equal(spawns[0].opts.cwd, '/proj');
+});
+
+test('launchWatcherIfNeeded spawns watcher when none alive, skips when alive', async () => {
+  const { projectRoot } = await createSessionStartFixture();
+
+  const spawns = [];
+  const first = await launchWatcherIfNeeded(projectRoot, {
+    spawnBackground: (cmd, args, opts) => { spawns.push({ cmd, args, opts }); return 222; },
+  });
+  assert.equal(first.launchedWatcher, true);
+  assert.equal(first.watcherPid, 222);
+  assert.match(spawns[0].args[0].replace(/\\/g, '/'), /cli\/watch\.mjs$/);
+
+  // Simulate a live watcher: fresh heartbeat + matching root + alive pid
+  await writeWatchPidRecord(projectRoot, {
+    pid: process.pid,
+    projectRoot,
+    startedAt: new Date().toISOString(),
+    lastHeartbeat: new Date().toISOString(),
+  });
+  const second = await launchWatcherIfNeeded(projectRoot, {
+    spawnBackground: () => { throw new Error('must not spawn'); },
+  });
+  assert.equal(second.launchedWatcher, false);
+  assert.equal(second.watcherPid, process.pid);
+});
+
+test('runSessionStartRuntime includes refresh and watcher launch results in snapshot', async () => {
+  const { projectRoot } = await createSessionStartFixture();
+  const spawned = [];
+  const result = await runSessionStartRuntime(projectRoot, {
+    buildStatusReport: async () => ({
+      state: 'idle',
+      worklist: { pending: 0, enriched: 5, errors: 0 },
+      subagentQueue: { pending: 0 },
+    }),
+    spawnBackground: (cmd, args) => { spawned.push(args); return 333; },
+  });
+
+  assert.equal(result.refresh.launchedRefresh, true);
+  assert.equal(result.watcher.launchedWatcher, true);
+  // Snapshot on disk reflects the new fields
+  const snapshot = JSON.parse(await readFile(result.snapshot.jsonPath, 'utf8'));
+  assert.equal(snapshot.refresh.launchedRefresh, true);
+  assert.equal(snapshot.watcher.launchedWatcher, true);
 });

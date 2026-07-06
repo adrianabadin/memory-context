@@ -298,15 +298,19 @@ test('installAgentTemplates is idempotent on re-run', async () => {
   }
 });
 
-test('pmc skill template exists with PMC-first guidance', async () => {
+test('pmc skill template exists with PMC-first guidance and deterministic memory protocol', async () => {
   const skillTemplate = await readFile(
     join(packageRoot, 'templates', 'pmc-skill', 'SKILL.md'),
     'utf8',
   );
 
   assert.match(skillTemplate, /PMC first, files second/);
-  assert.match(skillTemplate, /query PMC before reading more than 3 files/i);
-  assert.match(skillTemplate, /pmc_query_project/);
+  assert.match(skillTemplate, /Memory Protocol — Deterministic Triggers/i);
+  assert.match(skillTemplate, /pmc-agent-memory_store/);
+  assert.match(skillTemplate, /pmc-agent-memory_set_session_context/);
+  assert.match(skillTemplate, /pmc-agent-memory_store_session_summary/);
+  assert.match(skillTemplate, /pmc-agent-memory_search_global_errors/);
+  assert.match(skillTemplate, /pmc-query_pmc_query_project/);
 });
 
 test('Claude and Cursor snippets include PMC-first guidance and MCP tools', async () => {

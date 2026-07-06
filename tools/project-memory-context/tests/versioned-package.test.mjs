@@ -20,6 +20,7 @@ test('package metadata uses the @aabadin scope and pmc binary', () => {
     '.': './src/index.mjs',
     './platform': './src/platform.mjs',
     './retrieval': './src/retrieval/query-engine.mjs',
+    './plugin': './plugin/index.mjs',
   });
 });
 

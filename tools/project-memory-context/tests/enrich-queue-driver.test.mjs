@@ -12,6 +12,7 @@ import {
   finalizeQueueState,
   buildQueueState,
   maybeLaunchRetryErrors,
+  maybeNameCommunities,
 } from '../cli/enrich-queue.mjs';
 import {
   ensureProjectMemoryContextDirs,
@@ -419,4 +420,56 @@ test('maybeLaunchRetryErrors skips spawn when summary.errors is 0', async () => 
   assert.equal(result.launched, false);
   assert.equal(result.reason, 'no-errors');
   assert.equal(launches.length, 0);
+});
+
+// ── maybeNameCommunities (post-enrich naming hook, task 3.1) ────────────────────
+
+test('maybeNameCommunities runs the naming pipeline when symbols were enriched', async () => {
+  const calls = [];
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 3, errors: 0 },
+    runNaming: async (spec) => {
+      calls.push(spec);
+      return { named: 2, skipped: 1, failed: 0 };
+    },
+  });
+
+  assert.equal(result.ran, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].projectRoot, '/repo');
+  assert.deepEqual(result.result, { named: 2, skipped: 1, failed: 0 });
+});
+
+test('maybeNameCommunities skips naming when no symbols were enriched', async () => {
+  const calls = [];
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 0, errors: 0 },
+    runNaming: async (spec) => {
+      calls.push(spec);
+      return { named: 0, skipped: 0, failed: 0 };
+    },
+  });
+
+  assert.equal(result.ran, false);
+  assert.equal(result.reason, 'nothing-enriched');
+  assert.equal(calls.length, 0);
+});
+
+test('maybeNameCommunities never throws when the naming pipeline fails', async () => {
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 1, errors: 0 },
+    runNaming: async () => {
+      throw new Error('graph.db locked');
+    },
+  });
+
+  assert.equal(result.ran, false);
+  assert.equal(result.reason, 'error');
+  assert.match(result.error, /graph\.db locked/);
 });

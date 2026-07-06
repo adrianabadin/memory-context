@@ -21,12 +21,37 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function log(msg) { console.error(`[refresh-context] ${msg}`); }
 
+/**
+ * Default timeout (ms) for the global MCP sync round-trip. A refresh must
+ * not hang on the agent-memory handshake — a slow or stuck sync is logged
+ * and refresh returns normally.
+ */
+export const DEFAULT_SYNC_TIMEOUT_MS = 15_000;
+
+/**
+ * Race a promise against a timeout. Rejects with a descriptive error on
+ * timeout so the caller can log it and continue. Never throws on its own
+ * — the underlying promise's errors are propagated normally.
+ */
+function withTimeout(promise, ms, label) {
+  let handle;
+  const timeout = new Promise((_, reject) => {
+    handle = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(handle));
+}
+
 function computeProjectId(rootPath) {
   const normalised = rootPath.replace(/\\/g, '/').toLowerCase();
   return createHash('sha256').update(normalised).digest('hex');
 }
 
-async function trySyncProjectToGlobal(projectRoot, dirs) {
+async function trySyncProjectToGlobal(projectRoot, dirs, options = {}) {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_SYNC_TIMEOUT_MS;
+
   const mcpPath = resolve(projectRoot, '.mcp.json');
   let serverConfig;
   try {
@@ -52,38 +77,56 @@ async function trySyncProjectToGlobal(projectRoot, dirs) {
     projectId,
   );
 
-  const client = new Client({ name: 'pmc-refresh', version: '1.0.0' });
-  const transport = new StdioClientTransport({
+  const realClient = new Client({ name: 'pmc-refresh', version: '1.0.0' });
+  const realTransport = new StdioClientTransport({
     command: serverConfig.command,
     args: serverConfig.args ?? [],
     env: { ...process.env, ...serverConfig.env },
   });
+  // Allow tests to inject a fake client/transport so they can simulate
+  // a stalled MCP handshake without spawning real processes.
+  const client = options.client ?? realClient;
+  const transport = options.transport ?? realTransport;
 
   try {
-    await client.connect(transport);
+    await withTimeout(client.connect(transport), timeoutMs, 'mcp connect');
 
     // Ensure project is registered (idempotent)
-    await client.callTool({
-      name: 'register_project',
-      arguments: { name: projectName, rootPath: projectRoot },
-    });
+    await withTimeout(
+      client.callTool({
+        name: 'register_project',
+        arguments: { name: projectName, rootPath: projectRoot },
+      }),
+      timeoutMs,
+      'mcp register_project',
+    );
 
     // Sync metadata
     const metadataArgs = { projectId };
     if (architectureText) metadataArgs.architecture = architectureText.slice(0, 2000);
     if (minimapText) metadataArgs.minimap = { summary: minimapText.slice(0, 1000) };
-    await client.callTool({ name: 'sync_project_metadata', arguments: metadataArgs });
+    await withTimeout(
+      client.callTool({ name: 'sync_project_metadata', arguments: metadataArgs }),
+      timeoutMs,
+      'mcp sync_project_metadata',
+    );
 
     // Auto-promote errors
     for (const payload of errorPayloads) {
-      await client.callTool({ name: 'record_error', arguments: payload });
+      await withTimeout(
+        client.callTool({ name: 'record_error', arguments: payload }),
+        timeoutMs,
+        'mcp record_error',
+      );
     }
 
     log(`Global context synced (${errorPayloads.length} errors promoted)`);
   } catch (err) {
     log(`Global context sync skipped (non-fatal): ${err.message}`);
   } finally {
-    try { await client.close(); } catch { /* ignore */ }
+    try {
+      await withTimeout(client.close(), timeoutMs, 'mcp close');
+    } catch { /* ignore */ }
   }
 }
 
@@ -232,8 +275,14 @@ export async function refreshContext(projectRoot, options = {}) {
 
   console.log(JSON.stringify(result, null, 2));
 
-  // Sync to global context store (non-blocking, errors are swallowed)
-  await trySyncProjectToGlobal(projectRoot, dirs).catch(() => {});
+  // Sync to global context store (non-blocking, errors are swallowed).
+  // trySyncProjectToGlobal has its own timeout — even if the agent-memory
+  // handshake stalls, refresh returns within DEFAULT_SYNC_TIMEOUT_MS.
+  const syncOptions = {};
+  if (options.syncTimeoutMs != null) syncOptions.timeoutMs = options.syncTimeoutMs;
+  if (options.syncClient) syncOptions.client = options.syncClient;
+  if (options.syncTransport) syncOptions.transport = options.syncTransport;
+  await trySyncProjectToGlobal(projectRoot, dirs, syncOptions).catch(() => {});
 
   return result;
 }
@@ -251,3 +300,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(1);
   });
 }
+
+export { trySyncProjectToGlobal };

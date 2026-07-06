@@ -2,6 +2,7 @@ import express from "express";
 import { readFileSync, existsSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { openGraphDb } from "../../src/graph-store/graph-db.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -11,6 +12,7 @@ const projectRoot = process.env.PMC_PROJECT_ROOT
   : resolve(process.cwd());
 
 const GRAPH_PATH = resolve(projectRoot, ".planning/project-memory-context/graph/graph.json");
+const GRAPH_DB_PATH = resolve(projectRoot, ".planning/project-memory-context/graph/graph.db");
 const WORKLIST_PATH = resolve(projectRoot, ".planning/project-memory-context/enrichment/worklist.json");
 const TRACKER_PATH = resolve(projectRoot, ".planning/project-memory-context/context-tracker.json");
 
@@ -32,6 +34,28 @@ app.get("/api/graph", (req, res) => {
     res.json(data);
   } catch {
     res.status(404).json({ error: "graph.json not found" });
+  }
+});
+
+app.get("/api/communities", (req, res) => {
+  // Read-only lookup of community names from graph.db. The endpoint must never
+  // crash the server: any missing file, locked DB, or query error falls back to {}.
+  if (!existsSync(GRAPH_DB_PATH) || !existsSync(GRAPH_PATH)) {
+    return res.json({});
+  }
+  let store = null;
+  try {
+    store = openGraphDb(GRAPH_DB_PATH, GRAPH_PATH);
+    const rows = store.getAllCommunityNames();
+    const names = {};
+    for (const row of rows) {
+      names[String(row.community_id)] = row.name;
+    }
+    res.json(names);
+  } catch {
+    res.json({});
+  } finally {
+    try { store?.close(); } catch {}
   }
 });
 

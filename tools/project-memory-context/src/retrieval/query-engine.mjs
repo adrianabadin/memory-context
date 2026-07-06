@@ -1,5 +1,6 @@
 // src/retrieval/query-engine.mjs
 import { createInMemoryGraphStore } from '../graph-store/in-memory-graph.mjs';
+import { withLockRetry } from './lock-retry.mjs';
 
 const DEPTH_PRESETS = {
   compact:  { maxHops: 1, includeCommunity: false, maxTokens: 2000,  readSourceFiles: false },
@@ -27,7 +28,7 @@ export function focusToEdgeTypes(focus) {
   return map[focus] ?? ['calls', 'imports', 'imports_from', 'contains', 'method'];
 }
 
-export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, enrichmentDir, projectSlug }) {
+export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, enrichmentDir, projectSlug, memoryStore }) {
   // Backward-compat: if old `graph` object passed, auto-wrap in InMemoryGraphStore.
   const store = graphStore ?? createInMemoryGraphStore(graph ?? { nodes: [], links: [] });
 
@@ -66,10 +67,24 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     return (worklist ?? []).find((e) => e.symbolKey === symbolKey) ?? null;
   }
 
-  function buildSymbolInfo(symbolKey) {
+  async function fetchLinkedMemories(symbolKey) {
+    if (!memoryStore?.getBySymbol) return [];
+    try {
+      const rows = await withLockRetry(
+        () => memoryStore.getBySymbol(symbolKey, { sources: ['memory'], limit: 10 }),
+        { maxAttempts: 3, baseDelay: 100, staleFallback: [] },
+      );
+      return rows.map(r => ({ id: r.id, content: r.content, type: r.source, scope: 'project' }));
+    } catch {
+      return [];
+    }
+  }
+
+  async function buildSymbolInfo(symbolKey) {
     const entry = (symbolIndex ?? {})[symbolKey];
     const wl    = resolveWorklistEntry(symbolKey);
     const parts = parseSymbolKeyParts(symbolKey);
+    const linkedMemories = await fetchLinkedMemories(symbolKey);
     return {
       symbolKey,
       name:        wl?.name      ?? extractName(parts),
@@ -80,30 +95,68 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
       graphNodeId: entry?.graphNodeId ?? null,
       memoryId:    entry?.memoryId    ?? null,
       status:      entry?.status      ?? null,
+      linkedMemories,
     };
   }
 
-  function querySymbolContext({ symbolKey, depth }) {
+  // Build a community-id → name lookup once per engine. Returns an empty map
+  // when the store does not expose community names (e.g. in-memory store).
+  let _communityNameMap = null;
+  function communityNameFor(communityId) {
+    if (communityId == null) return null;
+    if (_communityNameMap === null) {
+      _communityNameMap = new Map();
+      if (typeof store.getAllCommunityNames === 'function') {
+        try {
+          for (const row of store.getAllCommunityNames() ?? []) {
+            _communityNameMap.set(String(row.community_id), row.name);
+          }
+        } catch {
+          // Missing table or query failure → no community names available.
+        }
+      }
+    }
+    return _communityNameMap.get(String(communityId)) ?? null;
+  }
+
+  function attachCommunity(target) {
+    if (!target.graphNodeId || typeof store.getNode !== 'function') return target;
+    const node = store.getNode(target.graphNodeId);
+    const communityId = node?.community ?? null;
+    if (communityId == null) return target;
+    const communityName = communityNameFor(communityId);
+    if (!communityName) return target;
+    return { ...target, communityId, communityName };
+  }
+
+  async function querySymbolContext({ symbolKey, depth }) {
     const config = createDepthConfig(depth);
-    const target = buildSymbolInfo(symbolKey);
+    let target = await buildSymbolInfo(symbolKey);
     if (!target.graphNodeId) return { target, neighbors: [], edges: [], depth_reached: 0 };
+    target = attachCommunity(target);
 
     const traversal = traverseGraph({ nodeIds: [target.graphNodeId], maxHops: config.maxHops });
-    const neighbors = traversal.nodes
-      .filter((n) => n.id !== target.graphNodeId)
-      .map((n) => {
-        const sk = graphNodeIdToSymbolKeyMap.get(n.id);
-        if (sk) return buildSymbolInfo(sk);
-        return { graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null };
-      });
+    const neighbors = [];
+    for (const n of traversal.nodes) {
+      if (n.id === target.graphNodeId) continue;
+      const sk = graphNodeIdToSymbolKeyMap.get(n.id);
+      if (sk) {
+        neighbors.push(await buildSymbolInfo(sk));
+      } else {
+        neighbors.push({ graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null });
+      }
+    }
     return { target, neighbors, edges: traversal.edges, depth_reached: traversal.depth_reached };
   }
 
-  function queryFileContext({ filePath, depth }) {
+  async function queryFileContext({ filePath, depth }) {
     const config      = createDepthConfig(depth);
     const normalized  = normalizePath(filePath);
     const symbolKeys  = filePathToSymbolKeys.get(normalized) ?? [];
-    const symbols     = symbolKeys.map(buildSymbolInfo);
+    const symbols     = [];
+    for (const sk of symbolKeys) {
+      symbols.push(await buildSymbolInfo(sk));
+    }
     const fileNodeIds = store.getNodesByFile(normalized).map((n) => n.id);
 
     const outTraversal = traverseGraph({ nodeIds: fileNodeIds, maxHops: config.maxHops });
@@ -118,9 +171,11 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
       if (fileNodeIdSet.has(n.id) || seen.has(n.id)) continue;
       seen.add(n.id);
       const sk = graphNodeIdToSymbolKeyMap.get(n.id);
-      neighbors.push(sk
-        ? buildSymbolInfo(sk)
-        : { graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null });
+      if (sk) {
+        neighbors.push(await buildSymbolInfo(sk));
+      } else {
+        neighbors.push({ graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null });
+      }
     }
 
     const edgeSet = new Set();
@@ -133,19 +188,25 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     return { symbols, neighbors, edges, depth_reached };
   }
 
-  function queryImpactScope({ symbolKeys, depth }) {
+  async function queryImpactScope({ symbolKeys, depth }) {
     const config      = createDepthConfig(depth);
-    const targets     = symbolKeys.map(buildSymbolInfo);
+    const targets     = [];
+    for (const sk of symbolKeys) {
+      targets.push(await buildSymbolInfo(sk));
+    }
     const nodeIds     = targets.map((t) => t.graphNodeId).filter(Boolean);
     const traversal   = traverseGraph({ nodeIds, maxHops: config.maxHops, direction: 'inbound' });
     const targetIdSet = new Set(nodeIds);
-    const dependents  = traversal.nodes
-      .filter((n) => !targetIdSet.has(n.id))
-      .map((n) => {
-        const sk = graphNodeIdToSymbolKeyMap.get(n.id);
-        if (sk) return buildSymbolInfo(sk);
-        return { graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null };
-      });
+    const dependents  = [];
+    for (const n of traversal.nodes) {
+      if (targetIdSet.has(n.id)) continue;
+      const sk = graphNodeIdToSymbolKeyMap.get(n.id);
+      if (sk) {
+        dependents.push(await buildSymbolInfo(sk));
+      } else {
+        dependents.push({ graphNodeId: n.id, label: n.label, sourceFile: n.source_file ?? null, symbolKey: null });
+      }
+    }
     return {
       target:        targets.length === 1 ? targets[0] : targets,
       dependents,

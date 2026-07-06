@@ -504,34 +504,46 @@ pmc project-context [--refresh]
 
 ## OpenCode Session Startup
 
-When PMC is installed as an OpenCode plugin, plugin startup runs the same shared Node runtime that powers `pmc session-start`. This happens outside the model context window and handles the deterministic startup work without spending chat tokens.
+`pmc init .` (or `pmc install-pmc`) installs `.opencode/plugins/pmc.mjs` — an auto-loaded plugin that OpenCode picks up at startup with no manual wiring required. It also writes the PMC MCP server entries into `.opencode/opencode.json` (merging non-destructively with existing config).
 
-What it does:
+On every OpenCode startup the plugin runs a zero-token Node runtime (`runSessionStartRuntime`) that:
 
-- reads PMC disk state and materialized project-context summaries
-- launches background `enrich-queue` plus `enrich-watchdog` when pending work exists
-- writes the latest startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` and `.planning/project-memory-context/runs/session-start/latest.md`
+1. Launches `pmc refresh-context --enrich` detached (hash-incremental — only changed files are re-processed)
+2. Launches background enrichment + watchdog if pending symbols exist
+3. Ensures exactly one detached file watcher per project (see **OpenCode File Watcher** below)
+4. Writes the startup snapshot to `.planning/project-memory-context/runs/session-start/latest.json` and `.planning/project-memory-context/runs/session-start/latest.md`
 
-Notes:
-
-- startup uses detached Node child processes today, not PTY tools
-- PTY is still recommended when an agent manually manages long-lived processes later in the session
-- if the plugin is disabled, the manual fallback is `pmc session-start .`
+The startup sequence adds less than 100ms of wall time and zero tokens to the session. Startup uses detached Node child processes today, not PTY tools. If the plugin is disabled, the manual fallback is `pmc session-start .`.
 
 ---
 
-## OpenCode Auto-Refresh Hook
+## OpenCode File Watcher
 
-When PMC is installed as an OpenCode plugin, the plugin listens to `tool.execute.after` for structured edit tools: `apply_patch`, `edit`, and `write`.
+The PMC file watcher (`pmc watch .`) watches source files and triggers `pmc refresh-context --enrich` automatically when files go quiet. It supersedes the old `opencode-refresh-hook` (`tool.execute.after`) approach — it sees agent edits, human edits, and git operations alike.
 
-Relevant edits are debounced for 5 minutes of inactivity. Once the debounce window expires, PMC launches a single background `pmc refresh-context --enrich` run for the current project.
+### Debounce semantics
 
-Notes:
+Each file has its own independent 5-minute quiet timer. A file that is being continuously edited never blocks the refresh of other files that have gone quiet. Once a file's quiet window expires, a single `pmc refresh-context --enrich` run is launched (pending state is merged across files).
 
-- shell-based file mutations from `bash` are intentionally excluded in v1
-- repeated edits collapse into one refresh run after the most recent write
-- pending work survives OpenCode restart through `.planning/project-memory-context/opencode-refresh-hook.json`
-- after installing or updating the plugin/config, restart OpenCode so the new plugin code is loaded
+### Lifecycle
+
+- **30-second tick + heartbeat**: the watcher writes a heartbeat every 30s to `state/watch.pid`
+- **PID file identity**: the PID file stores `{ pid, projectRoot, heartbeatAt }`. A running watcher is considered stale if `heartbeatAt` is more than 90s old (guards against PID reuse, zombie processes, and hung watchers)
+- **Pending state persistence**: `state/watch-pending.json` survives restarts — if the watcher is killed mid-debounce, the next startup picks up where it left off
+
+### CLI flags
+
+```bash
+pmc watch . --detach   # start in background (confirms startup within 5s)
+pmc watch . --status   # JSON: alive, pid, lastHeartbeat, pendingFiles
+pmc watch . --stop     # stop the tracked watcher
+```
+
+The plugin startup (`runSessionStartRuntime`) calls the `--detach` path automatically. Manual use is only needed when the plugin is not installed or after a manual `--stop`.
+
+### Enrichment single-instance guard
+
+`enrich-queue` has a built-in single-instance guard (PID + heartbeat) so concurrent launchers — session-start, refresh-context, and the file watcher — cannot double-process the same queue. If an instance is already running, subsequent launch attempts exit immediately without starting a second worker.
 
 ---
 

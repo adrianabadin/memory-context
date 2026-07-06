@@ -2,7 +2,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { buildInjectedPmcConfig } from './plugin-config.mjs';
 
 export { detectAgentType } from './platform.mjs';
 
@@ -112,6 +113,39 @@ const COMMAND_TEMPLATES = [
   'opencode/commands/refresh-context.md',
 ];
 
+async function readOpencodeInstallState(projectRoot) {
+  try {
+    return JSON.parse(
+      await readFile(join(projectRoot, '.planning', 'project-memory-context', 'install.json'), 'utf8'),
+    );
+  } catch {
+    return {
+      projectRoot,
+      memoryDbPath: join(projectRoot, '.planning', 'project-memory-context', 'memory-db'),
+    };
+  }
+}
+
+async function writeOpencodeProjectConfig({ projectRoot, installState }) {
+  const configPath = join(projectRoot, '.opencode', 'opencode.json');
+  let existing = {};
+  try {
+    existing = JSON.parse(await readFile(configPath, 'utf8'));
+  } catch {}
+
+  const injected = buildInjectedPmcConfig({ installState });
+  const merged = {
+    ...existing,
+    // Installer-owned field: always set the canonical schema, even if the
+    // existing config carries a stale or wrong one.
+    $schema: 'https://opencode.ai/config.json',
+    mcp: { ...(existing.mcp ?? {}), ...injected.mcp },
+  };
+
+  await mkdir(dirname(configPath), { recursive: true });
+  await writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+}
+
 async function installOpencode({ projectRoot, packageRoot, placeholders, globalConfigDir }) {
   const globalDir = globalConfigDir;
 
@@ -150,6 +184,20 @@ async function installOpencode({ projectRoot, packageRoot, placeholders, globalC
 
   const updated = replaceOrAppendBlock(existing.trim(), 'autostart', stripBlockMarkers(autostartBlock, 'autostart').trim());
   await writeFile(agentsMdPath, updated, 'utf8');
+
+  // Auto-load plugin wrapper: OpenCode loads .opencode/plugins/*.mjs at startup.
+  // The import path is resolved at install time to this package's location —
+  // global install for consumers, local path in the source repo.
+  const pluginImportUrl = pathToFileURL(join(packageRoot, 'plugin', 'index.mjs')).href;
+  const pluginContent = renderTemplate(
+    await readTemplate(packageRoot, 'opencode/plugins/pmc.mjs'),
+    { ...placeholders, PMC_PLUGIN_IMPORT: pluginImportUrl },
+  );
+  await writeIfMissingOrForced(join(projectRoot, '.opencode', 'plugins', 'pmc.mjs'), pluginContent, { force: true });
+
+  // MCP servers: written directly to project config (OpenCode has no `config` hook).
+  const installState = await readOpencodeInstallState(projectRoot);
+  await writeOpencodeProjectConfig({ projectRoot, installState });
 }
 
 async function installClaudeCode({ projectRoot, packageRoot, placeholders, globalConfigDir }) {
