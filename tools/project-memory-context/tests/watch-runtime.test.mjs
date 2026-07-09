@@ -5,7 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { createWatchRuntime } from '../cli/watch.mjs';
+import { createWatchRuntime, statusCommand } from '../cli/watch.mjs';
 import { readWatchPidRecord } from '../src/watcher-lifecycle.mjs';
 import { readWatchPending } from '../src/watch-debounce.mjs';
 
@@ -176,4 +176,41 @@ test('setPending seeds inherited pending from a previous run', async () => {
   assert.equal(result.refreshed, true);
   assert.equal(refreshCalls.length, 1);
   await rm(projectRoot, { recursive: true, force: true });
+});
+
+test('statusCommand prints watch status and includes sync state reports', async () => {
+  const printed = [];
+  const deps = {
+    readWatchPidRecord: async () => ({ pid: 1234, startedAt: '2026-05-19', lastHeartbeat: '2026-05-20' }),
+    isWatcherAlive: () => true,
+    readWatchPending: async () => ({ 'src/a.mjs': 1 }),
+    readSyncState: async () => ({
+      status: 'finished',
+      pid: 9999,
+      startedAt: '2026-05-20T20:50:00.000Z',
+      heartbeatAt: '2026-05-20T20:55:00.000Z',
+      finishedAt: '2026-05-20T20:55:01.000Z',
+      summary: { synced: 5, errors: 0, pending: 0 },
+    }),
+    deriveSyncState: (state) => ({
+      state: 'finished',
+      runtime: {
+        pid: state.pid,
+        startedAt: state.startedAt,
+        heartbeatAt: state.heartbeatAt,
+        finishedAt: state.finishedAt,
+        summary: state.summary,
+      }
+    }),
+    logFn: (msg) => printed.push(JSON.parse(msg)),
+  };
+
+  await statusCommand('/fake/root', deps);
+
+  assert.equal(printed.length, 1);
+  assert.equal(printed[0].alive, true);
+  assert.equal(printed[0].pid, 1234);
+  assert.equal(printed[0].pendingFiles, 1);
+  assert.equal(printed[0].sync.state, 'finished');
+  assert.equal(printed[0].sync.pid, 9999);
 });

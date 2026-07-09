@@ -168,3 +168,62 @@ test('buildStatusReport preserves finished terminal state', async () => {
   assert.equal(report.state, 'finished');
   assert.equal(report.runtime.finishedAt, '2026-05-20T20:55:01.000Z');
 });
+
+test('buildStatusReport returns sync state reports (fresh, stalled, failed)', async () => {
+  const { projectRoot, enrichmentDir } = await createStatusFixture();
+
+  // Test failed sync state
+  await writeFile(
+    join(enrichmentDir, 'sync-state.json'),
+    JSON.stringify({
+      status: 'failed',
+      pid: 5555,
+      startedAt: '2026-05-20T20:50:00.000Z',
+      heartbeatAt: '2026-05-20T20:55:00.000Z',
+      finishedAt: '2026-05-20T20:55:01.000Z',
+      lastError: 'sync connector lost',
+      summary: { synced: 2, errors: 1, pending: 0 },
+    }),
+  );
+
+  let report = await buildStatusReport({ projectRoot, now: '2026-05-20T21:00:00.000Z' });
+  assert.equal(report.sync.state, 'failed');
+  assert.equal(report.sync.pid, 5555);
+  assert.equal(report.sync.lastError, 'sync connector lost');
+  assert.equal(report.sync.summary.synced, 2);
+  assert.equal(report.sync.summary.errors, 1);
+
+  // Test running and fresh (heartbeat updated 2 mins ago, 5 mins stale threshold)
+  await writeFile(
+    join(enrichmentDir, 'sync-state.json'),
+    JSON.stringify({
+      status: 'running',
+      pid: 5555,
+      startedAt: '2026-05-20T20:50:00.000Z',
+      heartbeatAt: '2026-05-20T20:58:30.000Z',
+      finishedAt: null,
+      lastError: null,
+      summary: { synced: 2, errors: 0, pending: 4 },
+    }),
+  );
+
+  report = await buildStatusReport({ projectRoot, now: '2026-05-20T21:00:00.000Z' });
+  assert.equal(report.sync.state, 'running');
+
+  // Test running and stalled (heartbeat updated 6 mins ago)
+  await writeFile(
+    join(enrichmentDir, 'sync-state.json'),
+    JSON.stringify({
+      status: 'running',
+      pid: 5555,
+      startedAt: '2026-05-20T20:50:00.000Z',
+      heartbeatAt: '2026-05-20T20:53:30.000Z',
+      finishedAt: null,
+      lastError: null,
+      summary: { synced: 2, errors: 0, pending: 4 },
+    }),
+  );
+
+  report = await buildStatusReport({ projectRoot, now: '2026-05-20T21:00:00.000Z' });
+  assert.equal(report.sync.state, 'stalled');
+});

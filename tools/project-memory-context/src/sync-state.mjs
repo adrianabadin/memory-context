@@ -1,6 +1,57 @@
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
+function heartbeatIsFresh(heartbeatAt, now, staleAfterSeconds = 300) {
+  if (!heartbeatAt) return false;
+  const heartbeat = new Date(heartbeatAt).getTime();
+  const current = new Date(now).getTime();
+  if (!Number.isFinite(heartbeat) || !Number.isFinite(current)) return false;
+  return current - heartbeat <= staleAfterSeconds * 1000;
+}
+
+function toIsoString(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export function deriveSyncState(syncState, now, staleAfterSeconds = 300) {
+  if (!syncState || typeof syncState !== 'object') {
+    return { state: 'idle', runtime: null };
+  }
+
+  const runtime = {
+    pid: Number.isInteger(syncState.pid) ? syncState.pid : null,
+    startedAt: toIsoString(syncState.startedAt),
+    heartbeatAt: toIsoString(syncState.heartbeatAt),
+    finishedAt: toIsoString(syncState.finishedAt),
+    staleAfterSeconds,
+    lastError: syncState.lastError ?? null,
+    summary: syncState.summary ? {
+      synced: Number.isInteger(syncState.summary.synced) ? syncState.summary.synced : 0,
+      errors: Number.isInteger(syncState.summary.errors) ? syncState.summary.errors : 0,
+      pending: Number.isInteger(syncState.summary.pending) ? syncState.summary.pending : 0,
+    } : null,
+  };
+
+  if (syncState.status === 'finished') {
+    return { state: 'finished', runtime };
+  }
+
+  if (syncState.status === 'failed') {
+    return { state: 'failed', runtime };
+  }
+
+  if (syncState.status === 'running') {
+    return {
+      state: heartbeatIsFresh(runtime.heartbeatAt, now, staleAfterSeconds) ? 'running' : 'stalled',
+      runtime,
+    };
+  }
+
+  return { state: 'idle', runtime: null };
+}
+
 export function buildSyncState({
   status,
   pid,

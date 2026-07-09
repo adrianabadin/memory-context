@@ -8,6 +8,7 @@ import {
   buildSyncState,
   writeSyncState,
   readSyncState,
+  deriveSyncState,
 } from '../src/sync-state.mjs';
 
 let counter = 0;
@@ -162,4 +163,39 @@ test('writeSyncState retries mkdir+rename on ENOENT during rename', async () => 
   assert.ok(mkdirCalls >= 2);
 
   await rm(dir, { recursive: true, force: true });
+});
+
+test('deriveSyncState handles running, stalled, finished, failed and idle states', () => {
+  const now = '2026-07-09T12:05:00.000Z';
+
+  const state1 = deriveSyncState({
+    status: 'running',
+    pid: 123,
+    startedAt: '2026-07-09T12:00:00.000Z',
+    heartbeatAt: '2026-07-09T12:04:00.000Z',
+    summary: { synced: 5, errors: 0, pending: 1 }
+  }, now);
+  assert.equal(state1.state, 'running');
+
+  const state2 = deriveSyncState({
+    status: 'running',
+    pid: 123,
+    startedAt: '2026-07-09T12:00:00.000Z',
+    heartbeatAt: '2026-07-09T11:59:00.000Z',
+  }, now);
+  assert.equal(state2.state, 'stalled');
+
+  const state3 = deriveSyncState({
+    status: 'finished',
+    pid: 123,
+  }, now);
+  assert.equal(state3.state, 'finished');
+
+  const state4 = deriveSyncState({
+    status: 'failed',
+    pid: 123,
+    lastError: 'some error',
+  }, now);
+  assert.equal(state4.state, 'failed');
+  assert.equal(state4.runtime.lastError, 'some error');
 });

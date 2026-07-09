@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { detectAgentType, resolveConfigDirs } from '../src/platform.mjs';
 import { loadSubagentQueue, summarizeSubagentQueue } from '../src/subagent-queue.mjs';
+import { deriveSyncState } from '../src/sync-state.mjs';
 
 const DEFAULT_STALE_AFTER_SECONDS = 90;
 
@@ -88,12 +89,15 @@ export async function buildStatusReport({ projectRoot = process.cwd(), now = new
   const worklistPath = join(enrichmentDir, 'worklist.json');
   const installPath = join(planningDir, 'install.json');
   const queueStatePath = join(enrichmentDir, 'queue-state.json');
+  const syncStatePath = join(enrichmentDir, 'sync-state.json');
 
   const worklist = await readJsonSafe(worklistPath);
   const installState = await readJsonSafe(installPath);
   const queueState = await readJsonSafe(queueStatePath);
+  const syncState = await readJsonSafe(syncStatePath);
   const lastSync = await getLastSyncTimestamp(enrichmentDir);
   const { state, runtime } = deriveRuntimeState(queueState, now);
+  const derivedSync = deriveSyncState(syncState, now);
   const worklistSummary = Array.isArray(worklist) ? summarizeWorklist(worklist) : null;
 
   const subagentQueueData = await loadSubagentQueue(enrichmentDir).catch(() => null);
@@ -108,6 +112,15 @@ export async function buildStatusReport({ projectRoot = process.cwd(), now = new
     installState: installState ? { installedAt: installState.installedAt, version: installState.version } : null,
     state,
     runtime,
+    sync: derivedSync.runtime ? {
+      state: derivedSync.state,
+      pid: derivedSync.runtime.pid,
+      startedAt: derivedSync.runtime.startedAt,
+      heartbeatAt: derivedSync.runtime.heartbeatAt,
+      finishedAt: derivedSync.runtime.finishedAt,
+      lastError: derivedSync.runtime.lastError,
+      summary: derivedSync.runtime.summary,
+    } : null,
     worklist: worklistSummary,
     subagentQueue: subagentQueueSummary,
     lastSync,
