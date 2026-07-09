@@ -70,7 +70,10 @@ test('agent snippets and setup docs do not reference copied local CLI paths', ()
   // antigravity autostart-snippet uses session-start — no explicit enrich-status command needed
   assert.match(antigravity, /\{\{PMC_BIN\}\} get-context/);
   assert.match(antigravity, /\{\{PMC_BIN\}\} refresh-context/);
-  assert.match(antigravity, /\{\{PMC_BIN\}\} sync-context/);
+  // Per REQ-6 (nonblocking auto-sync), manual `{{PMC_BIN}} sync-context` is no longer
+  // instructed here; the override path is documented in commands/sync-context.md.
+  // This snippet only references the slash-command form for pending-sync visibility.
+  assert.match(antigravity, /\/sync-context/);
 });
 
 test('enrich subagent templates reference pmc enrich and use correct frontmatter', () => {
