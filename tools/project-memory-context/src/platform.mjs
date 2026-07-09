@@ -78,7 +78,7 @@ export function spawnBackground(command, args = [], options = {}) {
   const child = spawnImpl(command, args, {
     cwd: options.cwd,
     detached: true,
-    stdio: 'ignore',
+    stdio: options.stdio ?? 'ignore',
     shell: false,
   });
 
