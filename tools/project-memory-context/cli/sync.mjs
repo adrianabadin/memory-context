@@ -1,10 +1,13 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
+import { readFile, open } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { readSyncManifest, markEntriesSynced, getPendingEntries } from '../src/sync-manifest.mjs';
+import { spawnBackground } from '../src/platform.mjs';
+import { writeSyncState } from '../src/sync-state.mjs';
+import { SyncLock } from '../src/sync-lock.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -124,25 +127,169 @@ export async function syncPendingEntries(client, pending, { markSynced = async (
   return { synced, errors };
 }
 
-async function main() {
-  const manifest = await readSyncManifest(ENRICHMENT_DIR);
+export async function main(argv = process.argv, deps = {}) {
+  const spawnBackgroundImpl = deps.spawnBackground ?? spawnBackground;
+  const SyncLockImpl = deps.SyncLock ?? SyncLock;
+  const writeSyncStateImpl = deps.writeSyncState ?? writeSyncState;
+  const ClientImpl = deps.Client ?? Client;
+  const StdioClientTransportImpl = deps.StdioClientTransport ?? StdioClientTransport;
+  const readSyncManifestImpl = deps.readSyncManifest ?? readSyncManifest;
+  const markEntriesSyncedImpl = deps.markEntriesSynced ?? markEntriesSynced;
+  const loadAgentMemoryConfigImpl = deps.loadAgentMemoryConfig ?? loadAgentMemoryConfig;
+  const openLogFile = deps.openLogFile ?? (async (path) => open(path, 'a'));
+  const log = deps.log ?? console.log;
+  const errLogFn = deps.errLog ?? console.error;
+  const projectRoot = deps.PROJECT_ROOT ?? PROJECT_ROOT;
+  const enrichmentDir = deps.ENRICHMENT_DIR ?? ENRICHMENT_DIR;
+
+  const isDetach = argv.includes('--detach');
+  const isBackground = argv.includes('--background');
+
+  if (isDetach) {
+    const outLog = resolve(enrichmentDir, 'sync-stdout.log');
+    const errLog = resolve(enrichmentDir, 'sync-stderr.log');
+    
+    let outHandle, errHandle;
+    try {
+      outHandle = await openLogFile(outLog);
+      errHandle = await openLogFile(errLog);
+      
+      const childArgs = [fileURLToPath(import.meta.url), '--background'];
+      const pid = spawnBackgroundImpl(process.execPath, childArgs, {
+        cwd: projectRoot,
+        stdio: ['ignore', outHandle.fd, errHandle.fd],
+      });
+      
+      log(`[sync] Background sync worker launched (pid=${pid}). Logging to sync-stdout.log / sync-stderr.log.`);
+      return 0;
+    } finally {
+      if (outHandle) await outHandle.close();
+      if (errHandle) await errHandle.close();
+    }
+  }
+
+  if (isBackground) {
+    const lockFile = resolve(enrichmentDir, 'sync.lock');
+    const stateFile = resolve(enrichmentDir, 'sync-state.json');
+    const lock = new SyncLockImpl(lockFile);
+
+    const acquired = await lock.acquire(process.pid);
+    if (!acquired) {
+      log(`[sync] Skip: another background sync is already running.`);
+      return 0;
+    }
+
+    let heartbeatInterval;
+    const startedAt = new Date().toISOString();
+    const syncState = {
+      status: 'running',
+      pid: process.pid,
+      startedAt,
+      heartbeatAt: startedAt,
+      summary: {
+        synced: 0,
+        errors: 0,
+        pending: 0,
+      },
+    };
+
+    try {
+      await writeSyncStateImpl(stateFile, syncState);
+
+      const manifest = await readSyncManifestImpl(enrichmentDir);
+      const pending = getPendingEntries(manifest);
+      syncState.summary.pending = pending.length;
+
+      await writeSyncStateImpl(stateFile, syncState);
+
+      heartbeatInterval = setInterval(async () => {
+        try {
+          await lock.heartbeat();
+          syncState.heartbeatAt = new Date().toISOString();
+          await writeSyncStateImpl(stateFile, syncState);
+        } catch (e) {
+          // ignore
+        }
+      }, 10000);
+      if (typeof heartbeatInterval.unref === 'function') {
+        heartbeatInterval.unref();
+      }
+
+      if (pending.length === 0) {
+        clearInterval(heartbeatInterval);
+        syncState.status = 'finished';
+        syncState.finishedAt = new Date().toISOString();
+        await writeSyncStateImpl(stateFile, syncState);
+        await lock.release();
+        return 0;
+      }
+
+      const mcpConfig = await loadAgentMemoryConfigImpl();
+      const transport = new StdioClientTransportImpl({
+        command: mcpConfig.command,
+        args: mcpConfig.args ?? [],
+        env: { ...process.env, ...(mcpConfig.env ?? {}) },
+      });
+
+      const client = new ClientImpl({ name: 'pmc-sync', version: '1.0.0' });
+      await client.connect(transport);
+
+      const { synced, errors } = await syncPendingEntries(client, pending, {
+        markSynced: (ids) => markEntriesSyncedImpl(enrichmentDir, ids),
+        onProgress: async ({ synced: applied, total }) => {
+          syncState.heartbeatAt = new Date().toISOString();
+          syncState.summary.synced = applied;
+          syncState.summary.pending = total - applied;
+          await lock.heartbeat();
+          await writeSyncStateImpl(stateFile, syncState);
+        },
+        onError: ({ error, entry }) => {
+          errLogFn(`[sync] Entry ${entry.id} failed: ${error.message}`);
+        },
+      });
+
+      clearInterval(heartbeatInterval);
+      await client.close();
+
+      syncState.status = 'finished';
+      syncState.finishedAt = new Date().toISOString();
+      syncState.summary.synced = synced;
+      syncState.summary.errors = errors;
+      syncState.summary.pending = 0;
+      await writeSyncStateImpl(stateFile, syncState);
+      await lock.release();
+      return errors > 0 ? 1 : 0;
+    } catch (err) {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      syncState.status = 'failed';
+      syncState.finishedAt = new Date().toISOString();
+      syncState.lastError = err.message;
+      await writeSyncStateImpl(stateFile, syncState);
+      await lock.release();
+      errLogFn(`[sync] Background sync failed: ${err.message}`);
+      return 1;
+    }
+  }
+
+  // Foreground sync (no flags)
+  const manifest = await readSyncManifestImpl(enrichmentDir);
   const pending = getPendingEntries(manifest);
 
   if (pending.length === 0) {
-    console.log('[sync] Nothing to sync.');
+    log('[sync] Nothing to sync.');
     return 0;
   }
 
-  const mcpConfig = await loadAgentMemoryConfig();
-  console.log(`[sync] ${pending.length} pending entries — starting agent-memory server...`);
+  const mcpConfig = await loadAgentMemoryConfigImpl();
+  log(`[sync] ${pending.length} pending entries — starting agent-memory server...`);
 
-  const transport = new StdioClientTransport({
+  const transport = new StdioClientTransportImpl({
     command: mcpConfig.command,
     args: mcpConfig.args ?? [],
     env: { ...process.env, ...(mcpConfig.env ?? {}) },
   });
 
-  const client = new Client({ name: 'pmc-sync', version: '1.0.0' });
+  const client = new ClientImpl({ name: 'pmc-sync', version: '1.0.0' });
 
   try {
     await client.connect(transport);
@@ -151,17 +298,17 @@ async function main() {
   }
 
   const { synced, errors } = await syncPendingEntries(client, pending, {
-    markSynced: (ids) => markEntriesSynced(ENRICHMENT_DIR, ids),
+    markSynced: (ids) => markEntriesSyncedImpl(enrichmentDir, ids),
     onProgress: ({ synced: applied, total }) => {
       process.stdout.write(`\r[sync] ${applied}/${total} synced...`);
     },
     onError: ({ error, entry }) => {
-      console.error(`\n[sync] Entry ${entry.id} failed: ${error.message}`);
+      errLogFn(`\n[sync] Entry ${entry.id} failed: ${error.message}`);
     },
   });
 
   await client.close();
-  console.log(`\n[sync] Done. synced=${synced} errors=${errors}`);
+  log(`\n[sync] Done. synced=${synced} errors=${errors}`);
   return errors > 0 ? 1 : 0;
 }
 
