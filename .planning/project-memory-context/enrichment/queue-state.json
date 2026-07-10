@@ -1,13 +1,13 @@
 {
-  "status": "finished",
-  "pid": 2732,
-  "startedAt": "2026-05-30T23:59:53.964Z",
-  "heartbeatAt": "2026-05-31T00:05:24.106Z",
-  "finishedAt": "2026-05-31T00:05:24.106Z",
+  "status": "running",
+  "pid": 27184,
+  "startedAt": "2026-07-10T03:38:12.661Z",
+  "heartbeatAt": "2026-07-10T13:18:49.418Z",
+  "finishedAt": null,
   "lastError": null,
   "summary": {
-    "pending": 0,
-    "enriched": 432,
-    "errors": 18
+    "pending": 5958,
+    "enriched": 1253,
+    "errors": 17
   }
 }
