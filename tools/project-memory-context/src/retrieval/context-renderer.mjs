@@ -82,6 +82,33 @@ export function renderContext({ target, neighbors, edges, depth, depthReached, p
     }
   }
 
+  // ── Semantic Memory (linked memories from symbol links) ──────────
+  // One coherent section aggregating target linked memories plus, at
+  // extended/deep/disk depth, neighbor linked memories. Compact depth
+  // truncates each memory to 200 chars; deeper depths show full content.
+  const linkedEntries = [];
+  if (Array.isArray(target.linkedMemories)) {
+    for (const mem of target.linkedMemories) linkedEntries.push(mem);
+  }
+  if (depth === 'extended' || depth === 'deep' || depth === 'disk') {
+    for (const nb of neighbors) {
+      if (Array.isArray(nb.linkedMemories)) {
+        for (const mem of nb.linkedMemories) linkedEntries.push(mem);
+      }
+    }
+  }
+  if (linkedEntries.length > 0) {
+    const memLines = linkedEntries.map((mem) => {
+      const typeTag = mem.type ? ` (${mem.type})` : '';
+      let content = mem.content ?? '';
+      if (depth === 'compact' && content.length > 200) {
+        content = content.slice(0, 200);
+      }
+      return `- ${content}${typeTag}`;
+    });
+    sections.push(`### Semantic Memory\n${memLines.join('\n')}`);
+  }
+
   if (depth === 'disk' && sourceCode) {
     sections.push(`### Source Code\n\`\`\`\n${sourceCode}\n\`\`\``);
   }
