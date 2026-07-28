@@ -4,15 +4,22 @@ import { dirname, join } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildInjectedPmcConfig } from './plugin-config.mjs';
+import {
+  renderTemplate,
+  hasBlockMarker,
+  replaceOrAppendBlock,
+  stripBlockMarkers,
+  wrapBlock,
+} from './templates/render.mjs';
 
 export { detectAgentType } from './platform.mjs';
-
-export function renderTemplate(content, placeholders) {
-  return Object.entries(placeholders).reduce(
-    (text, [key, value]) => text.replaceAll(`{{${key}}}`, value),
-    content,
-  );
-}
+export {
+  renderTemplate,
+  hasBlockMarker,
+  replaceOrAppendBlock,
+  stripBlockMarkers,
+  wrapBlock,
+};
 
 const SUPPORTED_AGENTS = new Set(['opencode', 'claude-code', 'cursor', 'generic', 'antigravity']);
 
@@ -47,32 +54,6 @@ async function writeIfMissingOrForced(filePath, content, options = {}) {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf8');
   return true;
-}
-
-function hasBlockMarker(content, marker) {
-  return content.includes(`<!-- pmc:${marker} -->`);
-}
-
-function replaceOrAppendBlock(content, marker, block) {
-  const open = `<!-- pmc:${marker} -->`;
-  const close = `<!-- /pmc:${marker} -->`;
-  const regex = new RegExp(`${open}[\\s\\S]*?${close}`, 'g');
-
-  if (regex.test(content)) {
-    return content.replace(regex, `${open}\n${block}\n${close}`);
-  }
-
-  return `${content}\n\n${open}\n${block}\n${close}\n`;
-}
-
-function stripBlockMarkers(content, marker) {
-  return content
-    .replace(new RegExp(`<!-- pmc:${marker} -->|<!-- /pmc:${marker} -->`, 'g'), '')
-    .trim();
-}
-
-function wrapBlock(marker, block) {
-  return `<!-- pmc:${marker} -->\n${block}\n<!-- /pmc:${marker} -->\n`;
 }
 
 async function installWithBlockMarker({ projectRoot, packageRoot, placeholders, targetFile, templatePath, marker = 'init' }) {
