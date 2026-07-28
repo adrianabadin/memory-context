@@ -19,4 +19,8 @@ export const CLIENT_MARKERS = Object.freeze({
     project: [],
     instructionFiles: ['README-SETUP.md'],
   }),
+  codex: Object.freeze({
+    project: ['.codex'],
+    instructionFiles: [],
+  }),
 });
