@@ -2,6 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, posix, resolve } from 'node:path';
+import { CLIENT_MARKERS } from './clients/markers.mjs';
 
 const PROJECT_DIR_NAMES = ['.pmc', '.opencode', '.claude', '.cursor'];
 const INSTRUCTION_FILES = new Set([
@@ -24,13 +25,22 @@ export function isAgentInstructionFile(filePath) {
   return INSTRUCTION_FILES.has(normalizedPath.split('/').at(-1));
 }
 
+const DETECT_PRIORITY = [
+  { agent: 'opencode', markers: CLIENT_MARKERS.opencode },
+  { agent: 'claude-code', markers: CLIENT_MARKERS['claude-code'] },
+  { agent: 'cursor', markers: CLIENT_MARKERS.cursor },
+  { agent: 'antigravity', markers: CLIENT_MARKERS.antigravity },
+];
+
 export function detectAgentType(projectRoot) {
-  if (existsSync(join(projectRoot, '.opencode'))) return 'opencode';
-  if (existsSync(join(projectRoot, 'CLAUDE.md'))) return 'claude-code';
-  if (existsSync(join(projectRoot, '.claude'))) return 'claude-code';
-  if (existsSync(join(projectRoot, '.cursorrules'))) return 'cursor';
-  if (existsSync(join(projectRoot, '.cursor'))) return 'cursor';
-  if (existsSync(join(projectRoot, '.agents'))) return 'antigravity';
+  for (const { agent, markers } of DETECT_PRIORITY) {
+    for (const markerDir of markers.project) {
+      if (existsSync(join(projectRoot, markerDir))) return agent;
+    }
+    for (const markerFile of markers.instructionFiles) {
+      if (existsSync(join(projectRoot, markerFile))) return agent;
+    }
+  }
   return 'generic';
 }
 
