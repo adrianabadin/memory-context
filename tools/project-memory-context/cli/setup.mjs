@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -9,11 +8,15 @@ import { spawnSync } from 'node:child_process';
 import { bootstrapProjectInstall } from '../src/setup-bootstrap.mjs';
 import { runDoctor } from '../src/doctor.mjs';
 import { detectSetupAgentType, resolveConfigDirs, resolvePythonBin } from '../src/platform.mjs';
-import { installAgentTemplates } from '../src/template-installer.mjs';
+import { runPipeline } from '../src/clients/pipeline.mjs';
+import { formatInstallReport } from '../src/clients/report.mjs';
+import { selectClients } from '../src/clients/detect.mjs';
+import { CLIENT_REGISTRY } from '../src/clients/registry.mjs';
+import { PROBE_TABLE } from '../src/clients/probes.mjs';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 
-const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-
-const AGENT_FLAGS = {
+export const AGENT_FLAGS = {
   '--antigravity': 'antigravity',
   '--opencode': 'opencode',
   '--claude': 'claude-code',
@@ -21,10 +24,24 @@ const AGENT_FLAGS = {
   '--generic': 'generic',
 };
 
-function installGraphify() {
+export const CLIENT_FLAG_TO_ID = {
+  '--codex': 'codex',
+  '--kimi': 'kimi',
+  '--qwen': 'qwen',
+  ...AGENT_FLAGS,
+};
+
+export function parseArgs(args) {
+  const flagIds = [];
+  for (const arg of args) {
+    if (CLIENT_FLAG_TO_ID[arg]) flagIds.push(CLIENT_FLAG_TO_ID[arg]);
+  }
+  return { agents: [...new Set(flagIds)] };
+}
+
+export function installGraphify() {
   const candidates = process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python'];
   for (const command of candidates) {
-    // Temporarily installing from fork until PR #1085 is merged into safishamsi/graphify
     const forkUrl = 'git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction';
     const result = spawnSync(command, ['-m', 'pip', 'install', forkUrl], { stdio: 'inherit' });
     if (result.status === 0) return command;
@@ -41,20 +58,61 @@ function spawnCheck(bin, args) {
   return { exitCode: result.status ?? 1, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
 }
 
-function parseArgs(args) {
-  const agents = [];
-  for (const arg of args) {
-    if (AGENT_FLAGS[arg]) {
-      agents.push(AGENT_FLAGS[arg]);
-    }
-  }
-  return { agents };
+async function readTemplate(pkgRoot, tplPath) {
+  return readFile(join(pkgRoot, 'templates', tplPath), 'utf8');
 }
 
-const rl = createInterface({ input, output });
-const cwd = resolve(process.cwd());
+export async function runSetupPipeline({
+  cwd,
+  packageRoot,
+  requestedAgents = [],
+  homeDir,
+  consent = { dependencies: false },
+} = {}) {
+  const detection = selectClients({
+    projectRoot: cwd,
+    registry: CLIENT_REGISTRY,
+    exists: existsSync,
+    flags: requestedAgents.map((a) => {
+      for (const [flag, id] of Object.entries(CLIENT_FLAG_TO_ID)) {
+        if (id === a) return flag;
+      }
+      return null;
+    }).filter(Boolean),
+    csvClients: requestedAgents,
+    homeDir,
+  });
 
-try {
+  const placeholders = {
+    PMC_BIN: 'pmc',
+    AGENT_MEMORY_CMD: 'npx -y @aabadin/agent-memory-mcp',
+    PROJECT_ROOT: cwd,
+    CONFIG_DIR: '.pmc',
+  };
+
+  const { report } = await runPipeline({
+    projectRoot: cwd,
+    homeDir: homeDir ?? cwd,
+    packageRoot,
+    registry: CLIENT_REGISTRY,
+    probeTable: PROBE_TABLE,
+    placeholders,
+    readTemplate,
+    selectedIds: detection.clientIds,
+    consent,
+  });
+  return { report, detection };
+}
+
+export const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+
+// Wrap in a guard so importing this module from tests does NOT execute prompts.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+export async function runSetupInteractive({ packageRoot: pkg = packageRoot } = {}) {
+  const rl = createInterface({ input, output });
+  const cwd = resolve(process.cwd());
+
   console.log('\n─── pmc setup ───────────────────────────────────────\n');
   const { agents: requestedAgents } = parseArgs(process.argv.slice(2));
 
@@ -78,32 +136,21 @@ try {
 
   installGraphify();
 
-  const { globalConfig } = resolveConfigDirs(cwd);
-
-  const agentGlobalConfigDirs = {
-    'opencode': globalConfig,
-    'claude-code': join(homedir(), '.claude'),
-    'antigravity': join(homedir(), '.gemini', 'config'),
-  };
-
   const result = await bootstrapProjectInstall({
     projectRoot: cwd,
-    packageRoot,
+    packageRoot: pkg,
     ollamaBaseUrl,
     ollamaModel,
     agents,
   });
 
-  for (const agent of agents) {
-    await installAgentTemplates({
-      projectRoot: cwd,
-      agent,
-      packageRoot,
-      globalConfigDir: agentGlobalConfigDirs[agent],
-    });
-    console.log(`  ✓ Installed ${agent} templates.`);
-  }
+  const { report } = await runSetupPipeline({
+    cwd,
+    packageRoot: pkg,
+    requestedAgents: agents,
+  });
 
+  console.log(`\n${formatInstallReport(report)}\n`);
   console.log('\n─── Installation complete ───────────────────────────\n');
   console.log(`  Memory DB path:     ${result.installState.memoryDbPath}`);
   console.log(`  Embedding cache:    ${result.installState.embeddingCachePath}`);
@@ -124,12 +171,19 @@ try {
     console.log(`  ${icon[c.status]}  ${c.name.padEnd(22)} ${c.message}`);
   }
 
-  const hasFail = checks.some(c => c.status === 'fail');
+  const hasFail = checks.some((c) => c.status === 'fail');
   if (hasFail) {
     console.log('\nFix the issues above and re-run `pmc setup` if needed.\n');
   } else {
     console.log('\nAll checks passed. Run `pmc enrich` to start enriching the project.\n');
   }
-} finally {
   rl.close();
+  return { result, report };
+}
+
+if (isMain) {
+  runSetupInteractive().catch((err) => {
+    console.error('[setup] FATAL:', err.message);
+    process.exit(1);
+  });
 }
