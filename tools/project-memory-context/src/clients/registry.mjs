@@ -5,6 +5,7 @@ import { claudeCodeAdapter } from './adapters/claude-code.mjs';
 import { cursorAdapter } from './adapters/cursor.mjs';
 import { antigravityAdapter } from './adapters/antigravity.mjs';
 import { genericAdapter } from './adapters/generic.mjs';
+import { codexAdapter } from './adapters/codex.mjs';
 
 export const CLIENT_REGISTRY = Object.freeze([
   opencodeAdapter,
@@ -12,6 +13,7 @@ export const CLIENT_REGISTRY = Object.freeze([
   cursorAdapter,
   antigravityAdapter,
   genericAdapter,
+  codexAdapter,
 ]);
 
 export function validateRegistry(registry = CLIENT_REGISTRY, probeTable = PROBE_TABLE, contextRoots = null) {
