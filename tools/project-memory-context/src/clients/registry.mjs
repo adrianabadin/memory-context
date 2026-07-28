@@ -1,7 +1,18 @@
 import { PROBE_TABLE } from './probes.mjs';
 import { validateAdapterContract } from './adapter-contract.mjs';
+import { opencodeAdapter } from './adapters/opencode.mjs';
+import { claudeCodeAdapter } from './adapters/claude-code.mjs';
+import { cursorAdapter } from './adapters/cursor.mjs';
+import { antigravityAdapter } from './adapters/antigravity.mjs';
+import { genericAdapter } from './adapters/generic.mjs';
 
-export const CLIENT_REGISTRY = Object.freeze([]);
+export const CLIENT_REGISTRY = Object.freeze([
+  opencodeAdapter,
+  claudeCodeAdapter,
+  cursorAdapter,
+  antigravityAdapter,
+  genericAdapter,
+]);
 
 export function validateRegistry(registry = CLIENT_REGISTRY, probeTable = PROBE_TABLE, contextRoots = null) {
   const ids = new Set();
