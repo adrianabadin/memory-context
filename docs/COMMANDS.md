@@ -31,6 +31,32 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 | `view-context` | `bin/pmc-view-context.mjs` | Opens the PMC Graph Explorer web UI | `pmc view-context` |
 | `watch` | `cli/watch.mjs` | Watches project files for changes with debounced refresh-context triggers | `pmc watch .` |
 
+## sync-context Details
+
+`pmc sync-context` applies pending `sync-manifest.json` entries to agent-memory over MCP. Lookup is hybrid (full-text query + key-tag filter) and duplicate records converge to one per key. Options:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--checkpoint-batch-size <n>` | 25 (allowed 1–200) | Successfully applied entries committed ("marked synced" — one manifest write) per checkpoint; a final flush commits the remainder. `--detach` forwards the flag to the background worker. |
+
+Behavior and caveats:
+
+- **Serial by design — there is no `--concurrency` flag.** Entries mutate shared agent-memory records in manifest order. Concurrent lookups could act on stale snapshots (for example a prefetched miss followed by a same-key store would duplicate the record), so mutations and checkpoints stay serial. The batched checkpoint removes the dominant per-entry cost instead: previously every entry triggered one manifest write plus one sync-state write.
+- **Only committed checkpoints count as synced.** Any pre-checkpoint gate failure or checkpoint write failure aborts the whole batch with zero commits — a selective commit around a failed gate could let an older uncommitted mutation overwrite a newer committed one on the next run. Applied-but-uncommitted entries remain pending and are re-applied idempotently. Fatal aborts exit nonzero and log the reason in both foreground and background.
+- **A failed entry halts later entries with the same key tag** (per-key order preserved); other keys continue. Failed and halted entries stay pending and the exit code is nonzero.
+- **Progress state writes follow the checkpoint cadence**, plus a 10-second heartbeat timer; failed and finished states report truthful synced/errors/pending counts. Progress observers are best-effort: a failing observer is logged and never fails the run or double-counts committed entries.
+- **Lock guard:** foreground and background share `sync.lock`. Both modes re-verify on-disk ownership read-only (`isOwner` — token check, no heartbeat write) before every mutation and checkpoint, so a takeover between timer ticks aborts new work; an unreadable lock record fails closed as an abort. An orphaned atomic transition guard also fails closed — live PIDs are never evicted automatically. After verifying no sync process is actually running (check the PID recorded in the lock), remove the stale lock manually to recover.
+- **CPU:** sync is local JSON/FTS work plus MCP round-trips. It performs no embedding inference and no embeddings-model changes; heavy CPU work lives in enrichment, not here.
+
+## Enrichment Output Language
+
+All future symbol enrichments explicitly instruct the model to **write descriptive explanation fields in English**, regardless of source-comment or conversation language, while preserving code, identifiers, paths, tags, and structured keys verbatim. This applies to every prompt surface the pipeline builds: `enrich`/`enrich-queue`, `retry-errors`, the semantic-unit prompt, the local-model MCP `semantic_report` system prompt, and the subagent wrapper instructions in the agent templates (which also cover already-queued entries whose stored prompt predates this requirement — the queue itself is not rewritten).
+
+Scope notes:
+- This is a prospective prompt requirement only. Existing enriched memories, queued records, and databases are not re-enriched or translated.
+- `symbol.language` continues to hold the programming language; it is never set to a natural-language code.
+- The instruction is part of the prompt contract; actual output quality depends on the model and is not guaranteed.
+
 ## Internal CLI Scripts
 
 These scripts exist in `cli/` but are not registered as `pmc` subcommands. They are used internally by the enrichment pipeline:

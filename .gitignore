@@ -26,10 +26,27 @@ graphify-out/
 
 # graphify intermediate files
 .graphify_*.json
+# Local AI runtime state
+.atl/
+# PMC (Project Memory Context)
+.planning/project-memory-context/enrichment/
+.planning/project-memory-context/intake/
+.planning/project-memory-context/graph/graph.db
+.planning/project-memory-context/graph/graph.db-shm
+.planning/project-memory-context/graph/graph.db-wal
 
-# E5 embedding runtime and private migration artifacts
+# E5 migration operations (config backups)
 .planning/project-memory-context/e5-migration-operations/
+
+# E5 embedding runtime state
 .planning/project-memory-context/embedding-cache-e5/
 .planning/project-memory-context/model-weights-e5/
 .planning/project-memory-context/memory-db-e5.db*
 .planning/project-memory-context/memory-db-e5-live.db*
+
+# Generated project memory is local runtime data, never publication source
+.planning/project-memory-context/
+tools/.planning/
+tools/project-memory-context/.planning/
+.codegraph/
+**/.codegraph/

@@ -208,6 +208,8 @@ pmc setup --opencode             # Force OpenCode
 pmc setup --claude               # Force Claude Code
 pmc setup --cursor               # Force Cursor
 pmc setup --antigravity          # Force Antigravity CLI
+pmc setup --codex                # Force OpenAI Codex CLI
+pmc setup --kimi                 # Force Kimi Code (MoonshotAI)
 pmc setup --generic              # Generic (writes README-SETUP.md)
 ```
 
@@ -221,6 +223,8 @@ pmc setup --opencode --claude                    # OpenCode + Claude Code
 pmc setup --opencode --claude --cursor           # All three
 pmc setup --opencode --cursor                    # OpenCode + Cursor only
 pmc setup --claude --antigravity                 # Claude Code + Antigravity
+pmc setup --opencode --codex                     # OpenCode + Codex
+pmc setup --codex --kimi                         # Codex + Kimi
 ```
 
 Each agent gets its own configuration:
@@ -228,6 +232,8 @@ Each agent gets its own configuration:
 - **Claude Code**: `.claude/project-memory-context.json` enrichment config + `.mcp.json` + global commands/skills/`agents/enrich.md` subagent
 - **Antigravity**: `AGENTS.md` autostart + `.agents/skills/<cmd>/SKILL.md` (cada comando PMC como skill/slash command) + `.agents/skills/{pmc-skill,enrich}/SKILL.md`. Nota: Antigravity no soporta subagentes por archivo (feature request abierta); `enrich` se instala como skill invocable por el modelo y por slash command `/enrich`.
 - **Cursor**: `.cursor/project-memory-context.json` enrichment config + `.mcp.json`
+- **Codex**: `AGENTS.md` autostart + `.codex/config.toml` with `[mcp_servers.agent-memory]` (merged non-destructively). Codex loads project config only when the project is trusted — accept Codex's trust prompt once on first run. **No slash-command or skill templates** this pass (Codex's skill file convention is not yet documented).
+- **Kimi**: `AGENTS.md` autostart + `.kimi-code/mcp.json` with `agent-memory` (merged non-destructively). PMC does **not** touch `.kimi-code/local.toml` — that file is user-owned and intended to be gitignored. **No slash-command or skill templates** this pass.
 - **All agents**: `.mcp.json` at project root (universal fallback)
 
 ### Automated detection
@@ -240,8 +246,12 @@ When run without flags, `pmc setup` detects your agent by checking (in order):
 4. `.cursorrules` file → Cursor
 5. `.cursor/` directory → Cursor
 6. `.agents/` directory → Antigravity
-7. `~/.config/opencode/` exists → OpenCode (global)
-8. Otherwise → Generic
+7. `.codex/` directory → Codex
+8. `.kimi-code/` directory → Kimi
+9. `~/.config/opencode/` exists → OpenCode (global)
+10. `~/.codex/` exists → Codex (global)
+11. `~/.kimi-code/` exists → Kimi (global)
+12. Otherwise → Generic
 
 ---
 
@@ -252,7 +262,7 @@ When run without flags, `pmc setup` detects your agent by checking (in order):
 Interactively bootstraps PMC in the current project.
 
 ```bash
-pmc setup [--opencode] [--claude] [--cursor] [--antigravity] [--generic]
+pmc setup [--opencode] [--claude] [--cursor] [--antigravity] [--codex] [--kimi] [--generic]
 ```
 
 | Flag | Description |
@@ -261,6 +271,8 @@ pmc setup [--opencode] [--claude] [--cursor] [--antigravity] [--generic]
 | `--claude` | Install configs for Claude Code |
 | `--cursor` | Install configs for Cursor |
 | `--antigravity` | Install configs for Antigravity CLI |
+| `--codex` | Install configs for OpenAI Codex CLI |
+| `--kimi` | Install configs for Kimi Code (MoonshotAI) |
 | `--generic` | Generic setup (README only) |
 | *(no flags)* | Auto-detect agent(s) |
 
@@ -282,8 +294,10 @@ pmc setup [--opencode] [--claude] [--cursor] [--antigravity] [--generic]
 .opencode/opencode.json            (if opencode)
 .claude/project-memory-context.json (if claude-code)
 .cursor/project-memory-context.json (if cursor)
+.codex/config.toml                 (if codex) — [mcp_servers.agent-memory] merged non-destructively
+.kimi-code/mcp.json                (if kimi)  — agent-memory merged non-destructively; local.toml is never touched
 .mcp.json                          (universal MCP)
-AGENTS.md                          (autostart snippet, if opencode)
+AGENTS.md                          (autostart snippet, if opencode / antigravity / codex / kimi)
 project-memory-context.md
 project-memory-context workflow.md
 ```

@@ -20,6 +20,24 @@ test('detectSetupAgentType uses opencode when only global opencode config exists
   assert.equal(agent, 'opencode');
 });
 
+test('detectSetupAgentType falls back to codex when only global ~/.codex exists', () => {
+  const agent = detectSetupAgentType('C:/repo', {
+    exists: (candidate) => candidate.replace(/\\/g, '/').endsWith('/.codex'),
+    homeDir: 'C:/Users/alice',
+  });
+
+  assert.equal(agent, 'codex');
+});
+
+test('detectSetupAgentType falls back to kimi when only global ~/.kimi-code exists', () => {
+  const agent = detectSetupAgentType('C:/repo', {
+    exists: (candidate) => candidate.replace(/\\/g, '/').endsWith('/.kimi-code'),
+    homeDir: 'C:/Users/alice',
+  });
+
+  assert.equal(agent, 'kimi');
+});
+
 test('detectSetupAgentType honours explicit requested agent', () => {
   const agent = detectSetupAgentType('C:/repo', {
     requestedAgent: 'opencode',

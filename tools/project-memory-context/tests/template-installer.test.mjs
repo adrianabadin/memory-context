@@ -183,3 +183,163 @@ test('installOpencode overwrites a stale $schema in existing opencode.json', asy
   await rm(projectRoot, { recursive: true, force: true });
   await rm(globalConfigDir, { recursive: true, force: true });
 });
+
+// ─── codex ──────────────────────────────────────────────────────────────────
+
+test('installAgentTemplates(codex) writes AGENTS.md with autostart block', async () => {
+  await withTempProject(async (projectRoot) => {
+    await installAgentTemplates({ projectRoot, agent: 'codex', packageRoot });
+
+    const agentsMd = join(projectRoot, 'AGENTS.md');
+    assert.ok(existsSync(agentsMd), 'AGENTS.md should exist');
+    const content = await readFile(agentsMd, 'utf8');
+    assert.match(content, /<!-- pmc:autostart -->/);
+    assert.match(content, /<!-- \/pmc:autostart -->/);
+  });
+});
+
+test('installAgentTemplates(codex) writes [mcp_servers.agent-memory] block to .codex/config.toml', async () => {
+  await withTempProject(async (projectRoot) => {
+    // Pre-create the .codex dir to mirror what `codex init` would do in a real project.
+    await mkdir(join(projectRoot, '.codex'), { recursive: true });
+
+    await installAgentTemplates({ projectRoot, agent: 'codex', packageRoot });
+
+    const configPath = join(projectRoot, '.codex', 'config.toml');
+    assert.ok(existsSync(configPath), '.codex/config.toml should exist');
+    const content = await readFile(configPath, 'utf8');
+    assert.match(content, /\[mcp_servers\.agent-memory\]/);
+    assert.match(content, /command\s*=\s*"npx"/);
+    assert.match(content, /args\s*=\s*\["-y",\s*"@aabadin\/agent-memory-mcp"\]/);
+    // MEMORY_DB_PATH is rendered with the actual path placeholder resolved
+    assert.match(content, /MEMORY_DB_PATH\s*=\s*".*planning[\\/]project-memory-context[\\/]memory-db"/);
+  });
+});
+
+test('installAgentTemplates(codex) preserves user config keys already in .codex/config.toml', async () => {
+  await withTempProject(async (projectRoot) => {
+    const codexDir = join(projectRoot, '.codex');
+    await mkdir(codexDir, { recursive: true });
+    const userConfig = `[model]\nname = "gpt-5"\ntemperature = 0.2\n`;
+    await writeFile(join(codexDir, 'config.toml'), userConfig, 'utf8');
+
+    await installAgentTemplates({ projectRoot, agent: 'codex', packageRoot });
+
+    const content = await readFile(join(codexDir, 'config.toml'), 'utf8');
+    assert.match(content, /\[model\]/);
+    assert.match(content, /name\s*=\s*"gpt-5"/);
+    assert.match(content, /\[mcp_servers\.agent-memory\]/);
+  });
+});
+
+// ─── kimi ───────────────────────────────────────────────────────────────────
+
+test('installAgentTemplates(kimi) writes AGENTS.md with autostart block', async () => {
+  await withTempProject(async (projectRoot) => {
+    await installAgentTemplates({ projectRoot, agent: 'kimi', packageRoot });
+
+    const agentsMd = join(projectRoot, 'AGENTS.md');
+    assert.ok(existsSync(agentsMd), 'AGENTS.md should exist');
+    const content = await readFile(agentsMd, 'utf8');
+    assert.match(content, /<!-- pmc:autostart -->/);
+    assert.match(content, /<!-- \/pmc:autostart -->/);
+  });
+});
+
+test('installAgentTemplates(kimi) writes agent-memory entry to .kimi-code/mcp.json', async () => {
+  await withTempProject(async (projectRoot) => {
+    await installAgentTemplates({ projectRoot, agent: 'kimi', packageRoot });
+
+    const mcpPath = join(projectRoot, '.kimi-code', 'mcp.json');
+    assert.ok(existsSync(mcpPath), '.kimi-code/mcp.json should exist');
+    const config = JSON.parse(await readFile(mcpPath, 'utf8'));
+    assert.ok(config['agent-memory'], 'agent-memory key should be present');
+    assert.equal(config['agent-memory'].command, 'npx');
+    assert.deepEqual(config['agent-memory'].args, ['-y', '@aabadin/agent-memory-mcp']);
+    assert.equal(config['agent-memory'].cwd, '.');
+    // MEMORY_DB_PATH is rendered with the actual path
+    assert.match(config['agent-memory'].env.MEMORY_DB_PATH, /planning[\\/]project-memory-context[\\/]memory-db$/);
+  });
+});
+
+test('installAgentTemplates(kimi) preserves user keys already in .kimi-code/mcp.json', async () => {
+  await withTempProject(async (projectRoot) => {
+    const kimiDir = join(projectRoot, '.kimi-code');
+    await mkdir(kimiDir, { recursive: true });
+    const existing = {
+      'user-server': {
+        command: 'node',
+        args: ['./user-server.js'],
+        env: {},
+        cwd: '.',
+      },
+    };
+    await writeFile(join(kimiDir, 'mcp.json'), JSON.stringify(existing, null, 2), 'utf8');
+
+    await installAgentTemplates({ projectRoot, agent: 'kimi', packageRoot });
+
+    const config = JSON.parse(await readFile(join(kimiDir, 'mcp.json'), 'utf8'));
+    assert.ok(config['user-server'], 'user-server should survive the merge');
+    assert.equal(config['user-server'].command, 'node');
+    assert.ok(config['agent-memory'], 'agent-memory should be added');
+    assert.equal(config['agent-memory'].command, 'npx');
+  });
+});
+
+test('installAgentTemplates(kimi) does NOT touch .kimi-code/local.toml (user-owned, gitignored)', async () => {
+  await withTempProject(async (projectRoot) => {
+    const kimiDir = join(projectRoot, '.kimi-code');
+    await mkdir(kimiDir, { recursive: true });
+    const localToml = `[user]\nname = "alice"\n`;
+    await writeFile(join(kimiDir, 'local.toml'), localToml, 'utf8');
+
+    await installAgentTemplates({ projectRoot, agent: 'kimi', packageRoot });
+
+    // .kimi-code/local.toml must be untouched — it is user-owned and gitignored
+    const after = await readFile(join(kimiDir, 'local.toml'), 'utf8');
+    assert.equal(after, localToml, 'local.toml must not be modified by pmc');
+    // Only mcp.json is created
+    assert.ok(existsSync(join(kimiDir, 'mcp.json')));
+  });
+});
+
+// ─── Idempotency: re-running the install must not duplicate content ───────
+
+test('installAgentTemplates(codex) is idempotent across re-runs (one [mcp_servers.agent-memory] section, one PMC comment block)', async () => {
+  await withTempProject(async (projectRoot) => {
+    await mkdir(join(projectRoot, '.codex'), { recursive: true });
+
+    // Run the install three times to exercise the merge function across multiple passes.
+    for (let i = 0; i < 3; i++) {
+      await installAgentTemplates({ projectRoot, agent: 'codex', packageRoot });
+    }
+
+    const content = await readFile(join(projectRoot, '.codex', 'config.toml'), 'utf8');
+    // Count actual section headers at start of line. The string
+    // `mcp_servers.agent-memory` also appears in the PMC comment block,
+    // so we anchor with `^` to count only TOML section headers.
+    const sectionCount = (content.match(/^\[mcp_servers\.agent-memory\]/gm) ?? []).length;
+    assert.equal(sectionCount, 1, `expected 1 section header, found ${sectionCount}`);
+    // Count PMC comment blocks by their marker line.
+    const commentBlockCount = (content.match(/^# PMC — Codex CLI MCP server entry$/gm) ?? []).length;
+    assert.equal(commentBlockCount, 1, `expected 1 PMC comment block, found ${commentBlockCount}`);
+  });
+});
+
+test('installAgentTemplates(kimi) is idempotent across re-runs (one agent-memory key, no schema drift)', async () => {
+  await withTempProject(async (projectRoot) => {
+    for (let i = 0; i < 3; i++) {
+      await installAgentTemplates({ projectRoot, agent: 'kimi', packageRoot });
+    }
+
+    const config = JSON.parse(
+      await readFile(join(projectRoot, '.kimi-code', 'mcp.json'), 'utf8'),
+    );
+    assert.ok(config['agent-memory'], 'agent-memory key must be present');
+    assert.equal(Object.keys(config).filter((k) => k === 'agent-memory').length, 1);
+    // Schema must match the documented one
+    assert.equal(config['agent-memory'].command, 'npx');
+    assert.deepEqual(config['agent-memory'].args, ['-y', '@aabadin/agent-memory-mcp']);
+    assert.equal(config['agent-memory'].cwd, '.');
+  });
+});

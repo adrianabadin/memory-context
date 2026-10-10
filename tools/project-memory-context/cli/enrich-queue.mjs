@@ -198,7 +198,7 @@ async function buildSymbolPromptMeta(symbol, projectRoot) {
   const codeSection = lines.slice(symbol.range.startLine - 1, symbol.range.endLine).join('\n');
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
 
-  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
+  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
   return { prompt, totalLines };
 }
 
