@@ -26,3 +26,10 @@ graphify-out/
 
 # graphify intermediate files
 .graphify_*.json
+
+# E5 embedding runtime and private migration artifacts
+.planning/project-memory-context/e5-migration-operations/
+.planning/project-memory-context/embedding-cache-e5/
+.planning/project-memory-context/model-weights-e5/
+.planning/project-memory-context/memory-db-e5.db*
+.planning/project-memory-context/memory-db-e5-live.db*

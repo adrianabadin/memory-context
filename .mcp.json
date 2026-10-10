@@ -1,14 +1,18 @@
 {
   "mcpServers": {
     "agent-memory": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "@aabadin/agent-memory-mcp@2.1.0"
+        "agent-memory-mcp/dist/index.js"
       ],
+      "cwd": ".",
       "env": {
-        "MEMORY_DB_PATH": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\memory-db",
-        "EMBEDDING_CACHE_PATH": "C:\\Users\\aabad\\Documents\\CODE\\ia\\memory-context\\.planning\\project-memory-context\\embedding-cache"
+        "MEMORY_DB_PATH": ".planning/project-memory-context/memory-db-e5-live",
+        "EMBEDDING_MODEL": "Xenova/multilingual-e5-small",
+        "EMBEDDING_DIMENSIONS": "384",
+        "EMBEDDING_POOLING": "mean",
+        "EMBEDDING_WEIGHT_CACHE_PATH": ".planning/project-memory-context/model-weights-e5",
+        "EMBEDDING_CACHE_PATH": ".planning/project-memory-context/embedding-cache-e5"
       }
     },
     "pmc-query": {
