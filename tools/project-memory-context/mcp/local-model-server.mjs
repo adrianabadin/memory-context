@@ -15,6 +15,7 @@ async function generateSemanticReport(prompt) {
     'output: ...',
     'dependencies: dep1, dep2',
     'role: ...',
+    'Write all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.',
   ].join('\n');
 
   const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {

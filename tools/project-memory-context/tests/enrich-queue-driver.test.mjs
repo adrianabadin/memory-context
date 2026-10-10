@@ -358,6 +358,56 @@ test('finalizeQueueState persists failed terminal state with lastError', async (
   assert.equal(payload.lastError, 'fatal queue error');
 });
 
+test('finalizeQueueState unconditionally auto-spawns background sync and handles spawn errors', async () => {
+  const { dirs } = await createQueueFixture();
+  const queueStateFile = join(dirs.enrichment, 'queue-state.json');
+
+  const spawnCalls = [];
+  const openCalls = [];
+  const fakeHandle = { fd: 88, close: async () => {} };
+
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'finished',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    finishedAt: '2026-05-20T21:02:00.000Z',
+    summary: { pending: 0, enriched: 2, errors: 0 },
+  }, {
+    spawnBackground: (cmd, args, opts) => {
+      spawnCalls.push({ cmd, args, opts });
+      return 9876;
+    },
+    open: async (path, flags) => {
+      openCalls.push({ path, flags });
+      return fakeHandle;
+    },
+    projectRoot: dirs.enrichment + '/..',
+  });
+
+  assert.equal(spawnCalls.length, 1);
+  assert.ok(spawnCalls[0].args.includes('--background'));
+  assert.equal(spawnCalls[0].opts.stdio[1], 88);
+
+  // Test spawn error does not throw
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'finished',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    finishedAt: '2026-05-20T21:02:00.000Z',
+    summary: { pending: 0, enriched: 2, errors: 0 },
+  }, {
+    spawnBackground: () => {
+      throw new Error('mock spawn error');
+    },
+    open: async () => fakeHandle,
+    projectRoot: dirs.enrichment + '/..',
+  });
+});
+
 test('buildQueueState normalizes missing summary fields to zero', () => {
   const state = buildQueueState({
     status: 'running',

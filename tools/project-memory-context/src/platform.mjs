@@ -31,6 +31,14 @@ export function detectAgentType(projectRoot) {
   if (existsSync(join(projectRoot, '.cursorrules'))) return 'cursor';
   if (existsSync(join(projectRoot, '.cursor'))) return 'cursor';
   if (existsSync(join(projectRoot, '.agents'))) return 'antigravity';
+  // Codex CLI (@openai/codex): config schema confirmed 2026-07-29. Project marker: `.codex/`.
+  // MCP schema is TOML; project `.codex/config.toml` is loaded only when the project is
+  // trusted by Codex, which the user accepts once on first run.
+  if (existsSync(join(projectRoot, '.codex'))) return 'codex';
+  // Kimi Code (MoonshotAI/kimi-code): config schema confirmed 2026-07-29. Project marker:
+  // `.kimi-code/`. MCP is read from a separate `.kimi-code/mcp.json` (not from
+  // `.kimi-code/local.toml`, which is user-owned and intended to be gitignored).
+  if (existsSync(join(projectRoot, '.kimi-code'))) return 'kimi';
   return 'generic';
 }
 
@@ -43,6 +51,12 @@ export function detectSetupAgentType(projectRoot, options = {}) {
   const exists = options.exists ?? existsSync;
   const homeDir = options.homeDir ?? homedir();
   if (exists(join(homeDir, '.config', 'opencode'))) return 'opencode';
+  // Global fallback signals for Codex and Kimi — mirror the `~/.config/opencode` check.
+  // These are weaker than project-level markers, so they only run after a project-level
+  // generic fallback; a global config dir is the only signal we have for these agents
+  // when the project itself has no marker yet.
+  if (exists(join(homeDir, '.codex'))) return 'codex';
+  if (exists(join(homeDir, '.kimi-code'))) return 'kimi';
 
   return projectAgent;
 }
@@ -78,7 +92,7 @@ export function spawnBackground(command, args = [], options = {}) {
   const child = spawnImpl(command, args, {
     cwd: options.cwd,
     detached: true,
-    stdio: 'ignore',
+    stdio: options.stdio ?? 'ignore',
     shell: false,
   });
 

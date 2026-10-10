@@ -1,6 +1,6 @@
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readFile } from 'node:fs/promises';
+import { readFile, open } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -264,13 +264,40 @@ export async function refreshContext(projectRoot, options = {}) {
   log(`Sync-manifest operations: ${result.syncOps}`);
   log(`Pending enrichment: ${result.pendingEnrichment}`);
 
-  if (enrich && result.pendingEnrichment > 0) {
+  const isEnriching = enrich && result.pendingEnrichment > 0;
+  const spawnBackgroundImpl = options.spawnBackground ?? spawnBackground;
+  if (isEnriching) {
     const enrichQueueScript = resolve(dirname(fileURLToPath(import.meta.url)), 'enrich-queue.mjs');
-    spawnBackground(process.execPath, [enrichQueueScript], { cwd: projectRoot });
+    spawnBackgroundImpl(process.execPath, [enrichQueueScript], { cwd: projectRoot });
     log(`Launched background enrichment (${result.pendingEnrichment} pending).`);
     result.enrichLaunched = true;
-  } else if (result.pendingEnrichment > 0) {
-    log(`Tip: run \`pmc refresh-context --enrich\` or \`pmc enrich .\` to enrich ${result.pendingEnrichment} pending symbol(s).`);
+  } else {
+    if (result.pendingEnrichment > 0) {
+      log(`Tip: run \`pmc refresh-context --enrich\` or \`pmc enrich .\` to enrich ${result.pendingEnrichment} pending symbol(s).`);
+    }
+    try {
+      const syncScript = resolve(dirname(fileURLToPath(import.meta.url)), 'sync.mjs');
+      const openImpl = options.open ?? open;
+
+      const outLog = resolve(dirs.enrichment, 'sync-stdout.log');
+      const errLog = resolve(dirs.enrichment, 'sync-stderr.log');
+
+      let outHandle, errHandle;
+      try {
+        outHandle = await openImpl(outLog, 'a');
+        errHandle = await openImpl(errLog, 'a');
+        spawnBackgroundImpl(process.execPath, [syncScript, '--background'], {
+          cwd: projectRoot,
+          stdio: ['ignore', outHandle.fd, errHandle.fd],
+        });
+        log('Launched background sync.');
+      } finally {
+        if (outHandle) await outHandle.close();
+        if (errHandle) await errHandle.close();
+      }
+    } catch (err) {
+      log(`Failed to auto-spawn background sync (non-fatal): ${err.message}`);
+    }
   }
 
   console.log(JSON.stringify(result, null, 2));

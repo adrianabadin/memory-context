@@ -15,6 +15,7 @@ import { createLocalModelProvider } from '../src/providers/local-model-provider.
 import { appendSubagentQueue } from '../src/subagent-queue.mjs';
 import { appendSyncEntries, appendSyncEntry, createCommunitySyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 import { isPidAlive } from '../src/watcher-lifecycle.mjs';
+import { spawnBackground } from '../src/platform.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -197,7 +198,7 @@ async function buildSymbolPromptMeta(symbol, projectRoot) {
   const codeSection = lines.slice(symbol.range.startLine - 1, symbol.range.endLine).join('\n');
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
 
-  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
+  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
   return { prompt, totalLines };
 }
 
@@ -474,8 +475,34 @@ export async function writeQueueState(input) {
   await saveJson(input.queueStateFile, buildQueueState(input));
 }
 
-export async function finalizeQueueState(input) {
+export async function finalizeQueueState(input, options = {}) {
   await writeQueueState(input);
+
+  try {
+    const projectRoot = options.projectRoot ?? PROJECT_ROOT;
+    const syncScript = resolve(dirname(fileURLToPath(import.meta.url)), 'sync.mjs');
+    const spawnBackgroundImpl = options.spawnBackground ?? spawnBackground;
+    const openImpl = options.open ?? open;
+
+    const enrichmentDir = dirname(input.queueStateFile);
+    const outLog = resolve(enrichmentDir, 'sync-stdout.log');
+    const errLog = resolve(enrichmentDir, 'sync-stderr.log');
+
+    let outHandle, errHandle;
+    try {
+      outHandle = await openImpl(outLog, 'a');
+      errHandle = await openImpl(errLog, 'a');
+      spawnBackgroundImpl(process.execPath, [syncScript, '--background'], {
+        cwd: projectRoot,
+        stdio: ['ignore', outHandle.fd, errHandle.fd],
+      });
+    } finally {
+      if (outHandle) await outHandle.close();
+      if (errHandle) await errHandle.close();
+    }
+  } catch (err) {
+    // catch and log spawn failure without throwing
+  }
 }
 
 // Conservative staleness window: an enrichment heartbeat older than this means

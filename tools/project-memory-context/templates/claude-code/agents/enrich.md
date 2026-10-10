@@ -47,6 +47,7 @@ Run every **≥120 seconds**. Track `relaunchCounter` (cap: 3) and `inProgressSu
    ```
    You are enriching a code symbol for a project memory index.
    Return ONLY the structured explanation — no preamble, no markdown fences.
+   Write all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.
 
    <entry.prompt>
    ```

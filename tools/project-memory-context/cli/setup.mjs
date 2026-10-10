@@ -18,6 +18,8 @@ const AGENT_FLAGS = {
   '--opencode': 'opencode',
   '--claude': 'claude-code',
   '--cursor': 'cursor',
+  '--codex': 'codex',
+  '--kimi': 'kimi',
   '--generic': 'generic',
 };
 
@@ -84,6 +86,15 @@ try {
     'opencode': globalConfig,
     'claude-code': join(homedir(), '.claude'),
     'antigravity': join(homedir(), '.gemini', 'config'),
+    // Codex: global config at ~/.codex/ (per @openai/codex docs, 2026-07-29).
+    // Currently unused by installCodex (we only write project-level config
+    // because Codex requires project trust to load it), but kept for parity
+    // with the other agents and to support a future global-config write.
+    'codex': join(homedir(), '.codex'),
+    // Kimi: global config at ~/.kimi-code/ (per MoonshotAI/kimi-code docs,
+    // 2026-07-29). Same rationale as codex — kept for parity, not used by
+    // installKimi which writes project-level `.kimi-code/mcp.json` only.
+    'kimi': join(homedir(), '.kimi-code'),
   };
 
   const result = await bootstrapProjectInstall({
