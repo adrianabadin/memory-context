@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, copyFileSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFile, spawn, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
@@ -13,6 +13,58 @@ const COPY_FILES = new Set(['graph.json', 'graph.metadata.json', 'graph.html', '
  * but small enough that a stuck graphify does not block the agent.
  */
 export const DEFAULT_GRAPHIFY_TIMEOUT_MS = 60_000;
+
+export const REQUIRED_GRAPHIFY_IGNORE_ENTRIES = [
+  '.worktrees/',
+  '.planning/',
+  'node_modules/',
+  'graphify-out/',
+  '.graphify_*.json',
+];
+
+/**
+ * Ensure `.graphifyignore` exists in projectRoot and contains all required
+ * exclusion entries, preserving existing lines and comments. Idempotent.
+ *
+ * @param {string} projectRoot - Absolute or relative path to project root
+ * @returns {Promise<string>} Path to .graphifyignore
+ */
+export async function ensureGraphifyIgnore(projectRoot) {
+  const ignorePath = resolve(projectRoot, '.graphifyignore');
+  let currentContent = '';
+  let exists = false;
+  try {
+    currentContent = await readFile(ignorePath, 'utf8');
+    exists = true;
+  } catch (err) {
+    if (err && err.code !== 'ENOENT') throw err;
+  }
+
+  const existingLines = currentContent.split(/\r?\n/);
+  const hasEntry = (entry) => {
+    const trimmedEntry = entry.trim();
+    const altTrimmed = trimmedEntry.endsWith('/') ? trimmedEntry.slice(0, -1) : trimmedEntry + '/';
+    return existingLines.some((line) => {
+      const trimmedLine = line.trim();
+      return trimmedLine === trimmedEntry || trimmedLine === altTrimmed;
+    });
+  };
+
+  const missing = REQUIRED_GRAPHIFY_IGNORE_ENTRIES.filter((entry) => !hasEntry(entry));
+  if (missing.length === 0 && exists) {
+    return ignorePath;
+  }
+
+  let newContent = currentContent;
+  if (newContent.length > 0 && !newContent.endsWith('\n')) {
+    newContent += '\n';
+  }
+  newContent += missing.join('\n') + '\n';
+
+  await mkdir(projectRoot, { recursive: true });
+  await writeFile(ignorePath, newContent, 'utf8');
+  return ignorePath;
+}
 
 /**
  * Terminate the child process and (on Windows) its descendants.
@@ -69,6 +121,13 @@ export async function runGraphifyUpdate(projectRoot, options = {}) {
     graphifyExe = resolveGraphifyFn();
   } catch {
     log('graphify not found — skipping incremental graph update. Install with `pip install graphifyy` or set PMC_GRAPHIFY_PATH.');
+    return { ran: false, copied: [] };
+  }
+
+  try {
+    await ensureGraphifyIgnore(projectRoot);
+  } catch (err) {
+    log(`failed to ensure .graphifyignore (${err.message}) — continuing without graph refresh.`);
     return { ran: false, copied: [] };
   }
 

@@ -1,30 +1,19 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { hashFile as hashFileXxh3, HASH_VERSION } from './hash.mjs';
+import { shouldIgnoreDir, isGraphifyScope } from './walk-ignores.mjs';
 
 const TRACKED_EXTENSIONS = new Set(['.ts', '.tsx', '.mjs', '.js', '.jsx', '.cs']);
-
-const IGNORED_DIRS = new Set([
-  'node_modules',
-  'dist',
-  '.git',
-  'bin',
-  'obj',
-  '.opencode',
-  '.planning',
-  'graphify-out',
-  'target',
-  '.next',
-]);
 
 async function walkDir(dir, projectRoot) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      if (IGNORED_DIRS.has(entry.name)) continue;
+      if (entry.name === '.opencode' || shouldIgnoreDir(entry.name)) continue;
       files.push(...await walkDir(join(dir, entry.name), projectRoot));
     } else if (entry.isFile()) {
+      if (isGraphifyScope(entry.name)) continue;
       const ext = entry.name.substring(entry.name.lastIndexOf('.'));
       if (TRACKED_EXTENSIONS.has(ext)) {
         files.push(relative(projectRoot, join(dir, entry.name)).replace(/\\/g, '/'));

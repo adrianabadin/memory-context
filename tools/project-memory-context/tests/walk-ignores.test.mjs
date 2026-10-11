@@ -11,10 +11,17 @@ test('shouldIgnoreDir ignores always-ignored names (hidden or not)', () => {
 test('shouldIgnoreDir ignores hidden directories by default', () => {
   assert.equal(shouldIgnoreDir('.git'), true);
   assert.equal(shouldIgnoreDir('.worktrees'), true);
+  assert.equal(shouldIgnoreDir('.planning'), true);
   assert.equal(shouldIgnoreDir('.next'), true);
   assert.equal(shouldIgnoreDir('.vscode'), true);
   assert.equal(shouldIgnoreDir('.idea'), true);
   assert.equal(shouldIgnoreDir('.playwright-mcp'), true);
+});
+
+test('shouldIgnoreDir explicitly ignores .worktrees and .planning in IGNORED_DIRS', () => {
+  assert.equal(IGNORED_DIRS.has('.worktrees'), true, 'expected .worktrees in IGNORED_DIRS');
+  assert.equal(IGNORED_DIRS.has('.planning'), true, 'expected .planning in IGNORED_DIRS');
+  assert.equal(ALLOWED_HIDDEN_DIRS_NAMES.has('.planning'), false, 'expected .planning not in ALLOWED_HIDDEN_DIRS_NAMES');
 });
 
 test('shouldIgnoreDir keeps allowlisted hidden directories', () => {

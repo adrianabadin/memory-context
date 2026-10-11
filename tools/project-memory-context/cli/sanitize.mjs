@@ -10,6 +10,7 @@ import { attachGraphNodeIds } from '../src/graph-node-resolver.mjs';
 import { appendSyncEntries, createSyncEntry, clearManifest } from '../src/sync-manifest.mjs';
 import { spawnBackground } from '../src/platform.mjs';
 import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
+import { shouldIgnoreDir, isGraphifyScope } from '../src/walk-ignores.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IS_MAIN = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -27,18 +28,20 @@ function codeHash(content) {
 
 async function findSourceFiles(projectRoot) {
   const exts = new Set(['.ts', '.mjs', '.js', '.cs']);
-  const ignore = ['node_modules', 'dist', '.git', 'bin', 'obj', '.opencode', '.planning', 'graphify-out'];
   const results = [];
 
   async function walk(dir) {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const full = resolve(dir, entry.name);
-      if (ignore.some(i => full.includes(i))) continue;
       if (entry.isDirectory()) {
-        await walk(full);
-      } else if (Array.from(exts).some(e => entry.name.endsWith(e))) {
-        results.push(relative(projectRoot, full).replace(/\\/g, '/'));
+        if (entry.name === '.opencode' || shouldIgnoreDir(entry.name)) continue;
+        await walk(resolve(dir, entry.name));
+      } else if (entry.isFile()) {
+        if (isGraphifyScope(entry.name)) continue;
+        const ext = entry.name.substring(entry.name.lastIndexOf('.'));
+        if (exts.has(ext)) {
+          results.push(relative(projectRoot, resolve(dir, entry.name)).replace(/\\/g, '/'));
+        }
       }
     }
   }
@@ -216,4 +219,4 @@ if (IS_MAIN) {
   });
 }
 
-export { sanitize };
+export { sanitize, findSourceFiles };

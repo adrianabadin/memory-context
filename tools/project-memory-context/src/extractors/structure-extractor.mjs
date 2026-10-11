@@ -1,24 +1,12 @@
 import { readdir, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-
-const IGNORED_DIRECTORIES = new Set([
-  'node_modules',
-  '.git',
-  '.planning',
-  '.next',
-  'graphify-out',
-  'dist',
-  'build',
-  'coverage',
-  '.turbo',
-  '.vercel',
-]);
+import { shouldIgnoreDir } from '../walk-ignores.mjs';
 
 async function listDirectories(dir, root, depth = 0, maxDepth = 2, acc = []) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    if (IGNORED_DIRECTORIES.has(entry.name)) continue;
+    if (shouldIgnoreDir(entry.name)) continue;
     const full = join(dir, entry.name);
     const rel = relative(root, full).replace(/\\/g, '/');
     acc.push({ rel, depth });

@@ -12,16 +12,22 @@ import {
 
 const TMP = join(process.env.TEMP || '/tmp', 'pmc-hash-store-test');
 
-test('computeFileHashes hashes tracked source files', async () => {
+test('computeFileHashes skips .planning, .worktrees, graphify-out, and .graphify_*.json', async () => {
   await mkdir(TMP, { recursive: true });
-  await writeFile(join(TMP, 'app.ts'), 'const x = 1;');
-  await writeFile(join(TMP, 'util.js'), 'export function add(a, b) { return a + b; }');
-  await writeFile(join(TMP, 'ignore.txt'), 'not tracked');
+  await mkdir(join(TMP, 'src'), { recursive: true });
+  await writeFile(join(TMP, 'src', 'app.ts'), 'const x = 1;');
+  await mkdir(join(TMP, '.worktrees', 'wt'), { recursive: true });
+  await writeFile(join(TMP, '.worktrees', 'wt', 'leak.ts'), 'const x = 2;');
+  await mkdir(join(TMP, '.opencode'), { recursive: true });
+  await writeFile(join(TMP, '.opencode', 'plugin.ts'), 'const x = 2.5;');
+  await mkdir(join(TMP, '.planning'), { recursive: true });
+  await writeFile(join(TMP, '.planning', 'plan.ts'), 'const x = 3;');
+  await mkdir(join(TMP, 'graphify-out'), { recursive: true });
+  await writeFile(join(TMP, 'graphify-out', 'out.ts'), 'const x = 4;');
+  await writeFile(join(TMP, '.graphify_custom.ts'), 'const x = 5;');
 
   const hashes = await computeFileHashes(TMP);
-  assert.ok(hashes['app.ts']);
-  assert.ok(hashes['util.js']);
-  assert.equal(hashes['ignore.txt'], undefined);
+  assert.deepEqual(Object.keys(hashes), ['src/app.ts']);
 
   await rm(TMP, { recursive: true });
 });

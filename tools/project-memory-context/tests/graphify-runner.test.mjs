@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 
-import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
+import { runGraphifyUpdate, ensureGraphifyIgnore } from '../src/graphify-runner.mjs';
 
 let counter = 0;
 function tmp(label) {
@@ -155,5 +155,96 @@ test('6. runGraphifyUpdate reports ran:true with empty copied list when graphify
   });
   assert.equal(result.ran, true, 'ran must be true when exit code is 0');
   assert.deepEqual(result.copied, [], 'nothing to copy if graphify-out missing');
+  await rm(T, { recursive: true, force: true });
+});
+
+test('7. ensureGraphifyIgnore creates .graphifyignore with required entries when absent', async () => {
+  const T = tmp('ignore-create');
+  await mkdir(T, { recursive: true });
+  const ignoreFile = resolve(T, '.graphifyignore');
+
+  await ensureGraphifyIgnore(T);
+
+  const { readFile } = await import('node:fs/promises');
+  const content = await readFile(ignoreFile, 'utf8');
+  assert.ok(content.includes('.worktrees/'), 'must include .worktrees/');
+  assert.ok(content.includes('.planning/'), 'must include .planning/');
+  assert.ok(content.includes('node_modules/'), 'must include node_modules/');
+  assert.ok(content.includes('graphify-out/'), 'must include graphify-out/');
+  assert.ok(content.includes('.graphify_*.json'), 'must include .graphify_*.json');
+  await rm(T, { recursive: true, force: true });
+});
+
+test('8. ensureGraphifyIgnore preserves user lines/comments and appends missing entries idempotently', async () => {
+  const T = tmp('ignore-preserve');
+  await mkdir(T, { recursive: true });
+  const ignoreFile = resolve(T, '.graphifyignore');
+  const initial = '# Custom user comment\nmy-custom-build/\n.worktrees\n';
+  await writeFile(ignoreFile, initial, 'utf8');
+
+  await ensureGraphifyIgnore(T);
+
+  const { readFile } = await import('node:fs/promises');
+  const content1 = await readFile(ignoreFile, 'utf8');
+  assert.ok(content1.startsWith('# Custom user comment\nmy-custom-build/\n.worktrees'), 'must preserve user header');
+  assert.ok(content1.includes('.planning/'), 'must append .planning/');
+  assert.ok(content1.includes('node_modules/'), 'must append node_modules/');
+  assert.ok(content1.includes('graphify-out/'), 'must append graphify-out/');
+  assert.ok(content1.includes('.graphify_*.json'), 'must append .graphify_*.json');
+
+  // Verify .worktrees (without slash) was recognized and .worktrees/ was not duplicated
+  const occurrences = (content1.match(/\.worktrees\/?/g) || []).length;
+  assert.equal(occurrences, 1, '.worktrees must not be duplicated even when entered without trailing slash');
+
+  // Idempotency: run again, content must not change
+  await ensureGraphifyIgnore(T);
+  const content2 = await readFile(ignoreFile, 'utf8');
+  assert.equal(content2, content1, 'second call must be idempotent');
+
+  await rm(T, { recursive: true, force: true });
+});
+
+test('9. runGraphifyUpdate invokes ensureGraphifyIgnore before spawning child process', async () => {
+  const T = tmp('order-before-spawn');
+  await mkdir(T, { recursive: true });
+  const ignoreFile = resolve(T, '.graphifyignore');
+
+  const { existsSync } = await import('node:fs');
+  let ignoreExistedAtSpawnTime = false;
+  const spawnImpl = (...args) => {
+    ignoreExistedAtSpawnTime = existsSync(ignoreFile);
+    return fakeChild({ exitCode: 0 });
+  };
+
+  await runGraphifyUpdate(T, {
+    resolveGraphifyFn: () => '/fake/graphify',
+    spawnImpl,
+    timeoutMs: 1000,
+  });
+
+  assert.equal(ignoreExistedAtSpawnTime, true, '.graphifyignore must exist before spawn is called');
+  await rm(T, { recursive: true, force: true });
+});
+
+test('10. runGraphifyUpdate degrades gracefully and does not throw when .graphifyignore cannot be written (directory collision)', async () => {
+  const T = tmp('dir-collision');
+  await mkdir(T, { recursive: true });
+  // Create .graphifyignore as a directory to force an EISDIR / EPERM write failure
+  await mkdir(resolve(T, '.graphifyignore'), { recursive: true });
+
+  const messages = [];
+  const result = await runGraphifyUpdate(T, {
+    resolveGraphifyFn: () => '/fake/graphify',
+    spawnImpl: makeSpawnFactory(() => fakeChild({ exitCode: 0 })),
+    log: (m) => messages.push(m),
+    timeoutMs: 1000,
+  });
+
+  assert.equal(result.ran, false, 'must report ran:false on .graphifyignore write error');
+  assert.deepEqual(result.copied, []);
+  assert.ok(
+    messages.some((m) => m.includes('.graphifyignore')),
+    'must log error about .graphifyignore',
+  );
   await rm(T, { recursive: true, force: true });
 });

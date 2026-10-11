@@ -13,8 +13,16 @@ Or run focused test files directly with Node's native test runner:
 
 ```bash
 cd tools/project-memory-context
-node --test tests/relational-eval.test.mjs
+node --test tests/walk-ignores.test.mjs tests/graphify-runner.test.mjs tests/non-source-scopes.test.mjs
 ```
+
+## Scope Exclusions and .graphifyignore
+
+PMC walkers exclude non-source scopes and generator artifacts consistently:
+- Walkers (`file-hash-store`, `structure-extractor`, `sanitize`, `bootstrap`, `file-watcher`) consult shared definitions from `src/walk-ignores.mjs`. Source walkers additionally preserve prior exclusions for `.opencode/**`.
+- Scopes excluded: `.planning/**`, `.worktrees/**`, `graphify-out/**`, `.graphify_*.json`, build outputs (`dist`, `build`, `obj`, `bin`, `coverage`, `target`), vendor directories (`node_modules`), and version control metadata (`.git`).
+- `.planning/**` declared intake artifacts remain explicitly readable via artifact paths under `.planning/project-memory-context/`.
+- `ensureGraphifyIgnore(projectRoot)` in `src/graphify-runner.mjs` idempotently appends `.worktrees/`, `.planning/`, `node_modules/`, `graphify-out/`, and `.graphify_*.json` to `.graphifyignore` prior to invoking graphify, preserving existing user rules and comments. If writing `.graphifyignore` fails (such as on a directory collision), `runGraphifyUpdate` degrades gracefully without throwing.
 
 ## Relational Evaluation Harness
 
