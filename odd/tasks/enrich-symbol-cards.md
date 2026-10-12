@@ -1,54 +1,47 @@
 # Enrich Symbol Cards
 
-Repository: `memory-context` · Target branch: `feat/enrich-symbol-cards` (isolated worktree: C:/Users/aabad/AppData/Local/Temp/pmc-enrich-symbol-cards; base 76cb4be)
-Design: `v3.md` · Plan: `docs/superpowers/plans/2026-10-09-enrich-symbol-cards.md` · Baseline audit: `v2.md`
-Objective: Make PMC enrichment useful for coding through Symbol Cards: deterministic graph facts linked by `symbolKey`, a rule-based architectural role, and a bottom-up, schema-validated LLM narrative, served through MCP and CLI.
-Constraints: Test-first (`node --test` from `tools/project-memory-context`); fixture-only integration tests; never run refresh, sync, enrich, or watch from the worktree until `assertCheckoutIdentity` lands; real-repo cleanup only with explicit authorization and a backup; one Conventional Commit per task; no push, PR, or merge.
-Status: IN PROGRESS — ongoing planned implementation, commits and reviews authorized until a real blocker. Task 0.1 closed: `ed39cb5`, 29/29 focused; full suite 852 pass, 1 confirmed base failure. Native review approved and acknowledged. Task 0.2 closed: source commit `2093c84`, native review approved and acknowledged. Authorized B1 bootstrap isolation and B2 watcher test synchronization are closed; full serial suite completes with only the known Codex baseline failure. Task 0.3 is next. No publishing or production mutations. Real-data pruning requires separate authorization and backup. Delivery strategy: single-pr (user chose one combined review); chain strategy not applicable. This grants no push, PR creation, or merge permission. Main and its intentional deletions remain untouched. Guard integration deferred.
-Route 0.0: delegated writer (multi-file implementation), RED/GREEN with temporary data only, followed by independent verifier. Forecast was 350–400 lines; observed implementation/tests/fixture: 1,136 authored lines (planning/docs separately: 433). No publishing or merge authorized.
+Repository: `memory-context`
+Worktree: `C:/Users/aabad/AppData/Local/Temp/pmc-enrich-symbol-cards`
+Branch: `feat/enrich-symbol-cards` · Initial base: `76cb4be`
+Design: `v3.md` · Plan: `docs/superpowers/plans/2026-10-09-enrich-symbol-cards.md`
+Objective: deterministic symbol relationships, architectural roles and validated bottom-up narratives, served through MCP and CLI.
+Status: IN PROGRESS — 0.3 closed; 0.4 exploration next. Ongoing scoped implementation, commits and native reviews authorized until a real blocker.
+Delivery: single-pr; no push, PR creation, merge or publishing. Preserve main and its intentional deletions; guard integration deferred.
+Safety: owned temporary fixtures only. No real DB access or production PMC session-start/get-context/refresh/sync/enrich/watch until checkout identity guard lands. Compact PMC context unavailable safely: authorized disk mapping, no CodeGraph calls/init. No network/install, host cleanup or process termination. Real-data pruning needs separate authorization and backup.
+Workflow: sequential delegated writers; observed deterministic RED/GREEN; independent checks; separate Conventional Commit/native review per work unit. Native approval requires exact acknowledgement; advisories do not reopen reviewed candidates.
+Continuity: detailed historical evidence is preserved in this file at commit `f317ae0`, the linked unit trackers and Engram discoveries. This compact projection retains task states, acceptance and receipt evidence without repeating closed incident transcripts.
 
 ## F0 — Hygiene and identity
-- [x] 0.0 DONE — Golden fixture `layered-app` + relational eval harness (baseline 2/12; commit `4ed1bce`)
-- [x] 0.1 DONE — Exclude `.planning/**`, `.worktrees/**`, graphify artifacts from walkers + `.graphifyignore`
-  - Route: delegated writer; multiple independent walker implementations require multi-file changes. Forecast: 250–400 authored lines, advisory only.
-  - Acceptance: no polluted fixture paths/keys, idempotent `.graphifyignore` preserving user lines, declared intake still accessible; focused tests then full package suite.
-  - Safety: temporary fixtures only; no production PMC commands or DB. Compact PMC context unavailable safely; disk mapping used. No install/bootstrap ignore-generation wiring added.
-  - Evidence: writer observed RED/GREEN; independent verifier observed 29/29 focused tests, clean modified/untracked whitespace. Full `npm test`: 852 pass / 1 fail (writer); verifier reproduced exact Codex idempotency failure at untouched HEAD 4455281: expected 1 PMC comment block, found 3 (`tests/template-installer.test.mjs:308`). Full suite is NOT green; unrelated fix not authorized.
-  - Correction: independent verifier found accidental `.opencode` inclusion; local prior exclusions restored in hash/sanitize/bootstrap/watcher with RED/GREEN regressions. `.graphifyignore` directory collision now returns `{ran:false,copied:[]}` without spawning.
-  - Commit: `ed39cb5` — `fix(pmc): exclude generated scopes from source walkers` (15 files, 409 additions/66 deletions).
-  - Review closure: native `review-26a60365cfe00bb6` approved; exact acknowledgement burned authority at revision `sha256:6355f7de344abb1b28bf988cc97d5e35a7fa8a37be95f97795122d9f27884cad`. Two earlier in-process provider completions failed `terminated` without timeout or mutation. Read-only incident diagnosis found reliability routing to Anthropic; human explicitly switched global `review-reliability` to `openai-codex/gpt-6.1-sol` (medium), then same frozen capture succeeded. Root cause of transport interruption remains unproven. Only advisory: `R3-hidden-scope-mismatch`, `src/file-watcher.mjs:15`, WARNING/informational, no correction authorized. Diff: 255 additions/66 deletions tracked plus 151-line new regression test (including tracker/docs). Nonblocking follow-ups: hidden watcher mismatch, mixed ignore-file line endings, anchored ignore-rule duplication. Verifier-owned temp folders `/tmp/pmc-verify-base-sD9rce` and `/tmp/pmc-verify-fx-a4VORe` remain because cleanup was safety-blocked; no bypass attempted.
-- [x] 0.2 DONE — Persist `semanticSummary` in symbol-index
-  - Route: delegated explorer then one bounded writer (index, queue, linker and tests; multi-file trigger). Forecast 150–300 authored lines, advisory only. Closure tracker commit for 0.1: `867913f`.
-  - Contract: extract first Responsibility sentence, max 200 chars; persist index summaries through queue/subagent and linker; preserve existing summary when omitted; missing summaries retain graph fallback. Existing producer summary strings remain valid.
-  - Acceptance: temporary fixture `pmc_search_symbols` returns non-empty summaries, upsert/merge/readback and extraction regressions pass. RED/GREEN focused `node --test tests/symbol-index.test.mjs tests/enrich-queue-routing.test.mjs tests/enrichment-linker.test.mjs`, then full package `npm test`; add fixture MCP query coverage if needed.
-  - Safety: owned temporary fixtures only, no real DB/production PMC commands, no 0.1 advisory fixes. Compact PMC context safely unavailable; disk mapping fallback.
-  - Partial evidence: writer `mv3tzj85-h-1ups` observed RED (10/15 pass), intermediate 26/27, then GREEN 27/27; independent verifier confirmed 27/27 and clean tracked/untracked whitespace. In-process MCP fixture invokes actual `pmc_search_symbols` against persisted disk summary; no candidate-caused blocker found. Source/tests/documentation are committed and reviewed (see closure below).
-  - Full-suite correction: completed first `npm test` actually 867 tests / 865 pass / 2 fail, NOT only the known base failure reported by the incident scout. Additional `tests/setup-bootstrap.test.mjs:301` timed out around 60s (null exit status) during pip/GitHub graphify cloning; cause unclassified. Second full run stalled and harness timed out after 30min; no result. Do not repeat unbounded full runs or trigger external install/network without resolving this safety mismatch.
-  - Documentation writer `mv3w3cmi-j-m7wx` failed with four provider `fetch failed` errors, no edits. One fresh retry after explicit user continuation completed `docs/DEVELOPMENT.md`; doc whitespace clean, passive-doc RED exception recorded. Generic verification completed normally.
-  - Read-only bootstrap diagnosis: failure stage unconditionally calls host Python `pip install` from GitHub without virtualenv; temporary target does not isolate host Python/home MCP config. The 0.2 source modules are absent from pre-failure dependency chain, supporting environmental classification, NOT a reproduced base result. No further live install/test run or host remediation performed; earlier suite host side effects remain unverified. Separate scope authorization was subsequently granted and B1/B2 closed: B2 source `b9c5c7e`, docs `7c2ef81`, native review approved/acknowledged; B1 source `e0864da`, docs `d453383`, native review approved/acknowledged. Production bootstrap and watcher behavior unchanged. Current full serial suite: 877 tests, 876 pass, 1 known pre-existing Codex template failure, 0 cancelled, 55.3s; prior hang resolved. Current summary focused 27/27 and real fixture MCP acceptance verified independently. No full-green claim.
-  - Commit: `2093c84` — `fix(pmc): persist enrichment semantic summaries in symbol index`, 9 files, +671/-13, separate from B1/B2.
-  - Native closure: `review-1ed9347bb82ccc2a`, medium / review-reliability, approved and exact acknowledgement burned authority. Target `sha256:1678b528dfa1f4e0d0abe7e1e3e5edffc2b4456bc78880deaafa0118903dcf8a`, consumed revision `sha256:191deb7b26beb780112fdee76610433887efcf7c36aeb7c19a8eb09d68c8ac34`. One nonblocking advisory `R3-responsibility-list` at symbol-index.mjs:63-83; no correction offered/applied. Task 0.3 is next.
-- [ ] 0.3 `attach_symbol` on sync + `backfill-symbol-keys` CLI (dry-run default)
-- [ ] 0.4 Deterministic `graphNodeId` resolution + null-reason report
-- [ ] 0.5 Decision D1 checkpoint (graphify edges vs own tree-sitter edges)
-- [ ] 0.6 Real-repo prune (STOP: user authorization + backup)
+- [x] 0.0 Golden relational fixture/eval harness — source `4ed1bce`, closure `4455281`; independent 12/12, real graphify baseline 2/12 (not stub accuracy). Native `review-ee4df511d212422b` approved/acknowledged. Full suite skipped; seven nonblocking advisories.
+- [x] 0.1 Walker exclusions and graphifyignore — source `ed39cb5`, closure `867913f`; independent 29/29; full 852 pass/1 baseline Codex failure. Native `review-26a60365cfe00bb6` approved/acknowledged. Explicitly approved global reliability model switch to Codex medium; hidden-scope advisory left untouched.
+- [x] 0.2 Persist semanticSummary — source `2093c84`, closure `f317ae0`; independent 27/27 including registered fixture MCP query. First Responsibility sentence, max 200 chars; omitted summary preserves prior value, explicit null may clear; graph fallback retained. Native `review-1ed9347bb82ccc2a` approved/acknowledged, one responsibility-list advisory.
+- [x] 0.3 DONE — attach_symbol on sync and backfill-symbol-keys CLI
+  - Initial estimate 350–500 lines revised to 650–850 before edits; unchanged scope split into small sequential reviewable units.
+  - [x] 0.3a Sync attachment/retry — `4a8edea7924b91f3b8637ff16746dbd6eee56a67`, 2 files +172/-1. RED 34 pass/7 fail; GREEN/independent 41/41 (492.8ms). Exact attachment after parsed store/update; missing ID and MCP errors remain pending; retry reuses the stored row. Native `review-01e28e9249a67d3a` approved/acknowledged; consumed `sha256:b3f4acd69c3b2f141af5096c7376943ed403cabd3c8c0f03c5b72cc828c545a3`. Static advisories only; no live backend claim.
+  - [x] 0.3b Dry-run planner — `3b1e141ccc3998609533b0cab7816d10fba04a5e`, 2 files +422. Observed RED; correction RED 2 failures for single-character project tags and mixed duplicate IDs, then GREEN/independent 58/58 (534.5ms). Index-driven exact-tag search, collision grouping before eligibility, project ownership/conflict/duplicate/unsafe-path checks, cap reporting. Native `review-ff16f310a123e26d` approved/acknowledged; consumed `sha256:79a0322effb044f7df3e7efece7e910edd3784d1b659d19171236e79b36ecb8c`. One nonblocking cap-group advisory R3-001; approved planner unchanged.
+  - [x] 0.3c CLI/apply and fixture acceptance — `b3fe0ddfc56ab7effa098a435948a771e34bb53f`, 5 files +412/-3. RED missing exports/registration; target-cwd RED 77/78 then GREEN/independent 78/78. Actual owned SQLite reader and context main render `Semantic Memory` with exact fixture content. Native `review-4d831b5728740bca` approved/acknowledged, consumed `sha256:ad814958e40fa93ea49e6f038b15d4ae72bf0597c9b58c472e3d72624010f9f5`; no correction offered. Cleanup failures are logged without changing successful application counts. Live backend acceptance not run.
+  - Acceptance: dry-run default, only --apply mutates; refuse ALL application if coverage.complete is false, closing capped-group duplicate risk without reopening 0.3b. Validate arguments before setup, missing/invalid index safe, exact project slug documented with explicit override if needed, honest indexed-only coverage. Controlled failure counts/exit and client cleanup. Fixture get_by_symbol protocol plus real local SQLite reader and get-context render Semantic Memory; backend submodule absent, never label stubs a live handler test.
+  - Checks: focused sync/backfill/dispatch plus bounded serial full suite after safety audit. Preserve known unrelated Codex template failure; no full-green claim. No production commands or approved advisory fixes.
+- [ ] 0.4 IN PROGRESS — Deterministic graphNodeId resolution and null-reason report (read-only exploration; write scope/acceptance after mapping)
+- [ ] 0.5 Decision D1 checkpoint — graphify vs own tree-sitter edges; stop for unresolved human product decision
+- [ ] 0.6 Real-repo prune — STOP: explicit authorization and backup
 
-## F1 — Typed nodes, file cards, facts, relations
-- [ ] 1.1 Typed node kinds in graph.db (`file/symbol/member/doc/config/data`)
-- [ ] 1.2 Class member extraction + member keys (D2)
-- [ ] 1.3 Facts builder (`src/cards/facts.mjs`)
-- [ ] 1.4 File cards (`src/cards/file-card.mjs`)
-- [ ] 1.5 get-context inbound callers + target disambiguation
-- [ ] 1.6 MCP `pmc_relations` + facts-only `pmc_card` on graph.db
+## F1 — Typed nodes, file cards, facts and relations
+- [ ] 1.1 Typed node kinds in graph.db (file/symbol/member/doc/config/data)
+- [ ] 1.2 Class member extraction and member keys (D2)
+- [ ] 1.3 Facts builder
+- [ ] 1.4 File cards
+- [ ] 1.5 get-context inbound callers and disambiguation
+- [ ] 1.6 MCP pmc_relations and facts-only pmc_card
 
-## F2–F5 (expanded to step level at phase entry)
-- [ ] F2 Role classifier + profiles (≥90% fixture accuracy)
-- [ ] F3 Bottom-up structured narrative + validator + narrativeHash + concurrency
-- [ ] F4 stopAtRole, entrypoints, impact, card levels, Pi MCP access
-- [ ] F5 Rollups + eval metrics in CI
+## F2–F5 — Expand at phase entry
+- [ ] F2 Role classifier and profiles (>=90% fixture accuracy)
+- [ ] F3 Bottom-up structured narrative, validator, narrativeHash and concurrency
+- [ ] F4 Role-aware surface: stopAtRole, entrypoints, impact, card levels, Pi MCP access
+- [ ] F5 Rollups and eval metrics in CI
 
-## Evidence log
-- 2026-10-09: Audit `v2.md`, design `v3.md`, and plan written. No source changes, no commits.
-- Task 0.0: delegated writer observed RED then GREEN; independent verifier reran 12/12 focused tests and both baseline/stub commands. Baseline via real graphify 0.8.25 on owned temporary root: 2/12 exact matches (16.7%), including 1 graph-backed call relation and 1 empty-set match. Extraction: 10 files, 12 symbols, 0 methods. Stub 12/12 is harness validation only, NOT pipeline accuracy.
-- Earlier verifier blockers (incorrect graphify probe, incompatible golden keys, fake graphless baseline, unsafe caller temp root) were corrected and rechecked. No remaining technical blockers reported. Full suite skipped; global graphify integration check is environment-dependent. Baseline CLI includes graphify stdout and is not pure JSON. git diff --check does not cover untracked files.
-- Closure: explicit user commit authorization received; independent final verification passed 12/12 focused tests and staged whitespace check (21 files, 1,572 insertions; no drift). Work-unit commit `4ed1bce`: `test(pmc): add golden relational evaluation fixture and harness`. Native review `review-ee4df511d212422b` approved and exact acknowledgement consumed authority. Seven advisory findings are non-blocking follow-ups: relation-type filtering, cleanup assertion, environment-dependent integration test, decoupled graphify probe, project-root branch, non-JSON stdout, and test naming. Full suite skipped. User selected single-pr delivery; no push, PR, merge, task 0.1, or production refresh authorized. Main remains unchanged.
+## Separately authorized safety work (closed)
+- [x] B1 Bootstrap test isolation — source `e0864da`, closure `d453383`; independent 23/23; native `review-c21c7c759dfcdef9` approved/acknowledged, two nonblocking advisories. See `odd/tasks/bootstrap-test-isolation.md`.
+- [x] B2 Watcher overlap test barrier — source `b9c5c7e`, closure `7c2ef81`; deterministic RED/GREEN, independent 16/16; native `review-81d10d8eaf686e0c` approved/acknowledged, one advisory. See `odd/tasks/watcher-test-synchronization.md`.
+- Last complete serial suite (0.3c): 913 tests, 21 suites, 912 pass/1 known pre-existing Codex failure, 0 skipped/cancelled, 54.074s, exit 1; no hang. Both package test selectors ran, including nested extractor tests. Earlier root-only run 869/870 is NOT full-suite evidence. Failure `tests/template-installer.test.mjs:308`: expected 1 PMC comment block, found 3, reproduced at untouched `4455281`. Log `%TEMP%/pmc-verify-03c/full.tap` contains human-readable Node output, not TAP. Default parallel suite not rerun after B2.
+- Earlier host-install side effects and old runner ownership remain unverified. No host remediation, process kills or bulk cleanup authorized. Old verifier artifacts left intact.
