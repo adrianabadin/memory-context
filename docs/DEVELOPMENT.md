@@ -24,6 +24,10 @@ PMC walkers exclude non-source scopes and generator artifacts consistently:
 - `.planning/**` declared intake artifacts remain explicitly readable via artifact paths under `.planning/project-memory-context/`.
 - `ensureGraphifyIgnore(projectRoot)` in `src/graphify-runner.mjs` idempotently appends `.worktrees/`, `.planning/`, `node_modules/`, `graphify-out/`, and `.graphify_*.json` to `.graphifyignore` prior to invoking graphify, preserving existing user rules and comments. If writing `.graphifyignore` fails (such as on a directory collision), `runGraphifyUpdate` degrades gracefully without throwing.
 
+## Symbol Index Semantic Summary Persistence
+
+Enrichment pipelines persist a concise `semanticSummary` field in `symbol-index.json`. Queue workers and `pmc subagent-apply` record summaries via `persistEnrichmentSuccess` (`cli/enrich-queue.mjs`), while enrichment linking propagates entries via `applyEnrichmentResult` (`src/enrichment-linker.mjs`). For freeform enrichment text, `extractSemanticSummary` in `src/symbol-index.mjs` extracts the first sentence of the `Responsibility` section, bounded to a maximum of 200 characters. When updating existing entries, `upsertSymbolIndexEntry` preserves any pre-existing `semanticSummary` if the update omits the field. Query artifact loaders (`loadQueryArtifacts` in `src/query/load-artifacts.mjs`) fall back to graph node metadata (`node.metadata.semanticSummary`) whenever an index entry lacks a summary.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.

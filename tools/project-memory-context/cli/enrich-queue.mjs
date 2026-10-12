@@ -16,6 +16,7 @@ import { appendSubagentQueue } from '../src/subagent-queue.mjs';
 import { appendSyncEntries, appendSyncEntry, createCommunitySyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 import { isPidAlive } from '../src/watcher-lifecycle.mjs';
 import { spawnBackground } from '../src/platform.mjs';
+import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -325,13 +326,18 @@ export async function persistEnrichmentSuccess({
     });
   }
 
-  symbolIndex[symbol.symbolKey] = {
+  const semanticSummary = symbol.semanticSummary ?? extractSemanticSummary(content);
+
+  const updatedIndex = upsertSymbolIndexEntry(symbolIndex, {
+    symbolKey: symbol.symbolKey,
     memoryId,
     graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
     codeHash: symbol.codeHash,
     status: 'enriched',
     lastEnrichedAt: enrichedAt,
-  };
+    semanticSummary,
+  });
+  symbolIndex[symbol.symbolKey] = updatedIndex[symbol.symbolKey];
 
   await saveWorklistMerged(worklistFile, worklist);
   if (symbolIndexFile) {
@@ -430,13 +436,15 @@ export async function runQueueSymbolEnrichment({
     });
   }
 
-  symbolIndex[symbol.symbolKey] = {
+  const updatedErrorIndex = upsertSymbolIndexEntry(symbolIndex, {
+    symbolKey: symbol.symbolKey,
     memoryId: null,
     graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
     codeHash: symbol.codeHash,
     status: 'error',
     lastEnrichedAt: failedAt,
-  };
+  });
+  symbolIndex[symbol.symbolKey] = updatedErrorIndex[symbol.symbolKey];
 
   await saveWorklistMerged(worklistFile, worklist);
   if (symbolIndexFile) {
