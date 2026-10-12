@@ -1256,6 +1256,162 @@ test('main in --background mode verifies ownership at the checkpoint gate, not o
   assert.match(failed.state.lastError ?? '', /ownership lost/);
 });
 
+test('applySyncEntry attaches symbol keys returned by store or the primary update', async (t) => {
+  const cases = [
+    { name: 'store id', response: { id: 'stored-id' }, expectedId: 'stored-id' },
+    { name: 'nested store id', response: { memory: { id: 'nested-id' } }, expectedId: 'nested-id' },
+    { name: 'primary update id', existing: 'primary-id', response: { id: 'ignored-id' }, expectedId: 'primary-id' },
+  ];
+
+  for (const scenario of cases) {
+    await t.test(scenario.name, async () => {
+      const calls = [];
+      const client = {
+        async callTool(request) {
+          calls.push(request);
+          if (request.name === 'search') {
+            return toolResult(scenario.existing
+              ? { results: [{ memory: { id: scenario.existing } }] }
+              : { results: [] });
+          }
+          if (request.name === 'store' || request.name === 'update') return toolResult(scenario.response);
+          if (request.name === 'attach_symbol') return toolResult({ attached: true });
+          throw new Error(`unexpected tool ${request.name}`);
+        },
+      };
+
+      await applySyncEntry(client, {
+        id: 'entry-symbol', action: 'upsert', key_tag: 'key:symbol',
+        content: 'symbol memory', tags: [], symbolKey: 'js|src/a.mjs|||function|a|()',
+      });
+
+      assert.deepEqual(calls.at(-1), {
+        name: 'attach_symbol',
+        arguments: { memory_id: scenario.expectedId, symbol_key: 'js|src/a.mjs|||function|a|()' },
+      });
+      assert.equal(calls.filter((call) => call.name === 'store').length, scenario.existing ? 0 : 1);
+      assert.equal(calls.filter((call) => call.name === 'update').length, scenario.existing ? 1 : 0);
+    });
+  }
+});
+
+test('applySyncEntry skips symbol attachment when symbolKey is absent or empty', async () => {
+  for (const symbolKey of [undefined, null, '']) {
+    const calls = [];
+    const client = {
+      async callTool(request) {
+        calls.push(request);
+        if (request.name === 'search') return toolResult({ results: [] });
+        if (request.name === 'store') return toolResult({ id: 'stored-id' });
+        throw new Error(`unexpected tool ${request.name}`);
+      },
+    };
+    await applySyncEntry(client, { action: 'upsert', key_tag: 'key:no-symbol', symbolKey });
+    assert.equal(calls.some((call) => call.name === 'attach_symbol'), false);
+  }
+});
+
+test('applySyncEntry rejects a missing stored id and invalid symbolKey before attachment', async () => {
+  const calls = [];
+  const client = {
+    async callTool(request) {
+      calls.push(request);
+      if (request.name === 'search') return toolResult({ results: [] });
+      if (request.name === 'store') return toolResult({ memory: {} });
+      throw new Error(`unexpected tool ${request.name}`);
+    },
+  };
+  await assert.rejects(
+    () => applySyncEntry(client, { action: 'upsert', key_tag: 'key:no-id', symbolKey: 'js|src/a.mjs' }),
+    /stored memory id/i,
+  );
+  assert.deepEqual(calls.map((call) => call.name), ['search', 'store']);
+
+  calls.length = 0;
+  await assert.rejects(
+    () => applySyncEntry(client, { action: 'upsert', key_tag: 'key:invalid', symbolKey: ['not', 'a', 'string'] }),
+    /symbolKey must be a string/i,
+  );
+  assert.deepEqual(calls, []);
+});
+
+test('syncPendingEntries leaves attachment failures pending and halts later entries for that key', async () => {
+  const calls = [];
+  const committed = [];
+  const client = {
+    async callTool(request) {
+      calls.push(request);
+      if (request.name === 'search') return toolResult({ results: [] });
+      if (request.name === 'store') return toolResult({ id: `memory-${request.arguments.content}` });
+      if (request.name === 'attach_symbol' && request.arguments.memory_id === 'memory-bad') {
+        return { isError: true, content: [{ type: 'text', text: 'attachment failed' }] };
+      }
+      if (request.name === 'attach_symbol') return toolResult({ attached: true });
+      throw new Error(`unexpected tool ${request.name}`);
+    },
+  };
+  const entries = [
+    { ...syncEntry('bad', 'key:shared'), content: 'bad', symbolKey: 'js|bad' },
+    { ...syncEntry('halted', 'key:shared'), content: 'halted', symbolKey: 'js|halted' },
+    { ...syncEntry('good', 'key:other'), content: 'good', symbolKey: 'js|good' },
+  ];
+  const result = await syncPendingEntries(client, entries, {
+    markSynced: async (ids) => committed.push(...ids),
+  });
+
+  assert.deepEqual(result, { synced: 1, errors: 1, halted: 1, aborted: null });
+  assert.deepEqual(committed, ['good']);
+  assert.deepEqual(calls.filter((call) => call.name === 'store').map((call) => call.arguments.content), ['bad', 'good']);
+  assert.equal(calls.filter((call) => call.name === 'attach_symbol').length, 2);
+});
+
+test('retry updates and reattaches an already stored row without creating a duplicate', async () => {
+  const calls = [];
+  const rows = [];
+  let failFirstAttachment = true;
+  const client = {
+    async callTool(request) {
+      calls.push(request);
+      if (request.name === 'search') {
+        return toolResult({ results: rows.map((memory) => ({ memory })) });
+      }
+      if (request.name === 'store') {
+        const memory = { id: 'stable-memory-id', tags: request.arguments.tags };
+        rows.push(memory);
+        return toolResult(memory);
+      }
+      if (request.name === 'update') return toolResult({ id: request.arguments.id });
+      if (request.name === 'attach_symbol' && failFirstAttachment) {
+        failFirstAttachment = false;
+        return { isError: true, content: [{ type: 'text', text: 'temporary attachment failure' }] };
+      }
+      if (request.name === 'attach_symbol') return toolResult({ attached: true });
+      throw new Error(`unexpected tool ${request.name}`);
+    },
+  };
+  const entry = { ...syncEntry('retry', 'key:retry'), symbolKey: 'js|src/retry.mjs|||function|retry|()' };
+  const firstCommitted = [];
+  const first = await syncPendingEntries(client, [entry], {
+    markSynced: async (ids) => firstCommitted.push(...ids),
+  });
+  assert.deepEqual(first, { synced: 0, errors: 1, halted: 0, aborted: null });
+  assert.deepEqual(firstCommitted, []);
+
+  const retryCommitted = [];
+  const retry = await syncPendingEntries(client, [entry], {
+    markSynced: async (ids) => retryCommitted.push(...ids),
+  });
+  assert.deepEqual(retry, { synced: 1, errors: 0, halted: 0, aborted: null });
+  assert.deepEqual(retryCommitted, ['retry']);
+  assert.equal(rows.length, 1);
+  assert.equal(calls.filter((call) => call.name === 'store').length, 1);
+  assert.equal(calls.filter((call) => call.name === 'update').length, 1);
+  assert.deepEqual(calls.filter((call) => call.name === 'attach_symbol').map((call) => call.arguments), [
+    { memory_id: 'stable-memory-id', symbol_key: 'js|src/retry.mjs|||function|retry|()' },
+    { memory_id: 'stable-memory-id', symbol_key: 'js|src/retry.mjs|||function|retry|()' },
+  ]);
+});
+
 test('main treats an ownership probe read failure as a fatal abort, not a per-entry error', async () => {
   const stateWrites = [];
   const committed = [];

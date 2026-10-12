@@ -75,6 +75,19 @@ export async function findMemoriesByKeyTag(client, keyTag) {
 
 export async function applySyncEntry(client, entry) {
   if (entry.action === 'upsert') {
+    const symbolKey = entry.symbolKey;
+    if (symbolKey !== undefined && symbolKey !== null && typeof symbolKey !== 'string') {
+      throw new TypeError('symbolKey must be a string when provided');
+    }
+
+    const attachSymbol = async (memoryId) => {
+      if (!symbolKey) return;
+      if (!memoryId) throw new Error('Cannot attach symbol: stored memory id is missing');
+      await client.callTool({
+        name: 'attach_symbol',
+        arguments: { memory_id: memoryId, symbol_key: symbolKey },
+      }).then(parseToolResult);
+    };
     const matches = (await findMemoriesByKeyTag(client, entry.key_tag))
       .slice()
       .sort((left, right) => String(left.id).localeCompare(String(right.id)));
@@ -101,10 +114,12 @@ export async function applySyncEntry(client, entry) {
         }).then(parseToolResult);
       }
 
+      await attachSymbol(primary.id);
       return;
     }
 
-    await client.callTool({ name: 'store', arguments: payload }).then(parseToolResult);
+    const stored = await client.callTool({ name: 'store', arguments: payload }).then(parseToolResult);
+    await attachSymbol(stored?.id ?? stored?.memory?.id);
     return;
   }
 
