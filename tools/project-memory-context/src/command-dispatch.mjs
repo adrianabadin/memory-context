@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const COMMANDS = new Map([
+  ['backfill-symbol-keys', 'cli/backfill-symbol-keys.mjs'],
   ['doctor', 'cli/doctor.mjs'],
   ['enrich', 'cli/enrich.mjs'],
   ['enrich-status', 'cli/status.mjs'],

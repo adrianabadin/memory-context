@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { planSymbolKeyBackfill } from '../cli/backfill-symbol-keys.mjs';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, basename, resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { planSymbolKeyBackfill, main as backfillMain } from '../cli/backfill-symbol-keys.mjs';
+import { createSqliteSymbolReader } from '../cli/memory-store-loader.mjs';
+import { main as contextMain } from '../cli/context.mjs';
 
 const root = '/repo';
 const projectTag = 'project:sample';
@@ -232,4 +238,271 @@ test('validates canonical C# seven-part symbol keys', async () => {
   const malformedResult = await plan(index({ [malformed]: { filePath: 'src/Thing.cs' } }), harness());
   assert.equal(malformedResult.mappings.length, 0);
   assert.equal(malformedResult.skips[0].reason, 'invalid-symbol-key');
+});
+
+// Application-path contracts are tested with temporary project roots and fake MCP clients only.
+async function projectFixture({ slug = 'sample', indexData = { [key]: {} } } = {}) {
+  const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-symbol-backfill-'));
+  await mkdir(join(projectRoot, '.planning', 'project-memory-context', 'enrichment'), { recursive: true });
+  await writeFile(join(projectRoot, '.planning', 'project-memory-context', 'enrichment', 'symbol-index.json'), JSON.stringify(indexData));
+  await writeFile(join(projectRoot, '.mcp.json'), JSON.stringify({ mcpServers: { 'agent-memory': { command: 'fake', args: [], env: {} } } }));
+  return { projectRoot, slug, cleanup: () => rm(projectRoot, { recursive: true, force: true }) };
+}
+
+function cliDeps(client, extras = {}) {
+  const events = [];
+  return {
+    events,
+    deps: {
+      env: { PMC_PROJECT_SLUG: 'sample' },
+      connect: async (server) => {
+        events.push(['connect', server]);
+        return { client, close: async () => events.push(['close']) };
+      },
+      log: (line) => events.push(['log', String(line)]),
+      errLog: (line) => events.push(['error', String(line)]),
+      ...extras,
+    },
+  };
+}
+
+test('CLI help and invalid arguments return before loading project config or connecting MCP', async () => {
+  const h = cliDeps({});
+  let code = await backfillMain(['--help'], h.deps);
+  assert.equal(code, 0);
+  for (const args of [['--aply'], ['--project-slug'], ['--project-slug', ''], ['one', 'two'], ['--unknown']]) {
+    code = await backfillMain(args, h.deps);
+    assert.equal(code, 1, args.join(' '));
+  }
+  assert.equal(h.events.filter(([kind]) => kind === 'connect').length, 0);
+});
+
+test('missing and malformed symbol indexes fail before MCP setup', async () => {
+  const missingRoot = await mkdtemp(join(tmpdir(), 'pmc-symbol-backfill-missing-'));
+  const fixture = await projectFixture();
+  const h = cliDeps({});
+  try {
+    const missingCode = await backfillMain([missingRoot], h.deps);
+    assert.equal(missingCode, 1);
+    await writeFile(join(fixture.projectRoot, '.planning', 'project-memory-context', 'enrichment', 'symbol-index.json'), '[]');
+    const malformedCode = await backfillMain([fixture.projectRoot], h.deps);
+    assert.equal(malformedCode, 1);
+    assert.equal(h.events.filter(([kind]) => kind === 'connect').length, 0);
+  } finally {
+    await rm(missingRoot, { recursive: true, force: true });
+    await fixture.cleanup();
+  }
+});
+
+test('connectAgentMemory supports injected MCP client and stdio transport factories', async () => {
+  const { connectAgentMemory } = await import('../cli/backfill-symbol-keys.mjs');
+  const calls = [];
+  class FakeTransport {
+    constructor(options) { calls.push(['transport', options]); }
+    async close() { calls.push(['transport-close']); }
+  }
+  class FakeClient {
+    constructor(options) { calls.push(['client', options]); }
+    async connect(transport) { this.transport = transport; calls.push(['client-connect']); }
+    async close() { calls.push(['client-close']); await this.transport.close(); }
+  }
+  const connection = await connectAgentMemory({ command: 'fake-server', args: ['--stdio'], env: { CUSTOM: 'value' } }, {
+    ClientImpl: FakeClient,
+    StdioClientTransportImpl: FakeTransport,
+  });
+  await connection.close();
+  assert.equal(calls[0][0], 'transport');
+  assert.equal(calls[0][1].command, 'fake-server');
+  assert.deepEqual(calls[0][1].args, ['--stdio']);
+  assert.equal(calls[0][1].env.CUSTOM, 'value');
+  assert.deepEqual(calls.slice(-2).map(([kind]) => kind), ['client-close', 'transport-close']);
+});
+
+test('CLI starts the stdio MCP command in the resolved target project root', async () => {
+  const fixture = await projectFixture();
+  let transportOptions;
+  class FakeTransport { constructor(options) { transportOptions = options; } async close() {} }
+  class FakeClient { async connect() {} async close() {} async callTool() { return { content: [{ text: JSON.stringify({ results: [] }) }] }; } }
+  const h = cliDeps({});
+  try {
+    await backfillMain([fixture.projectRoot], { ...h.deps, connect: undefined, ClientImpl: FakeClient, StdioClientTransportImpl: FakeTransport });
+    assert.equal(transportOptions.cwd, resolve(fixture.projectRoot));
+    assert.notEqual(transportOptions.cwd, process.cwd());
+  } finally { await fixture.cleanup(); }
+});
+
+test('connect failure closes transport and preserves the original connection error', async () => {
+  const calls = [];
+  class FakeTransport { async close() { calls.push('transport-close'); } }
+  class FakeClient { async connect() { throw new Error('connect failed'); } }
+  const { connectAgentMemory } = await import('../cli/backfill-symbol-keys.mjs');
+  await assert.rejects(connectAgentMemory({ command: 'fake' }, { ClientImpl: FakeClient, StdioClientTransportImpl: FakeTransport }), /connect failed/);
+  assert.deepEqual(calls, ['transport-close']);
+});
+
+test('CLI defaults to dry-run and closes its MCP connection after exact-tag queries', async () => {
+  const fixture = await projectFixture();
+  const calls = [];
+  const client = { async callTool(request) {
+    calls.push(request);
+    return { content: [{ text: JSON.stringify({ results: [{ memory: row('legacy') }] }) }] };
+  } };
+  const h = cliDeps(client);
+  h.deps.env = {};
+  try {
+    const code = await backfillMain([fixture.projectRoot], h.deps);
+    assert.equal(code, 0);
+    assert.deepEqual(calls.map(({ name }) => name), ['search']);
+    assert.deepEqual(calls[0].arguments.tags, [tag(key)]);
+    const output = JSON.parse(h.events.find(([kind]) => kind === 'log')[1]);
+    assert.equal(output.dryRun, true);
+    assert.equal(output.projectTag, `project:${basename(fixture.projectRoot)}`);
+    assert.deepEqual(h.events.at(-1), ['close']);
+  } finally { await fixture.cleanup(); }
+});
+
+test('CLI applies only a freshly planned complete mapping and reports applied count', async () => {
+  const fixture = await projectFixture();
+  const calls = [];
+  const client = { async callTool(request) {
+    calls.push(request);
+    return request.name === 'search'
+      ? { content: [{ text: JSON.stringify({ results: [{ memory: row('legacy', [tag(key), 'project:Exact Slug']) }] }) }] }
+      : { content: [{ text: '{}'}] };
+  } };
+  const h = cliDeps(client);
+  try {
+    const code = await backfillMain([fixture.projectRoot, '--apply', '--project-slug', 'Exact Slug'], h.deps);
+    assert.equal(code, 0);
+    assert.deepEqual(calls.map(({ name }) => name), ['search', 'attach_symbol']);
+    assert.deepEqual(calls[1].arguments, { memory_id: 'legacy', symbol_key: key });
+    const output = JSON.parse(h.events.find(([kind]) => kind === 'log')[1]);
+    assert.equal(output.applied, 1);
+    assert.equal(output.failed, 0);
+    assert.equal(output.projectTag, 'project:Exact Slug');
+  } finally { await fixture.cleanup(); }
+});
+
+test('a capped later lookup aborts all mappings, including a valid earlier mapping and repeated ID', async () => {
+  const second = 'javascript|src/b.mjs|function|local|beta|0';
+  const fixture = await projectFixture({ indexData: { [key]: {}, [second]: {} } });
+  const calls = [];
+  const client = { async callTool(request) {
+    calls.push(request);
+    if (request.name !== 'search') return { content: [{ text: '{}' }] };
+    const lookupTag = request.arguments.tags[0];
+    const results = lookupTag === tag(key)
+      ? [{ memory: row('shared', [tag(key), projectTag]) }]
+      : Array.from({ length: 100 }, (_, i) => ({ memory: row(i === 0 ? 'shared' : `m${i}`, [tag(second), projectTag]) }));
+    return { content: [{ text: JSON.stringify({ results }) }] };
+  } };
+  const h = cliDeps(client);
+  try {
+    const code = await backfillMain([fixture.projectRoot, '--apply'], h.deps);
+    assert.equal(code, 1);
+    assert.deepEqual(calls.map(({ name }) => name), ['search', 'search']);
+    const output = JSON.parse(h.events.find(([kind]) => kind === 'log')[1]);
+    assert.equal(output.coverage.complete, false);
+    assert.equal(output.mappings.some(({ id }) => id === 'shared'), true);
+    assert.equal(output.applied, 0);
+    assert.equal(output.failed, 0);
+    assert.match(h.events.find(([kind]) => kind === 'error')[1], /incomplete/i);
+  } finally { await fixture.cleanup(); }
+});
+
+test('MCP close failure is reported without distorting applied counts', async () => {
+  const fixture = await projectFixture();
+  const client = { async callTool(request) {
+    return request.name === 'search'
+      ? { content: [{ text: JSON.stringify({ results: [{ memory: row('attached') }] }) }] }
+      : { content: [{ text: '{}' }] };
+  } };
+  const h = cliDeps(client, { connect: async () => ({ client, close: async () => { throw new Error('close failed'); } }) });
+  try {
+    const code = await backfillMain([fixture.projectRoot, '--apply'], h.deps);
+    assert.equal(code, 0);
+    const output = JSON.parse(h.events.find(([kind]) => kind === 'log')[1]);
+    assert.equal(output.applied, 1);
+    assert.deepEqual(output.appliedIds, ['attached']);
+    assert.equal(output.failed, 0);
+    assert.match(h.events.find(([kind]) => kind === 'error')[1], /cleanup failed: close failed/);
+  } finally { await fixture.cleanup(); }
+});
+
+test('owned SQLite v7 fixture is read by the actual symbol reader and rendered by get-context main', async () => {
+  const fixture = await projectFixture();
+  const symbolKey = 'ts|src/alpha.ts|function|exported|alpha|0';
+  const memoryBase = join(fixture.projectRoot, '.planning', 'project-memory-context', 'memory-db');
+  const dbPath = `${memoryBase}.db`;
+  const db = new DatabaseSync(dbPath);
+  let reader;
+  const originalCwd = process.cwd();
+  const originalLog = console.log;
+  const output = [];
+  try {
+    db.exec(`CREATE TABLE memories (
+      id TEXT PRIMARY KEY,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      symbol_key TEXT
+    )`);
+    db.prepare('INSERT INTO memories (id, content, created_at, symbol_key) VALUES (?, ?, ?, ?)')
+      .run('sqlite-memory', 'Owned SQLite fixture record: alpha context', '2026-01-01T00:00:00.000Z', symbolKey);
+    db.close();
+    reader = createSqliteSymbolReader(dbPath);
+    const readback = (await reader.getBySymbol(symbolKey))[0].content;
+    assert.equal(readback, 'Owned SQLite fixture record: alpha context');
+    assert.equal(readback.includes('Semantic Memory'), false);
+    reader.close();
+    reader = null;
+
+    await mkdir(join(fixture.projectRoot, '.planning', 'project-memory-context', 'enrichment'), { recursive: true });
+    await mkdir(join(fixture.projectRoot, '.planning', 'project-memory-context', 'graph'), { recursive: true });
+    await writeFile(join(fixture.projectRoot, '.planning', 'project-memory-context', 'install.json'), '{}');
+    await writeFile(join(fixture.projectRoot, '.planning', 'project-memory-context', 'enrichment', 'symbol-index.json'), JSON.stringify({ [symbolKey]: { graphNodeId: 'alpha-node' } }));
+    await writeFile(join(fixture.projectRoot, '.planning', 'project-memory-context', 'enrichment', 'worklist.json'), JSON.stringify([{ symbolKey, name: 'alpha', filePath: 'src/alpha.ts', kind: 'function' }]));
+    await writeFile(join(fixture.projectRoot, '.mcp.json'), JSON.stringify({ mcpServers: { 'agent-memory': { env: { MEMORY_DB_PATH: memoryBase } } } }));
+    process.chdir(fixture.projectRoot);
+    console.log = (...args) => output.push(args.join(' '));
+    const code = await contextMain(['symbol', 'alpha']);
+    assert.equal(code, 0);
+    assert.ok(!output.join('\n').includes('Semantic Memory from owned SQLite fixture'));
+    assert.ok(output.join('\n').includes('Summary\n- Symbol: alpha (function)\nTarget\n  mode: symbol'));
+    assert.ok(output.join('\n').includes('Semantic Memory\n- Owned SQLite fixture record: alpha context'));
+  } finally {
+    console.log = originalLog;
+    process.chdir(originalCwd);
+    reader?.close();
+    await fixture.cleanup();
+  }
+});
+
+test('CLI stops on a middle mutation failure and reports only the actual prior successful ID', async () => {
+  const second = 'javascript|src/b.mjs|function|local|beta|0';
+  const third = 'javascript|src/c.mjs|function|local|gamma|0';
+  const fixture = await projectFixture({ indexData: { [key]: {}, [second]: {}, [third]: {} } });
+  const calls = [];
+  const client = { async callTool(request) {
+    calls.push(request);
+    if (request.name === 'search') {
+      const symbolKey = [key, second, third].find((candidate) => request.arguments.tags[0] === tag(candidate));
+      const id = symbolKey === key ? 'first' : symbolKey === second ? 'middle-fail' : 'third';
+      return { content: [{ text: JSON.stringify({ results: [{ memory: row(id, [tag(symbolKey), projectTag]) }] }) }] };
+    }
+    if (request.arguments.memory_id === 'middle-fail') return { isError: true, content: [{ text: 'backend denied attach' }] };
+    return { content: [{ text: '{}'}] };
+  } };
+  const h = cliDeps(client);
+  try {
+    const code = await backfillMain([fixture.projectRoot, '--apply'], h.deps);
+    assert.equal(code, 1);
+    assert.deepEqual(calls.filter(({ name }) => name === 'attach_symbol').map(({ arguments: args }) => args.memory_id), ['first', 'middle-fail']);
+    const output = JSON.parse(h.events.find(([kind]) => kind === 'log')[1]);
+    assert.equal(output.applied, 1);
+    assert.equal(output.failed, 1);
+    assert.deepEqual(output.appliedIds, ['first']);
+    assert.equal(output.failedId, 'middle-fail');
+    assert.equal(output.error, 'backend denied attach');
+    assert.deepEqual(h.events.at(-1), ['close']);
+  } finally { await fixture.cleanup(); }
 });

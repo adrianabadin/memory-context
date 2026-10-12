@@ -8,6 +8,7 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 
 | Command | CLI File | Purpose | Example |
 |---------|----------|---------|---------|
+| `backfill-symbol-keys` | `cli/backfill-symbol-keys.mjs` | Plans or explicitly applies symbol-key attachments for legacy memories found by known index tags | `pmc backfill-symbol-keys .` |
 | `doctor` | `cli/doctor.mjs` | Runs health checks on the PMC environment (Node, Python, Ollama, agent-memory) | `pmc doctor .` |
 | `enrich` | `cli/enrich.mjs` | Launches enrichment queue for pending/stale symbols | `pmc enrich .` |
 | `enrich-status` | `cli/status.mjs` | Reports current enrichment status: counts of pending/enriched/error entries, queue state | `pmc enrich-status .` |
@@ -30,6 +31,20 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 | `sync-context` | `cli/sync.mjs` | Syncs pending enrichment data from the local graph into agent memory via MCP | `pmc sync-context` |
 | `view-context` | `bin/pmc-view-context.mjs` | Opens the PMC Graph Explorer web UI | `pmc view-context` |
 | `watch` | `cli/watch.mjs` | Watches project files for changes with debounced refresh-context triggers | `pmc watch .` |
+
+## backfill-symbol-keys Details
+
+`pmc backfill-symbol-keys [project-root] [--apply] [--project-slug <name>]` defaults to a read-only dry run. It loads only `<project-root>/.planning/project-memory-context/enrichment/symbol-index.json` and `<project-root>/.mcp.json`, then searches the existing exact `key:symbol:<safe-key>` tags for each eligible indexed symbol. It never scans agent-memory for unknown tagged records; coverage is explicitly limited to known index keys. Capped lookups make coverage incomplete and refuse the entire apply run, including otherwise eligible mappings. `--apply` is the only mode that calls `attach_symbol`, sequentially, stopping on the first MCP error and reporting successful IDs and the original failure.
+
+The default project tag follows `enrich-queue`: `PMC_PROJECT_SLUG` when set, otherwise the project-root basename. Projects whose other memory producer uses a different slug or case must provide its exact value with `--project-slug`; values are not normalized or lowercased. Unknown tag coverage is not expanded by an override.
+
+Examples:
+
+```sh
+pmc backfill-symbol-keys .
+pmc backfill-symbol-keys . --project-slug "Exact Project Slug"
+pmc backfill-symbol-keys . --apply
+```
 
 ## sync-context Details
 
