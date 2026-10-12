@@ -1,47 +1,49 @@
 # Enrich Symbol Cards
 
-Repository: `memory-context`
-Worktree: `C:/Users/aabad/AppData/Local/Temp/pmc-enrich-symbol-cards`
-Branch: `feat/enrich-symbol-cards` · Initial base: `76cb4be`
-Design: `v3.md` · Plan: `docs/superpowers/plans/2026-10-09-enrich-symbol-cards.md`
-Objective: deterministic symbol relationships, architectural roles and validated bottom-up narratives, served through MCP and CLI.
-Status: IN PROGRESS — 0.3 closed; 0.4 exploration next. Ongoing scoped implementation, commits and native reviews authorized until a real blocker.
-Delivery: single-pr; no push, PR creation, merge or publishing. Preserve main and its intentional deletions; guard integration deferred.
-Safety: owned temporary fixtures only. No real DB access or production PMC session-start/get-context/refresh/sync/enrich/watch until checkout identity guard lands. Compact PMC context unavailable safely: authorized disk mapping, no CodeGraph calls/init. No network/install, host cleanup or process termination. Real-data pruning needs separate authorization and backup.
-Workflow: sequential delegated writers; observed deterministic RED/GREEN; independent checks; separate Conventional Commit/native review per work unit. Native approval requires exact acknowledgement; advisories do not reopen reviewed candidates.
-Continuity: detailed historical evidence is preserved in this file at commit `f317ae0`, the linked unit trackers and Engram discoveries. This compact projection retains task states, acceptance and receipt evidence without repeating closed incident transcripts.
+Repository: memory-context
+Worktree: C:/Users/aabad/AppData/Local/Temp/pmc-enrich-symbol-cards
+Branch: feat/enrich-symbol-cards · Initial base: 76cb4be
+Design: v3.md · Plan: docs/superpowers/plans/2026-10-09-enrich-symbol-cards.md
+Status: IN PROGRESS — B3 and 0.4 closed; next is the read-only D1 checkpoint (0.5). No F1 or real pruning before its decisions.
+Objective: deterministic symbol relationships, architectural roles and validated bottom-up narratives through MCP and CLI.
+Authority: ongoing scoped implementation, commits and reviews until a real blocker. Single-pr delivery shape only; no push, PR, merge or publishing. Preserve main and intentional deletions; guard integration deferred.
+Safety: owned fixtures only; no real DB/config, production PMC commands, Graphify, CodeGraph/init, network/install, host cleanup or process termination. Safe compact context unavailable: authorized disk mapping. Do not reuse the failed test-name filter; exclude the entire relational-eval.test.mjs file through an asserted explicit test-file array. Actual D1 data access and real pruning need their own authorization.
+Workflow: sequential bounded writers, observed RED/GREEN and independent verification, source work-unit commits, native approval plus exact acknowledgement. Advisory findings never reopen receipts.
+History: detailed closed evidence remains in this file at f317ae0 and 6872b88, separate safety trackers and Engram observations 2950, 2999–3008.
 
 ## F0 — Hygiene and identity
-- [x] 0.0 Golden relational fixture/eval harness — source `4ed1bce`, closure `4455281`; independent 12/12, real graphify baseline 2/12 (not stub accuracy). Native `review-ee4df511d212422b` approved/acknowledged. Full suite skipped; seven nonblocking advisories.
-- [x] 0.1 Walker exclusions and graphifyignore — source `ed39cb5`, closure `867913f`; independent 29/29; full 852 pass/1 baseline Codex failure. Native `review-26a60365cfe00bb6` approved/acknowledged. Explicitly approved global reliability model switch to Codex medium; hidden-scope advisory left untouched.
-- [x] 0.2 Persist semanticSummary — source `2093c84`, closure `f317ae0`; independent 27/27 including registered fixture MCP query. First Responsibility sentence, max 200 chars; omitted summary preserves prior value, explicit null may clear; graph fallback retained. Native `review-1ed9347bb82ccc2a` approved/acknowledged, one responsibility-list advisory.
-- [x] 0.3 DONE — attach_symbol on sync and backfill-symbol-keys CLI
-  - Initial estimate 350–500 lines revised to 650–850 before edits; unchanged scope split into small sequential reviewable units.
-  - [x] 0.3a Sync attachment/retry — `4a8edea7924b91f3b8637ff16746dbd6eee56a67`, 2 files +172/-1. RED 34 pass/7 fail; GREEN/independent 41/41 (492.8ms). Exact attachment after parsed store/update; missing ID and MCP errors remain pending; retry reuses the stored row. Native `review-01e28e9249a67d3a` approved/acknowledged; consumed `sha256:b3f4acd69c3b2f141af5096c7376943ed403cabd3c8c0f03c5b72cc828c545a3`. Static advisories only; no live backend claim.
-  - [x] 0.3b Dry-run planner — `3b1e141ccc3998609533b0cab7816d10fba04a5e`, 2 files +422. Observed RED; correction RED 2 failures for single-character project tags and mixed duplicate IDs, then GREEN/independent 58/58 (534.5ms). Index-driven exact-tag search, collision grouping before eligibility, project ownership/conflict/duplicate/unsafe-path checks, cap reporting. Native `review-ff16f310a123e26d` approved/acknowledged; consumed `sha256:79a0322effb044f7df3e7efece7e910edd3784d1b659d19171236e79b36ecb8c`. One nonblocking cap-group advisory R3-001; approved planner unchanged.
-  - [x] 0.3c CLI/apply and fixture acceptance — `b3fe0ddfc56ab7effa098a435948a771e34bb53f`, 5 files +412/-3. RED missing exports/registration; target-cwd RED 77/78 then GREEN/independent 78/78. Actual owned SQLite reader and context main render `Semantic Memory` with exact fixture content. Native `review-4d831b5728740bca` approved/acknowledged, consumed `sha256:ad814958e40fa93ea49e6f038b15d4ae72bf0597c9b58c472e3d72624010f9f5`; no correction offered. Cleanup failures are logged without changing successful application counts. Live backend acceptance not run.
-  - Acceptance: dry-run default, only --apply mutates; refuse ALL application if coverage.complete is false, closing capped-group duplicate risk without reopening 0.3b. Validate arguments before setup, missing/invalid index safe, exact project slug documented with explicit override if needed, honest indexed-only coverage. Controlled failure counts/exit and client cleanup. Fixture get_by_symbol protocol plus real local SQLite reader and get-context render Semantic Memory; backend submodule absent, never label stubs a live handler test.
-  - Checks: focused sync/backfill/dispatch plus bounded serial full suite after safety audit. Preserve known unrelated Codex template failure; no full-green claim. No production commands or approved advisory fixes.
-- [ ] 0.4 IN PROGRESS — Deterministic graphNodeId resolution and null-reason report (read-only exploration; write scope/acceptance after mapping)
-- [ ] 0.5 Decision D1 checkpoint — graphify vs own tree-sitter edges; stop for unresolved human product decision
-- [ ] 0.6 Real-repo prune — STOP: explicit authorization and backup
+- [x] 0.0 Golden relational fixture/eval — 4ed1bce/4455281; 12/12 independent; real baseline 2/12, not stub accuracy. Native approved/acknowledged; seven advisories, full suite skipped.
+- [x] 0.1 Walker exclusions/graphifyignore — ed39cb5/867913f; 29/29 independent; full 852/853 with known Codex failure. Native approved/acknowledged; explicit reliability-model switch to Codex medium; hidden-scope advisory untouched.
+- [x] 0.2 semanticSummary persistence — 2093c84/f317ae0; 27/27 including fixture MCP readback; native approved/acknowledged. First Responsibility sentence, max 200 chars; omitted values preserve prior summaries, explicit null may clear; graph fallback retained.
+- [x] 0.3 Symbol attachment/backfill — 4a8edea (sync), 3b1e141 (planner), b3fe0dd (CLI); closure 6872b88. Independent 41/41, 58/58, 78/78 respectively; all native reviews approved/acknowledged. Dry-run default, --apply only, exact project slug, global refusal on incomplete lookup coverage, accurate partial failure counts, fixture SQLite reader and actual context Semantic Memory output. Backend absent: no live handler claim. One planner cap advisory addressed by caller refusal, not by reopening the planner.
+- [x] 0.4 DONE — deterministic graphNodeId resolution and diagnostics
+  - Source commit 5539e16189f84eaf806255726fbac3c6045acc1f, five files +430/-57; base after separate B3 closure 977822dfbb879c85f71d806a48e731ed8e2db0e5. Original forecast 250–400 authored lines, advisory only.
+  - Contract: consistent exact metadata.symbolKey first, then normalized same-file/name and uniquely nearest valid source line. Contradictory or foreign explicit keys, duplicate IDs/keys, ties or insufficient line data fail closed; no fuzzy/global-name or array-order fallback. Invalid/reversed ranges do not select a winner; stale input IDs become null at resolver level.
+  - Pure resolverReport returns totals/nullRate/reason counts (no-file-node, no-label-match, ambiguous) and resolved symbols. Per-symbol resolutionReason is non-enumerable: accessible in memory but omitted from spread, JSON and actual worklist serialization. No index/DB schema change. Backfill both ID and metadata-only paths reject conflicting keys.
+  - Observed correction RED/GREEN: initial 20/20, diagnostic/identity/range correction 6 failing then 28/28, metadata-only guard 1 failing then independent 29/29. Synthetic multilingual function/class fixture null rate 0 is NOT pipeline accuracy. Pre-existing caller nullish merge can restore stale IDs; documented follow-up, outside scope.
+  - After B3: independent combined focused 46/46 (resolver/backfill/linker/summary/driver), 1951ms. Broad explicit array 111/112 files (entire relational file excluded, 12 tests not run): 918 tests, 21 suites, 917 pass/1 known Codex baseline failure, 0 skipped/cancelled, 56.0408s; exit 1, not full npm test. Source hashes and ignored sync-state SHA/mtime/presence unchanged. Logs %TEMP%/verif-broad.tap and verif-focused.tap. Earlier 55.385s run exposed the driver boundary; do not confuse it with this successful isolation check.
+  - Native review-5d357ec59881cd84 approved; exact acknowledgement burned authority, consumed sha256:22eb19b49b836f810f4bb39966d30af5dbec3a73a9c11728cf5d977cdf956af9. Two informational reliability advisories at resolver lines 81-83 and 59; no correction opened or applied.
+- [ ] 0.5 D1 checkpoint — read-only real graph copy measurement, then human graphify-vs-own-tree-sitter edge decision; no F1 until resolved
+- [ ] 0.6 Real pruning — STOP for explicit authorization and online backup
 
 ## F1 — Typed nodes, file cards, facts and relations
-- [ ] 1.1 Typed node kinds in graph.db (file/symbol/member/doc/config/data)
-- [ ] 1.2 Class member extraction and member keys (D2)
+- [ ] 1.1 Typed node kinds in graph.db
+- [ ] 1.2 Class members and member keys (D2)
 - [ ] 1.3 Facts builder
 - [ ] 1.4 File cards
 - [ ] 1.5 get-context inbound callers and disambiguation
 - [ ] 1.6 MCP pmc_relations and facts-only pmc_card
 
 ## F2–F5 — Expand at phase entry
-- [ ] F2 Role classifier and profiles (>=90% fixture accuracy)
-- [ ] F3 Bottom-up structured narrative, validator, narrativeHash and concurrency
-- [ ] F4 Role-aware surface: stopAtRole, entrypoints, impact, card levels, Pi MCP access
-- [ ] F5 Rollups and eval metrics in CI
+- [ ] F2 Role classifier/profiles (>=90% fixture accuracy)
+- [ ] F3 Bottom-up narrative, validator, narrativeHash and concurrency
+- [ ] F4 Role-aware surface, impact, entrypoints, card levels and Pi MCP
+- [ ] F5 Rollups and CI eval
 
-## Separately authorized safety work (closed)
-- [x] B1 Bootstrap test isolation — source `e0864da`, closure `d453383`; independent 23/23; native `review-c21c7c759dfcdef9` approved/acknowledged, two nonblocking advisories. See `odd/tasks/bootstrap-test-isolation.md`.
-- [x] B2 Watcher overlap test barrier — source `b9c5c7e`, closure `7c2ef81`; deterministic RED/GREEN, independent 16/16; native `review-81d10d8eaf686e0c` approved/acknowledged, one advisory. See `odd/tasks/watcher-test-synchronization.md`.
-- Last complete serial suite (0.3c): 913 tests, 21 suites, 912 pass/1 known pre-existing Codex failure, 0 skipped/cancelled, 54.074s, exit 1; no hang. Both package test selectors ran, including nested extractor tests. Earlier root-only run 869/870 is NOT full-suite evidence. Failure `tests/template-installer.test.mjs:308`: expected 1 PMC comment block, found 3, reproduced at untouched `4455281`. Log `%TEMP%/pmc-verify-03c/full.tap` contains human-readable Node output, not TAP. Default parallel suite not rerun after B2.
-- Earlier host-install side effects and old runner ownership remain unverified. No host remediation, process kills or bulk cleanup authorized. Old verifier artifacts left intact.
+## Separate safety units
+- [x] B1 Bootstrap isolation — e0864da/d453383; independent 23/23, native approved/acknowledged. See odd/tasks/bootstrap-test-isolation.md.
+- [x] B2 Watcher overlap barrier — b9c5c7e/7c2ef81; independent 16/16, native approved/acknowledged. See odd/tasks/watcher-test-synchronization.md.
+- [x] B3 Driver spawn isolation — bf93d6af2220db50d6e94b59303bd82186a22e91/977822dfbb879c85f71d806a48e731ed8e2db0e5; independent 17/17; native review-57dcab5d4f7913fe approved/exactly acknowledged, consumed sha256:f3b8bc9fd2e58aedfaaf0b5def71777cd1af49f07203a19203b400d77c69d193. See odd/tasks/enrichment-driver-test-isolation.md. Universal spawn denial, fixture-owned dependencies and cleanup, exact close counts; production unchanged.
+- Last unfiltered complete suite (0.3c): 913 tests, 912 pass/1 known Codex baseline failure, 54.074s. Failure tests/template-installer.test.mjs:308: expected 1 PMC comment block, found 3, reproduced at untouched 4455281. No full-green claim. Later root-only or excluded-file checks are not full npm test.
+- Existing package sync-state SHA f555fd82fc7728708841d2a0a1da5584750a5594d7014e0d6d68984f0fecf5cd and mtime 1791844641098.541 unchanged through B3; lock/log artifacts absent. Preserve it; no restoration/deletion authorized.
+- Earlier unintended live Graphify runs, host-install effects, old temp artifacts and runner ownership remain unverified. No host cleanup/process action authorized or performed; expected finally cleanup is not proof of global absence.
