@@ -125,47 +125,86 @@ test('tick never overlaps refreshes and refresh errors keep pending intact', asy
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-watch-runtime-'));
   const clock = { value: 1_000_000 };
   let resolveRefresh;
+  let releaseFirstHeartbeat;
+  let resolveRefreshStarted;
   let calls = 0;
+  const refreshStarted = new Promise((resolveStarted) => { resolveRefreshStarted = resolveStarted; });
+  const firstHeartbeat = new Promise((resolveHeartbeat) => { releaseFirstHeartbeat = resolveHeartbeat; });
+  let heartbeatWrites = 0;
   const runtime = createWatchRuntime({
     projectRoot,
     startedAt: new Date(clock.value).toISOString(),
     deps: {
       now: () => clock.value,
       pid: 7777,
+      mkdir: async () => {},
+      writeFile: async (path) => {
+        if (!path.endsWith('watch.pid')) return;
+        heartbeatWrites += 1;
+        if (heartbeatWrites === 1) {
+          await firstHeartbeat;
+        }
+      },
+      rename: async () => {},
       refreshContext: () => {
         calls += 1;
-        return new Promise((res) => { resolveRefresh = res; });
+        return new Promise((res) => {
+          resolveRefresh = res;
+          resolveRefreshStarted();
+        });
       },
     },
   });
 
-  await runtime.onFsEvent('src/foo.mjs');
-  clock.value += QUIET;
-  const first = runtime.tick();           // starts refresh, stays in-flight
-  const second = await runtime.tick();    // must skip: refresh in progress
-  assert.equal(second.refreshed, false);
-  assert.equal(calls, 1);
-  resolveRefresh();
-  await first;
+  try {
+    await runtime.onFsEvent('src/foo.mjs');
+    clock.value += QUIET;
+    const first = runtime.tick();
+    // Release independently, allowing the second heartbeat to win under the old ordering.
+    setImmediate(releaseFirstHeartbeat);
+    let second;
+    let deadlockTimer;
+    try {
+      const timeout = new Promise((_, reject) => {
+        deadlockTimer = setTimeout(() => reject(new Error('refresh start deadlock')), 250);
+      });
+      await Promise.race([refreshStarted, timeout]);
+      second = runtime.tick();
+      const skipped = await Promise.race([second, timeout]);
+      assert.equal(skipped.refreshed, false);
+      assert.equal(calls, 1);
+      resolveRefresh();
+      const firstResult = await first;
+      assert.equal(firstResult.refreshed, true);
+    } finally {
+      clearTimeout(deadlockTimer);
+      releaseFirstHeartbeat();
+      resolveRefresh?.();
+      await Promise.allSettled(second ? [first, second] : [first]);
+    }
 
-  // Error path: failing refresh leaves pending for retry on next tick
-  const refreshCalls = [];
-  const failing = createWatchRuntime({
-    projectRoot,
-    startedAt: new Date(clock.value).toISOString(),
-    deps: {
-      now: () => clock.value,
-      pid: 7777,
-      refreshContext: async () => { refreshCalls.push(1); throw new Error('boom'); },
-    },
-  });
-  await failing.onFsEvent('src/bar.mjs');
-  clock.value += QUIET;
-  const result = await failing.tick();
-  assert.equal(result.refreshed, false);
-  assert.equal(refreshCalls.length, 1);
-  assert.deepEqual(Object.keys(failing.getPending()), ['src/bar.mjs']);
-  await rm(projectRoot, { recursive: true, force: true });
+    // Error path: failing refresh leaves pending for retry on next tick
+    const refreshCalls = [];
+    const failing = createWatchRuntime({
+      projectRoot,
+      startedAt: new Date(clock.value).toISOString(),
+      deps: {
+        now: () => clock.value,
+        pid: 7777,
+        refreshContext: async () => { refreshCalls.push(1); throw new Error('boom'); },
+      },
+    });
+    await failing.onFsEvent('src/bar.mjs');
+    clock.value += QUIET;
+    const result = await failing.tick();
+    assert.equal(result.refreshed, false);
+    assert.equal(refreshCalls.length, 1);
+    assert.deepEqual(Object.keys(failing.getPending()), ['src/bar.mjs']);
+  } finally {
+    releaseFirstHeartbeat();
+    resolveRefresh?.();
+    await rm(projectRoot, { recursive: true, force: true });
+  }
 });
 
 test('setPending seeds inherited pending from a previous run', async () => {
