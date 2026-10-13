@@ -15,7 +15,7 @@ Generated inputs, outputs, logs and scripts stay under tools/project-memory-cont
 
 ## Tasks
 - [x] R1 — Fresh run-1AeGxo completed and independently accepted (commit 6ade7a2ffc8352f264617c407a06ee709497bbb6). Graphify PID 9940, exit 0, close 0, duration 12,216ms, timeout false; events persisted before finalization. 270 Git-object inputs, all input hashes unchanged, 1,343 unique graph nodes, 2,718 valid edges and a complete 805-symbol worklist. Metadata is explicitly derived. Original three JSON artifacts and package sync-state hashes/size/mtime unchanged. Initial run-SyMrKq remains retained with exit unknown; no blind replay or old-process cleanup.
-- [x] R2 — Independent read-only validation accepted. Evidence and limits: odd/evidence/d1-regeneration.md. Re-extraction/resolver output is byte-identical and normal/reverse ordering gives identical IDs. Structural null/mismatch checks are proxies, not ground-truth accuracy.
+- [x] R2 — Independent read-only validation accepted (commit 38ba69bca315022bbe1ddcaf7953c3cf324dfb4e). Evidence and limits: odd/evidence/d1-regeneration.md. Re-extraction/resolver output is byte-identical and normal/reverse ordering gives identical IDs. Structural null/mismatch checks are proxies, not ground-truth accuracy.
 - [ ] R3 IN PROGRESS — Human choice pending: Graphify+resolver versus PMC native TreeSitter call/import edges. Do not begin F1 or real pruning before that choice.
 
 Route: delegated writer for multi-file artifacts and execution; independent verifier for external-tool generation and command-running checks. No meaningful RED exists for passive regeneration: validate execution outcomes and artifact integrity instead. No production source behavior changes are authorized by this task.
