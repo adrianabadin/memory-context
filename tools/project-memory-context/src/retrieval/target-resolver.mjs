@@ -20,7 +20,15 @@ function looksLikeBareFilename(target) {
 }
 
 function resolveSymbolTarget(engine, target) {
-  const symbolKeys = engine.findSymbolKeyByName(target);
+  const identity = engine.resolveSymbolIdentity?.(target);
+  if (identity) return { mode: 'symbol', target, symbolKey: identity };
+  const separator = String(target).lastIndexOf('#');
+  const symbolKeys = separator >= 0
+    ? engine.findSymbolKeysByFilePath(normalizeTargetPath(target.slice(0, separator))).filter(key => {
+      const name = key.split('|').at(-2); const requested = target.slice(separator + 1);
+      return requested && (name === requested || name?.endsWith(`.${requested}`));
+    })
+    : engine.findSymbolKeyByName(target);
   if (symbolKeys.length === 1) {
     return { mode: 'symbol', target, symbolKey: symbolKeys[0] };
   }
@@ -40,6 +48,10 @@ export function resolveTarget({ engine, explicitMode = null, target }) {
   }
 
   if (explicitMode === 'symbol') {
+    return resolveSymbolTarget(engine, target);
+  }
+
+  if (String(target).includes('|') || String(target).includes('#') || engine.resolveSymbolIdentity?.(target)) {
     return resolveSymbolTarget(engine, target);
   }
 

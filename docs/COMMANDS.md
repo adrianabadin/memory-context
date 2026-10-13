@@ -90,6 +90,22 @@ These scripts exist in `cli/` but are not registered as `pmc` subcommands. They 
 
 ## Context Depth Levels
 
+Symbol targets accept an exact canonical `symbolKey`, a graph node ID, a name,
+or `path#name`. Bare member names such as `findById` match terminal member
+names; multiple matches remain ambiguous and display their canonical keys.
+
+```sh
+pmc get-context symbol findById compact callers
+pmc get-context symbol "src/services/user.service.ts#findById" compact all
+```
+
+For symbol targets, `callers` and `impact` traverse inbound relationships;
+`all` labels outbound and inbound groups separately. Native static call
+evidence is used when available, while graph-only projects retain legacy
+traversal and other Graphify relation types remain available. Constructor
+instantiation edges do not appear as named callers/callees. File/query modes
+and depth defaults are unchanged.
+
 Used with `get-context`:
 
 | Depth | Description |

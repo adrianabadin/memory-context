@@ -131,16 +131,17 @@ async function openGraphDbLazy(pmcRoot) {
   return openGraphDb(dbPath, jsonPath);
 }
 
-function groupEdges(edges, edgeTypes) {
+function groupEdges(edges, edgeTypes, direction = null) {
   const byKind = new Map();
   for (const edge of edges) {
     if (!edgeTypes.includes(edge.relation)) continue;
-    const kind = edge.relation;
+    const kind = direction ? `${edge.relation} (${direction})` : edge.relation;
+    const endpoint = direction === 'inbound' ? edge.source : edge.target;
     const arr = byKind.get(kind);
     if (arr) {
-      arr.push(edge.target);
+      arr.push(endpoint);
     } else {
-      byKind.set(kind, [edge.target]);
+      byKind.set(kind, [endpoint]);
     }
   }
 
@@ -162,7 +163,10 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
 
   switch (resolved.mode) {
     case 'symbol': {
-      const ctx = await engine.querySymbolContext({ symbolKey: resolved.symbolKey, depth });
+      const incoming = focus === 'callers' || focus === 'impact';
+      const ctx = incoming
+        ? await engine.queryImpactScope({ symbolKeys: [resolved.symbolKey], depth, edgeTypes })
+        : await engine.querySymbolContext({ symbolKey: resolved.symbolKey, depth });
       target = {
         mode: 'symbol',
         name: ctx.target?.name,
@@ -174,11 +178,19 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
         linkedMemories: ctx.target?.linkedMemories ?? [],
       };
       summary = [`Symbol: ${ctx.target?.name || resolved.target} (${ctx.target?.kind || 'unknown'})`];
-      relevant = (ctx.neighbors || []).map((n) => ({
+      relevant = (ctx.neighbors || ctx.dependents || []).map((n) => ({
         label: n.name || n.label || 'unknown',
         filePath: n.filePath || undefined,
       }));
-      relations = groupEdges(ctx.edges || [], edgeTypes);
+      relations = groupEdges(ctx.edges || [], edgeTypes, incoming ? 'inbound' : focus === 'all' ? 'outbound' : null);
+      if (focus === 'all') {
+        const inbound = await engine.queryImpactScope({ symbolKeys: [resolved.symbolKey], depth, edgeTypes, targetInfo: ctx.target });
+        relations.push(...groupEdges(inbound.edges || [], edgeTypes, 'inbound'));
+        for (const node of inbound.dependents || []) {
+          const item = { label: node.name || node.label || 'unknown', filePath: node.filePath || undefined };
+          if (!relevant.some(existing => existing.label === item.label && existing.filePath === item.filePath)) relevant.push(item);
+        }
+      }
       nextReads = relevant.map((r) => r.filePath).filter(Boolean);
       break;
     }
@@ -188,7 +200,7 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
       relevant = (resolved.symbolKeys || []).map((sk) => {
         const parts = sk.split('|');
         return {
-          label: parts.length >= 6 ? parts[parts.length - 2] : sk,
+          label: parts.length >= 6 ? `${parts[parts.length - 2]} [${sk}]` : sk,
           filePath: parts.length >= 2 ? parts[1] : undefined,
         };
       });
@@ -290,7 +302,7 @@ function printHelp() {
   console.log('from the PMC project graph.');
   console.log('');
   console.log('Modes:');
-  console.log('  symbol   Resolve a symbol by name');
+  console.log('  symbol   Resolve by name, canonical symbolKey, path#name or graph node ID');
   console.log('  file     Query context for a file path');
   console.log('  query    Free-text query (structural only)');
   console.log('');

@@ -39,13 +39,21 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
 
   for (const key of Object.keys(symbolIndex ?? {})) {
     const entry = symbolIndex[key];
-    if (entry.graphNodeId) graphNodeIdToSymbolKeyMap.set(entry.graphNodeId, key);
+    if (entry.graphNodeId) {
+      // A duplicated graph identity cannot authorize an array-order winner.
+      graphNodeIdToSymbolKeyMap.set(entry.graphNodeId, graphNodeIdToSymbolKeyMap.has(entry.graphNodeId) ? null : key);
+    }
 
     const parts = parseSymbolKeyParts(key);
     const name = extractName(parts);
     if (name) {
       const arr = nameToSymbolKeys.get(name);
       if (arr) arr.push(key); else nameToSymbolKeys.set(name, [key]);
+      if (parts[3] === 'member' && name.includes('.')) {
+        const member = name.slice(name.lastIndexOf('.') + 1);
+        const matches = nameToSymbolKeys.get(member);
+        if (matches) matches.push(key); else nameToSymbolKeys.set(member, [key]);
+      }
     }
 
     const fp = extractFilePath(parts);
@@ -65,6 +73,69 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
 
   function resolveWorklistEntry(symbolKey) {
     return (worklist ?? []).find((e) => e.symbolKey === symbolKey) ?? null;
+  }
+
+  // Replace call evidence only for proven native source identities. Other
+  // languages/sources and non-call relations retain legacy traversal.
+  // Native index uniqueness alone is not canonical graph-node proof.
+  function traverseSymbolRelations({ symbolKeys, maxHops, edgeTypes, direction = 'outbound' }) {
+    const types = edgeTypes ?? focusToEdgeTypes('all');
+    const seeds = symbolKeys.map(key => symbolIndex?.[key]?.graphNodeId).filter(Boolean);
+    let native = [];
+    if (types.includes('calls') && typeof store.listNativeEdges === 'function') {
+      try { native = store.listNativeEdges({ relation: 'calls' }); }
+      catch (error) {
+        if (error.code !== 'ERR_SQLITE_ERROR' || !/no such table: native_edges/.test(error.message)) throw error;
+      }
+    }
+    function canonicalNodeId(endpoint) {
+      const key = endpoint?.id;
+      if (typeof key !== 'string') return null;
+      const parts = parseSymbolKeyParts(key);
+      if (parts.length !== 6 || !['js', 'ts', 'tsx'].includes(parts[0])) return null;
+      const id = symbolIndex?.[key]?.graphNodeId;
+      if (!id || graphNodeIdToSymbolKeyMap.get(id) !== key) return null;
+      const node = store.getNode?.(id);
+      if (!node) return null;
+      const explicit = [node.symbolKey, node.metadata?.symbolKey].filter(value => value != null);
+      if (explicit.some(value => value !== key)) return null;
+      if (node.source_file != null && normalizePath(node.source_file) !== parts[1]) return null;
+      if (node.kind != null && node.kind !== parts[2]) return null;
+      return explicit.includes(key) || node.id === key ? id : null;
+    }
+    const mapped = native.filter(fact => fact.relation === 'calls').map(fact => ({
+      source: canonicalNodeId(fact.source), target: canonicalNodeId(fact.target),
+      relation: 'calls', constructor: [fact.source.id, fact.target.id].some(id => extractName(parseSymbolKeyParts(id))?.endsWith('.constructor')),
+    })).filter(edge => edge.source && edge.target);
+    if (!mapped.length) return traverseGraph({ nodeIds: seeds, maxHops, edgeTypes: types, direction });
+    const nativeSources = new Set(mapped.map(edge => edge.source));
+    const nodes = new Map();
+    for (const id of seeds) { const node = store.getNode?.(id); if (node) nodes.set(id, node); }
+    const edges = new Map(); const seen = new Set(seeds);
+    let frontier = seeds; let reached = 0;
+    for (let hop = 0; hop < maxHops && frontier.length; hop++) {
+      const next = [];
+      const legacy = traverseGraph({ nodeIds: frontier, maxHops: 1, edgeTypes: types, direction });
+      const legacyNodes = new Map(legacy.nodes.map(node => [node.id, node]));
+      const candidates = [...legacy.edges.filter(edge => edge.relation !== 'calls' || !nativeSources.has(edge.source)),
+        ...mapped.filter(edge => !edge.constructor).map(({ source, target, relation }) => ({ source, target, relation }))];
+      for (const edge of candidates) {
+          const from = direction === 'inbound' ? edge.target : edge.source;
+          const to = direction === 'inbound' ? edge.source : edge.target;
+          if (!frontier.includes(from)) continue;
+          edges.set(JSON.stringify([edge.source, edge.target, edge.relation]), edge);
+          reached = hop + 1;
+          for (const id of [edge.source, edge.target]) {
+            if (!nodes.has(id)) {
+              const node = legacyNodes.get(id) ?? store.getNode?.(id);
+              if (node) nodes.set(id, node);
+            }
+          }
+          if (!seen.has(to)) { seen.add(to); next.push(to); }
+      }
+      frontier = next;
+    }
+    return { nodes: [...nodes.values()], edges: [...edges.values()], depth_reached: reached };
   }
 
   async function fetchLinkedMemories(symbolKey) {
@@ -129,13 +200,13 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     return { ...target, communityId, communityName };
   }
 
-  async function querySymbolContext({ symbolKey, depth }) {
+  async function querySymbolContext({ symbolKey, depth, edgeTypes }) {
     const config = createDepthConfig(depth);
     let target = await buildSymbolInfo(symbolKey);
     if (!target.graphNodeId) return { target, neighbors: [], edges: [], depth_reached: 0 };
     target = attachCommunity(target);
 
-    const traversal = traverseGraph({ nodeIds: [target.graphNodeId], maxHops: config.maxHops });
+    const traversal = traverseSymbolRelations({ symbolKeys: [symbolKey], maxHops: config.maxHops, edgeTypes });
     const neighbors = [];
     for (const n of traversal.nodes) {
       if (n.id === target.graphNodeId) continue;
@@ -188,14 +259,14 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     return { symbols, neighbors, edges, depth_reached };
   }
 
-  async function queryImpactScope({ symbolKeys, depth }) {
+  async function queryImpactScope({ symbolKeys, depth, edgeTypes, targetInfo }) {
     const config      = createDepthConfig(depth);
     const targets     = [];
     for (const sk of symbolKeys) {
-      targets.push(await buildSymbolInfo(sk));
+      targets.push(targetInfo?.symbolKey === sk ? targetInfo : await buildSymbolInfo(sk));
     }
     const nodeIds     = targets.map((t) => t.graphNodeId).filter(Boolean);
-    const traversal   = traverseGraph({ nodeIds, maxHops: config.maxHops, direction: 'inbound' });
+    const traversal   = traverseSymbolRelations({ symbolKeys, maxHops: config.maxHops, edgeTypes, direction: 'inbound' });
     const targetIdSet = new Set(nodeIds);
     const dependents  = [];
     for (const n of traversal.nodes) {
@@ -219,6 +290,10 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     graphNodeIdToSymbolKey(graphNodeId) { return graphNodeIdToSymbolKeyMap.get(graphNodeId) ?? null; },
     findSymbolKeyByName(name)           { return nameToSymbolKeys.get(name) ?? []; },
     findSymbolKeysByFilePath(filePath)  { return filePathToSymbolKeys.get(normalizePath(filePath)) ?? []; },
+    resolveSymbolIdentity(value) {
+      if (Object.prototype.hasOwnProperty.call(symbolIndex ?? {}, value)) return value;
+      return graphNodeIdToSymbolKeyMap.get(value) ?? null;
+    },
     traverseGraph,
     querySymbolContext,
     queryFileContext,
