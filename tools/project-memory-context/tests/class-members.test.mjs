@@ -293,6 +293,111 @@ test('TS same-line accessor pair keeps both canonical keys', async () => {
   ]);
 });
 
+// ── Unit 1.2-B0: member parameter-slot counting (JS/TS/TSX members only) ──────
+
+test('JS member counts declared slots: self/cls names and renames keep one D2 key', async () => {
+  const receiver = await extractSymbolsForFile({
+    filePath: 'src/box-params.js',
+    content: 'class Box { take(self, cls) {} }',
+  });
+  const renamed = await extractSymbolsForFile({
+    filePath: 'src/box-params.js',
+    content: 'class Box { take(alpha, beta) {} }',
+  });
+
+  const take = receiver.find(s => s.kind === 'method' && s.name === 'take');
+  assert.ok(take, 'take member must be extracted');
+  assert.equal(take.arity, 2, 'self and cls are declared parameter slots for a member');
+  assert.equal(take.symbolKey, 'js|src/box-params.js|method|member|Box.take|2');
+
+  const renamedTake = renamed.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(renamedTake?.symbolKey, take.symbolKey,
+    'renaming parameter identifiers must not change the member D2 key');
+});
+
+test('JS member parameter comments are not additional slots', async () => {
+  const leading = await extractSymbolsForFile({
+    filePath: 'src/box-comment.js',
+    content: 'class Box { take(/* note */ a, b) {} }',
+  });
+  const leadingTake = leading.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(leadingTake?.arity, 2, 'a comment inside formal_parameters is not a declared slot');
+  assert.equal(leadingTake?.symbolKey, 'js|src/box-comment.js|method|member|Box.take|2');
+
+  const trailing = await extractSymbolsForFile({
+    filePath: 'src/box-comment.js',
+    content: 'class Box { take(a /* trail */, b) {} }',
+  });
+  const trailingTake = trailing.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(trailingTake?.arity, 2, 'trailing parameter comments are slots-neutral too');
+});
+
+test('TS and TSX members count untyped self/cls parameters as slots', async () => {
+  const ts = await extractSymbolsForFile({
+    filePath: 'src/box-untyped.ts',
+    content: 'class Box { take(self, cls) {} }',
+  });
+  const tsTake = ts.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(tsTake?.arity, 2, 'TS untyped self/cls are declared slots');
+  assert.equal(tsTake?.symbolKey, 'ts|src/box-untyped.ts|method|member|Box.take|2');
+
+  const tsx = await extractSymbolsForFile({
+    filePath: 'src/box-untyped.tsx',
+    content: 'class Box { take(self, cls) {} }',
+  });
+  const tsxTake = tsx.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(tsxTake?.arity, 2, 'TSX untyped self/cls are declared slots');
+  assert.equal(tsxTake?.symbolKey, 'tsx|src/box-untyped.tsx|method|member|Box.take|2');
+});
+
+test('TS/TSX explicit this receiver parameter is not a runtime formal slot', async () => {
+  const ts = await extractSymbolsForFile({
+    filePath: 'src/this-receiver.ts',
+    content: 'class Box { take(this: Box, a?: number, ...rest: string[]): void {} }',
+  });
+  const take = ts.find(s => s.kind === 'method' && s.name === 'take');
+  assert.ok(take, 'TS receiver method must be extracted');
+  assert.equal(take.arity, 2, 'this receiver excluded; optional + rest each count one slot');
+  assert.equal(take.symbolKey, 'ts|src/this-receiver.ts|method|member|Box.take|2');
+
+  const tsx = await extractSymbolsForFile({
+    filePath: 'src/this-receiver.tsx',
+    content: 'class Box { take(this: Box, x: number) {} }',
+  });
+  const tsxTake = tsx.find(s => s.kind === 'method' && s.name === 'take');
+  assert.equal(tsxTake?.arity, 1, 'only x is a runtime slot after the compile-time receiver');
+  assert.equal(tsxTake?.symbolKey, 'tsx|src/this-receiver.tsx|method|member|Box.take|1');
+});
+
+test('member default, destructuring and rest parameters each count one slot', async () => {
+  const content = 'class Box { cfg(a = 1, {b}, ...rest) {} }';
+  const symbols = await extractSymbolsForFile({ filePath: 'src/box-destructure.js', content });
+  const cfg = symbols.find(s => s.kind === 'method' && s.name === 'cfg');
+  assert.equal(cfg?.arity, 3, 'default + object destructuring + rest are three declared slots');
+  assert.equal(cfg?.symbolKey, 'js|src/box-destructure.js|method|member|Box.cfg|3');
+});
+
+test('legacy global function descriptors keep their pre-B0 key bytes (pinned)', async () => {
+  // Literal pre-fix behavior captured from the current code BEFORE the member
+  // counter landed: legacy `countArity` skips self/cls and counts comments.
+  // These descriptors stay intentionally wrong-but-stable; B0 must not rekey them.
+  const takeAll = await extractSymbolsForFile({
+    filePath: 'src/legacy.js',
+    content: 'function take(self, cls) {}',
+  });
+  const take = takeAll.find(s => s.kind === 'function' && s.name === 'take');
+  assert.equal(take?.arity, 0, 'legacy global self/cls skip is preserved byte-for-byte');
+  assert.equal(take?.symbolKey, 'js|src/legacy.js|function|local|take|0');
+
+  const commentOnly = await extractSymbolsForFile({
+    filePath: 'src/legacy-comment.js',
+    content: 'function foo(/* c */) {}',
+  });
+  const foo = commentOnly.find(s => s.kind === 'function' && s.name === 'foo');
+  assert.equal(foo?.arity, 1, 'legacy block-comment descriptor keeps its literal pre-B0 count');
+  assert.equal(foo?.symbolKey, 'js|src/legacy-comment.js|function|local|foo|1');
+});
+
 // ── Legacy languages: extraction output stays byte-compatible ─────────────────
 
 test('C# methods keep legacy key behavior with no container field', async () => {

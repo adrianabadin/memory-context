@@ -166,6 +166,49 @@ function countArity(symbolNode, kind) {
   return count;
 }
 
+/**
+ * Count declared parameter slots for a JS/TS/TSX class member (unit 1.2-B0).
+ *
+ * Members count the ACTUAL declared parameter slots in `formal_parameters`:
+ * every top-level named child is exactly one slot (optional, default, rest and
+ * destructuring parameters each count one), `comment` nodes inside the list are
+ * not parameters, and parameter names such as `self`/`cls` count normally —
+ * unlike the legacy `countArity` rule below, which stays byte-identical so all
+ * historical global/C#/PHP/other-language keys keep their exact bytes. A
+ * TypeScript explicit `this: T` receiver parameter (real AST:
+ * `required_parameter`/`optional_parameter` whose pattern child is the `this`
+ * keyword) is a compile-time receiver, not a runtime formal slot, so it is
+ * excluded. Only the JS/TS/TSX member path calls this counter; top-level
+ * symbols and every other language keep `countArity` untouched.
+ */
+function countMemberArity(symbolNode) {
+  // Bounded duplication of the parameter-node lookup: the legacy countArity
+  // path is deliberately left byte-for-byte as-is (historical keys).
+  const paramNode = symbolNode.children?.find(c => c.type === 'formal_parameters') ?? null;
+  if (!paramNode) return 0;
+  let count = 0;
+  for (const child of paramNode.children) {
+    if (!child.isNamed) continue;
+    if (child.type === 'comment') continue; // parameter comments are not slots
+    if (isExplicitThisReceiver(child)) continue; // compile-time receiver, not a slot
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Detect a TypeScript/TSX explicit `this: T` receiver parameter from its real
+ * AST shape: a `required_parameter`/`optional_parameter` whose first named
+ * (pattern) child is the `this` keyword node.
+ */
+function isExplicitThisReceiver(paramChild) {
+  if (paramChild.type !== 'required_parameter' && paramChild.type !== 'optional_parameter') {
+    return false;
+  }
+  const pattern = paramChild.children?.find(c => c.isNamed);
+  return pattern?.type === 'this';
+}
+
 function normalizeLanguageName(rawLanguage) {
   // tree-sitter language names vs PMC language names
   if (rawLanguage === 'typescript') return 'ts';
@@ -293,7 +336,11 @@ export async function extractSymbolsForFile({ filePath, content }) {
       ? 'member'
       : inferExportScope(rawLanguage, name, symbolNode);
     const codeFragment = lines.slice(startLine - 1, endLine).join('\n');
-    const arity = countArity(symbolNode, kind);
+    // Unit 1.2-B0: structured JS/TS/TSX members use the member-specific
+    // declared-slot counter; everything else keeps the legacy countArity.
+    const arity = container
+      ? countMemberArity(symbolNode)
+      : countArity(symbolNode, kind);
 
     symbolPromises.push(
       hashSymbol(codeFragment).then(codeHash => {
