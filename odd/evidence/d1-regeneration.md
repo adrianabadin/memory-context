@@ -5,7 +5,9 @@
 - Input source revision: `b1e90fcde85b5b9133d88cbc519e3068a5adaf83`.
 - R1: complete and independently accepted; task documentation records commit `6ade7a2ffc8352f264617c407a06ee709497bbb6`.
 - R2: independently accepted from corrected ignored run `tools/project-memory-context/.planning/d1-rebuild/run-1AeGxo`. Native assessment of the committed range was unassessable because the old raw snapshot is untracked; this does not negate the completed functional independent verification.
-- R3: IN PROGRESS, awaiting the human choice between Graphify+resolver edges and PMC native TreeSitter call/import edges. No option is selected here; native keys remove an ID bridge but do not resolve all fixture extractor-key, container, or dynamic-accuracy limitations.
+- R3: CLOSED by the explicit human acceptance of PMC-native Tree-sitter `calls`/`imports` relations with canonical symbol identity (“si acepto tu recomendacion”). This is a product decision, not a conclusion inferred from structural metrics. Native identity does not resolve all extractor-key, container, dynamic-call, or semantic-accuracy limitations; uncertain endpoints must remain unresolved rather than be invented.
+- The native implementation is planned after typed nodes (1.1) and member identity (1.2), as bounded extraction (1.2b) and persistence/integration (1.2c), before facts (1.3). Initial coverage is JS/TS only; other languages remain unimplemented/unresolved.
+- The separately authorized real-repo PMC artifact prune is deferred until after native call/import implementation and validation, and requires an exact target/scope preview plus online SQLite backup. No pruning occurred here.
 - This is structural evidence, not source behavior, semantic quality, or provider accuracy evaluation.
 
 ## Execution and integrity
@@ -30,7 +32,7 @@
 
 - No semantic call-edge ground truth, LLM quality assessment, or full-suite test was performed or claimed.
 - Historical `run-SyMrKq` remains retained with exit UNKNOWN; corrected `run-1AeGxo` did not overwrite it. The old raw snapshot at `.planning/d1-snapshots/snapshot-9FexP4` is untracked and not ignored: preserve it, never stage it. Its truncated worklist and inconsistent metadata are historical, not a current blocker.
-- No original commands, original DB access, real MCP sync, configuration changes, host installs, publishing, pruning, process cleanup, or architectural decision are authorized by this evidence.
+- During R1/R2, no original commands, original DB access, real MCP sync, configuration changes, host installs, publishing, pruning, process cleanup, or architectural decision was performed. The subsequent human decision and deferred bounded PMC artifact-prune authorization are recorded above; no pruning occurred in this evidence task.
 
 ## Key learnings
 

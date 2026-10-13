@@ -4,10 +4,10 @@ Parent feature: odd/tasks/enrich-symbol-cards.md (task 0.5)
 Worktree: C:/Users/aabad/AppData/Local/Temp/pmc-enrich-symbol-cards
 Branch: feat/enrich-symbol-cards
 Input revision: b1e90fcde85b5b9133d88cbc519e3068a5adaf83
-Status: IN PROGRESS — R1 and R2 are complete; R3 awaits the human D1 edge-source decision.
+Status: CLOSED — R1/R2 evidence accepted and R3 closed by explicit human acceptance of native PMC Tree-sitter call/import relations; no source implementation was part of this task.
 
 ## Authority and scope
-The user authorized copying inputs first, then isolated regeneration and possible external processing. Original checkout and artifacts must remain intact. No original commands, DB opening, real MCP sync, PMC/MCP configuration changes, host installs, publishing, old-process cleanup, pruning or architectural D1 decision.
+The user authorized copying inputs first, then isolated regeneration and possible external processing. Original checkout and artifacts must remain intact. During R1/R2 there were no original commands, DB opening, real MCP sync, PMC/MCP configuration changes, host installs, publishing, old-process cleanup, pruning or architectural D1 decision. The later human D1 acceptance and conditional, deferred PMC artifact-prune authorization are recorded in the feature tracker and plan; neither authorized action is performed by this evidence task.
 
 Only tracked parser-supported code at the input revision is copied. Exclude .git, .planning, .worktrees, node_modules, agent configurations and credential files. Preflight counted 271 eligible files; the execution manifest must establish the actual count. This is a code-only structural measurement, not document enrichment or semantic accuracy evaluation. Fixture/test and production subsets must be distinguished in the report.
 
@@ -16,7 +16,9 @@ Generated inputs, outputs, logs and scripts stay under tools/project-memory-cont
 ## Tasks
 - [x] R1 — Fresh run-1AeGxo completed and independently accepted (commit 6ade7a2ffc8352f264617c407a06ee709497bbb6). Graphify PID 9940, exit 0, close 0, duration 12,216ms, timeout false; events persisted before finalization. 270 Git-object inputs, all input hashes unchanged, 1,343 unique graph nodes, 2,718 valid edges and a complete 805-symbol worklist. Metadata is explicitly derived. Original three JSON artifacts and package sync-state hashes/size/mtime unchanged. Initial run-SyMrKq remains retained with exit unknown; no blind replay or old-process cleanup.
 - [x] R2 — Independent read-only validation accepted (commit 38ba69bca315022bbe1ddcaf7953c3cf324dfb4e). Evidence and limits: odd/evidence/d1-regeneration.md. Re-extraction/resolver output is byte-identical and normal/reverse ordering gives identical IDs. Structural null/mismatch checks are proxies, not ground-truth accuracy.
-- [ ] R3 IN PROGRESS — Human choice pending: Graphify+resolver versus PMC native TreeSitter call/import edges. Do not begin F1 or real pruning before that choice.
+- [x] R3 — Human explicitly accepted PMC-native Tree-sitter `calls`/`imports` code relations with canonical symbol identity (“si acepto tu recomendacion”). D1 is closed in `v3.md` §5. This selection is not inferred solely from the metrics. Do not treat it as semantic-accuracy proof or as implementation evidence.
+
+Pruning is separately authorized but deferred until after native call/import implementation and validation. Before that later prune, require an exact target/scope preview and online SQLite backup. No prune occurred in this R3 documentation closure.
 
 Route: delegated writer for multi-file artifacts and execution; independent verifier for external-tool generation and command-running checks. No meaningful RED exists for passive regeneration: validate execution outcomes and artifact integrity instead. No production source behavior changes are authorized by this task.
 

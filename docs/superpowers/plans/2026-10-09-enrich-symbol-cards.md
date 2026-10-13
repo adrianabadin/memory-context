@@ -38,7 +38,7 @@ Agents must answer "who calls X", "what does X depend on", "what depends on X", 
 
 - **G1. Isolation.** Work on branch `feat/enrich-symbol-cards`, created in an isolated worktree. The main checkout is dirty (341 changes on `feat/community-naming-db-and-command`).
 - **G2. Unmerged incident guard.** `assertCheckoutIdentity` is not merged; it is still in `.worktrees/pmc-pi-project-integration`. Until it lands, **never** run `refresh-context`, `sync`, `enrich`, or `watch` from the new worktree. Use fixture projects in temp directories for every integration test.
-- **G3. Real-repo cleanup** (Task 0.6) is destructive. Run it only after explicit user authorization, with a backup first, and from the main checkout.
+- **G3. Real-repo cleanup** (Task 0.6) is destructive. The user has authorized the planned real-repo PMC artifact prune, but explicitly deferred it until after native call/import implementation and validation. Do not prune now. Before any later apply, show the exact target and scope preview, make the required online SQLite backup, and operate only on the authorized PMC artifacts; this grant does not include source files, unrelated memory, or newly defined full-database migrations/remote MCP deletions.
 - **G4. Commits.** One Conventional Commit per task, with tests and docs alongside the behavior. No push, PR, or merge without the user's decision.
 
 ## Shared fixture
@@ -103,14 +103,14 @@ docs/README.md                       (non-code; must NOT become a code node)
 - [ ] GREEN.
 - **Accept:** fixture null rate is 0 for functions and classes. The report data feeds decision D1.
 
-### Task 0.5: Decision D1 checkpoint (no code)
-- [ ] Measure the resolver report on a copy of the real graph, read-only. Decide: graphify edges plus resolver, or PMC's own tree-sitter edges.
-- [ ] Record the decision in `v3.md` §5 and in Engram (`pmc/enrich-redesign-proposal`).
+### Task 0.5: Decision D1 checkpoint (no code) — CLOSED
+- [x] Measure the resolver report on a copy of the real graph, read-only (R1/R2 evidence in `odd/evidence/d1-regeneration.md`).
+- [x] Record the explicitly human-accepted decision in `v3.md` §5: PMC-native Tree-sitter `calls`/`imports` relations with canonical identity; Graphify is not authoritative for these new relations. The acceptance is explicit, not inferred from measurements. Documentation/tracker closure is complete; the parent will mirror the corresponding Engram update because this writer lacks the full project-memory mirror tools.
 
-### Task 0.6: Real-repo cleanup (requires user authorization, G3)
-**Files:** Create `cli/prune-polluted.mjs`. It is dry-run by default; `--apply` removes `.worktrees/**` keys from `symbol-index.json`, worklist, enrichment files, and agent-memory rows tagged `file:.worktrees/`, after an online SQLite backup. Test: `tests/prune-polluted.test.mjs` (fixture only).
+### Task 0.6: Real-repo cleanup (authorized, explicitly deferred; G3)
+**Files:** Create `cli/prune-polluted.mjs`. It is dry-run by default; `--apply` removes the authorized `.worktrees/**` entries from the PMC symbol index, worklist, enrichment files, and agent-memory rows tagged `file:.worktrees/`, after an online SQLite backup. Test: `tests/prune-polluted.test.mjs` (fixture only).
 - [ ] RED/GREEN on the fixture.
-- [ ] **STOP:** present the dry-run counts and ask the user. On approval, back up, apply, and rebuild the graph from the main checkout.
+- [ ] **DEFERRED — do not run now.** After native call/import implementation and its validation, provide an exact target/scope preview, make the required online SQLite backup, then perform only the authorized PMC artifact prune from the proper real-repo context. The user has granted this bounded prune; no second authorization is needed for that same scope. This does not authorize source-file changes, unrelated memory cleanup, or newly defined full-database migrations/remote MCP deletions.
 - **Accept:** real-repo pollution is 0%; `graph.metadata.json` matches the counts in `graph.db`.
 
 ---
@@ -134,6 +134,21 @@ docs/README.md                       (non-code; must NOT become a code node)
 - [ ] RED: existing top-level keys are unchanged (regression).
 - [ ] GREEN.
 - **Accept:** member symbols are present and resolver-linked; the full suite passes.
+
+### Task 1.2b: Extract bounded native call/import relations
+**Depends on:** 1.1 typed nodes and 1.2 canonical member identities.
+**Initial production baseline:** JavaScript/TypeScript only. This is the bounded first implementation, not a claim of full supported-language coverage; other languages remain unimplemented/unresolved until separately planned and validated.
+**Files/tests:** Tree-sitter query/extraction and resolver modules plus focused call/import relation tests (exact source/test paths to be settled from repository conventions when this task begins).
+- [ ] RED: fixture calls/imports resolve only where syntax and scope establish a unique canonical endpoint; aliases are handled; dynamic, unresolved, ambiguous, collision, and unsupported-language cases remain unresolved and produce no invented resolved target ID.
+- [ ] GREEN: emit typed native relation facts keyed by canonical symbol identity (and canonical file identity for file-level imports); do not promote a raw target string or arbitrary `symbolKey` to a resolved endpoint.
+- **Accept:** bounded JS/TS relations are conservative and deterministic; existing top-level/member identities remain intact. No semantic-accuracy claim follows merely from structural fixture checks.
+
+### Task 1.2c: Persist and integrate native call/import relations
+**Depends on:** 1.1 typed-node/schema contract, 1.2 member keys, and 1.2b native extraction.
+**Files/tests:** graph persistence/integration and focused persistence/facts tests (exact source/test paths to be settled from repository conventions when this task begins).
+- [ ] RED: native edges persist with relation type and canonical resolved endpoints; unresolved/ambiguous cases remain unresolved, not raw-ID edges.
+- [ ] GREEN: facts consume those canonical endpoints before Task 1.3; preserve Graphify's existing non-call/import graph features and legacy resolver/backfill compatibility.
+- **Accept:** a fixture rebuild/readback demonstrates native call/import edges through the typed graph contract without claiming unsupported-language coverage.
 
 ### Task 1.3: Facts builder
 **Files:** Create `src/cards/facts.mjs`, exporting `buildFacts(graphDb, symbolKey, {depth})`. It returns `{id, kind, signature, location, callers[], callees[], imports[], importedBy[], implements[], tests[], fanIn, fanOut}`, where each relation item is `{symbolKey|path, relation, kind}`. Tests are file-scoped where the target is a file. Test: `tests/card-facts.test.mjs`.
@@ -199,6 +214,6 @@ docs/README.md                       (non-code; must NOT become a code node)
 
 ## Self-review
 
-- **Spec coverage:** v3 §3.1 maps to Tasks 0.1–0.4 and 1.1–1.6; §3.2 to F2; §3.3 to F3; §3.4 to 1.6 and F4; §3.5 is produced by `pmc_card` after F2 and F3.
+- **Spec coverage:** v3 §3.1 maps to Tasks 0.1–0.4 and 1.1–1.6, including native call/import units 1.2b/1.2c before facts in 1.3; §3.2 to F2; §3.3 to F3; §3.4 to 1.6 and F4; §3.5 is produced by `pmc_card` after F2 and F3.
 - **Risk ordering:** the unmerged incident guard and the dirty main checkout are handled by G1–G3 before any real-repo mutation.
-- **Re-planning:** F2–F5 are expanded into step-level tasks at phase entry, using the F1 outcomes and decision D1.
+- **Re-planning:** Native call/import work is ordered after typed nodes (1.1) and member keys (1.2), split into extraction (1.2b) and persistence/integration (1.2c), and precedes facts (1.3). F2–F5 are expanded into step-level tasks at phase entry using F1 outcomes and the closed D1 decision.
