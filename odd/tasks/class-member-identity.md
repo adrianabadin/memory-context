@@ -6,7 +6,7 @@ Branch: feat/enrich-symbol-cards
 Base: typed-node source 530549becc426923eee245f75720d24891541705; review-c91196cfd2954656 approved/exactly acknowledged
 Parent: odd/tasks/enrich-symbol-cards.md Task 1.2
 Design: v3.md D2 existing planning contract; plan Task 1.2, then 1.2b/1.2c
-Status: IN PROGRESS — A closed at 77a6822 with exact native acknowledgement; B is at read-only phase-entry mapping and parent 1.2 is not complete
+Status: IN PROGRESS — A closed at 77a6822; B0 member-parameter guard is next, then B1 Python/Java and B2 Go/Rust. Parent 1.2 is not complete.
 
 ## Contract and scope
 Generic D2 member keys use lang|path|method|member|Container.name|arity. C# retains its existing seven-part namespace/containerName/signature key branch; generic qualification does not rewrite it. Adopt the existing planning contract for scoped implementation; no new human product grant or live-memory migration is implied. Keep method record names unqualified and expose structured container identity. Preserve existing top-level key bytes. Previously extracted C#/PHP members exist; do not claim historical methods were universally absent. A must not silently rekey those languages.
@@ -19,7 +19,9 @@ Never execute tests/relational-eval.test.mjs in ordinary verification. Broad che
 
 ## Tasks
 - [x] A DONE — JS/TS/TSX member-key/class-method engine; source 77a68226a2fef3788fd08c4bdac1c6f5070a585e, eight files +506/-6 (512 diff lines). Independent checks and exact native receipt below; no all-language, live migration or publishing claim.
-- [ ] B IN PROGRESS — Read-only mapping before selecting bounded remaining Python/Java/Go/Rust language/container adapters and existing C#/PHP compatibility surfaces. No B source edits yet; parent 1.2 stays incomplete until the remaining contract is independently verified and committed.
+- [ ] B0 IN PROGRESS — Guard new JS/TS/TSX member parameter-slot counting without changing historical global key bytes. The legacy countArity skips identifiers self/cls across all languages and counts all named children, so member identities may depend on parameter names/comments. Add meaningful RED first, fix only member-specific counting, cover TypeScript explicit this receiver when supported by actual AST, independently verify and close one new source/native-receipt unit. This is a new follow-up, never a reopened A receipt; no live rekey.
+- [ ] B1 — Named enclosing Python/Java type-body adapters. Derive actual supported AST wrappers and receiver conventions; do not invent containers, call arity or type-checker coverage. Preserve logical global function/class keys and C#/PHP compatibility. Source/test scope is mapped at phase entry; use a separate bounded source unit with independent checks and receipt.
+- [ ] B2 — Go receiver/Rust impl adapters. Derive actual receiver/self type syntax, not trait-name guesses or same-file parent requirements. Formerly misclassified logical members may intentionally acquire canonical member keys; normal global keys stay unchanged. Preserve ambiguous declarations and scoped parent-resolution limits; no live migration. Separate bounded source unit/receipt, with exact proof before parent 1.2 can close.
 
 ## Evidence
 - Prior typed-node focused verification: 74/74, exit 0; safe broad 945 tests/944 pass/one known Codex baseline failure, 111/112 files with twelve relational cases not run. Typed-node public objects gain additive node_kind; in-memory/query-engine filter forwarding is future work.
