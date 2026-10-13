@@ -3,6 +3,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
+import { NATIVE_EDGES_SCHEMA_SQL, persistNativeRelations, listNativeEdges, getNativeEdgesFor } from './native-relations.mjs';
+
 // ── Schema ───────────────────────────────────────────────────────────────────
 
 const SCHEMA_SQL = `
@@ -36,6 +38,7 @@ CREATE TABLE IF NOT EXISTS community_names (
 CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source, relation);
 CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target, relation);
 CREATE INDEX IF NOT EXISTS idx_nodes_file   ON nodes(source_file);
+${NATIVE_EDGES_SCHEMA_SQL}
 `;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -472,6 +475,23 @@ export function createSqliteGraphStore(db) {
     deleteCommunityName(communityId) {
       const id = String(communityId);
       db.prepare('DELETE FROM community_names WHERE community_id = ?').run(id);
+    },
+
+    // ── Native relations (unit C, S4–S5) ─────────────────────────────────────
+    // Additive surface: persists resolved native facts into `native_edges`
+    // (survives graph.json rebuilds) and reads them back as canonical
+    // endpoint pairs. Unresolved facts are never edges. See
+    // src/graph-store/native-relations.mjs.
+    persistNativeRelations(extractResult) {
+      return persistNativeRelations(db, extractResult);
+    },
+
+    listNativeEdges(filters) {
+      return listNativeEdges(db, filters);
+    },
+
+    getNativeEdgesFor(endpointId) {
+      return getNativeEdgesFor(db, endpointId);
     },
 
     close() {
