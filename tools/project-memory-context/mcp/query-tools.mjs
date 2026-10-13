@@ -10,7 +10,10 @@
 //   registerQueryTools(server, { projectRoot });
 
 import { z } from 'zod';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createQueryOrchestrator } from '../src/query/orchestrator.mjs';
+import { createRelationsReader } from '../src/query/relations.mjs';
 
 function textResult(value) {
   return {
@@ -34,6 +37,8 @@ function errorResult(toolName, error) {
 export function registerQueryTools(server, options = {}) {
   const projectRoot = options.projectRoot || process.env.PMC_PROJECT_ROOT || process.cwd();
   const orchestrator = createQueryOrchestrator({ projectRoot });
+  const reader = createRelationsReader({ projectRoot });
+  const hasDb = () => existsSync(join(projectRoot, '.planning', 'project-memory-context', 'graph', 'graph.db'));
 
   server.tool(
     'pmc_query_project',
@@ -74,7 +79,8 @@ export function registerQueryTools(server, options = {}) {
     },
     async ({ symbol }) => {
       try {
-        return textResult(await orchestrator.getDependents(symbol));
+        const related = hasDb() ? await reader.relatedSymbols(symbol, 'in') : null;
+        return textResult(related ?? await orchestrator.getDependents(symbol));
       } catch (error) {
         return errorResult('pmc_get_dependents', error);
       }
@@ -89,10 +95,35 @@ export function registerQueryTools(server, options = {}) {
     },
     async ({ symbol }) => {
       try {
-        return textResult(await orchestrator.getDependencies(symbol));
+        const related = hasDb() ? await reader.relatedSymbols(symbol, 'out') : null;
+        return textResult(related ?? await orchestrator.getDependencies(symbol));
       } catch (error) {
         return errorResult('pmc_get_dependencies', error);
       }
     },
   );
+
+  server.registerTool('pmc_relations', {
+    description: 'Read typed canonical relationships from graph.db; ambiguous targets return candidates.',
+    inputSchema: z.object({
+    target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
+    direction: z.enum(['in', 'out', 'inbound', 'outbound']).default('out'),
+    relations: z.array(z.enum(['calls', 'imports', 'imports_from', 'contains', 'method'])).optional(),
+    depth: z.number().int().min(1).max(3).default(1),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.relations(args)); }
+    catch (error) { return errorResult('pmc_relations', error); }
+  });
+  server.registerTool('pmc_card', {
+    description: 'Read symbol/file facts and existing enrichment text; no role or narrative generation.',
+    inputSchema: z.object({
+    target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.card(args)); }
+    catch (error) { return errorResult('pmc_card', error); }
+  });
 }

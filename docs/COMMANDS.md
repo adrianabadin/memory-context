@@ -90,6 +90,37 @@ These scripts exist in `cli/` but are not registered as `pmc` subcommands. They 
 
 ## Context Depth Levels
 
+### Facts-only MCP tools
+
+`pmc_relations({target, direction: "in" | "out", relations?, depth?})`
+returns `{status, target, direction, depth, edges}` for a resolved target.
+Edges carry typed canonical symbol endpoints (`symbolKey`, registry `id`,
+`kind`, `path`) or file endpoints (`file|<path>`, `kind: "file"`, `path`).
+`inbound`/`outbound` are accepted direction aliases. Depth is an integer
+from 1 through 3 (default 1); relation types are `calls`, `imports`,
+`imports_from`, `contains`, and `method`. Symbol import edges are file-scoped
+and marked `scope: "file"`, not individual symbol-use claims.
+
+`pmc_card({target})` returns `{status, target, facts, enrichment}` for a
+symbol or file. Symbol enrichment is the existing semantic summary; file
+cards currently return an empty enrichment string rather than inventing a
+narrative. Targets accept a canonical key, graph node ID, name, `path#name`,
+or file path (`file|<path>` is also accepted). Ambiguous results return `{status: "ambiguous", candidates}`
+with canonical identities; missing symbols return `status: "missing"`.
+Files absent from graph nodes and native evidence also return `status: "missing"`.
+File exports, members and counts use the same validated identity registry as
+symbol queries. Unknown explicit arguments, including future `level` or
+`stopAtRole` options, are rejected rather than silently discarded.
+These readers require an existing `graph.db`, open it read-only, and close
+it per request. Missing databases produce an explicit MCP tool error and
+are never created implicitly. Dependency aliases retain their legacy array
+shape and artifact fallback for legacy schemas or partially canonicalized
+neighbors; this fallback is never native proof for the new facts tools.
+Roles, generated narratives, levels and
+role-aware stopping remain later-phase work.
+
+### CLI target resolution
+
 Symbol targets accept an exact canonical `symbolKey`, a graph node ID, a name,
 or `path#name`. Bare member names such as `findById` match terminal member
 names; multiple matches remain ambiguous and display their canonical keys.

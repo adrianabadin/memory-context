@@ -124,10 +124,23 @@ The PMC query server exposes:
 |------|-------------|
 | `pmc_query_project` | Natural-language query against project context |
 | `pmc_search_symbols` | Search symbols by semantic summary |
-| `pmc_get_dependents` | List symbols that depend on a given symbol |
-| `pmc_get_dependencies` | List symbols a given symbol depends on |
-| `pmc_get_context` | Structured context for a symbol, file, or query |
-| `pmc_trace_paths` | Trace upstream/downstream symbol paths |
+| `pmc_get_dependents` | Inbound relations alias retaining the legacy symbol-array response |
+| `pmc_get_dependencies` | Outbound relations alias retaining the legacy symbol-array response |
+| `pmc_relations` | Typed canonical edges from `graph.db`, or ambiguity candidates |
+| `pmc_card` | Symbol/file facts plus existing enrichment text; no generated role or narrative |
+
+Both standalone and composable MCP servers use the same registration module.
+The relation/card reader opens and closes an existing SQLite connection per
+request with `readOnly: true`; it never rebuilds from `graph.json`, creates
+the database, or migrates its schema. Canonical registry identities are
+validated before they enter tool results. Symbol imports preserve binding
+evidence and are explicitly file-scoped. Missing `graph.db` is a tool error;
+legacy dependency aliases retain their existing artifact fallback when no
+database exists, the schema predates native tables, or an older origin or
+related neighbor has no provable canonical identity. The
+new facts tools never promote that legacy fallback into native proof.
+No active MCP configuration or installed package is changed
+by local source implementation.
 
 ## Schema Migrations
 

@@ -115,21 +115,22 @@ test('buildInjectedPmcConfig injects pmc-query with PMC_PROJECT_ROOT', () => {
   assert.equal(injected.mcp['pmc-query'].environment.PMC_PROJECT_ROOT, '/tmp/project');
 });
 
-test('pmc query server file exists and registers the v1 query tools', async () => {
+test('pmc query server delegates to the shared registry retaining v1 query tools', async () => {
   const serverPath = resolve(PACKAGE_ROOT, 'mcp', 'pmc-query-server.mjs');
   await access(serverPath, fsConstants.F_OK);
 
   const source = await readFile(serverPath, 'utf8');
 
-  assert.match(source, /createQueryOrchestrator\(\{\s*projectRoot\s*\}\)/);
+  assert.match(source, /registerQueryTools\(server,\s*\{\s*projectRoot\s*\}\)/);
   assert.match(source, /PMC_PROJECT_ROOT \|\| process\.cwd\(\)/);
-  assert.match(source, /server\.tool\(\s*'pmc_query_project'/);
-  assert.match(source, /server\.tool\(\s*'pmc_search_symbols'/);
-  assert.match(source, /server\.tool\(\s*'pmc_get_dependents'/);
-  assert.match(source, /server\.tool\(\s*'pmc_get_dependencies'/);
+  const registry = await readFile(resolve(PACKAGE_ROOT, 'mcp', 'query-tools.mjs'), 'utf8');
+  assert.match(registry, /server\.tool\(\s*'pmc_query_project'/);
+  assert.match(registry, /server\.tool\(\s*'pmc_search_symbols'/);
+  assert.match(registry, /server\.tool\(\s*'pmc_get_dependents'/);
+  assert.match(registry, /server\.tool\(\s*'pmc_get_dependencies'/);
 });
 
-test('pmc query server exposes the four v1 tools over MCP stdio', async () => {
+test('pmc query server retains four v1 tools and adds facts tools over MCP stdio', async () => {
   const serverPath = resolve(PACKAGE_ROOT, 'mcp', 'pmc-query-server.mjs');
   const transport = new StdioClientTransport({
     command: process.execPath,
@@ -154,7 +155,7 @@ test('pmc query server exposes the four v1 tools over MCP stdio', async () => {
 
     assert.deepEqual(
       result.tools.map((tool) => tool.name).sort(),
-      ['pmc_get_dependencies', 'pmc_get_dependents', 'pmc_query_project', 'pmc_search_symbols'].sort(),
+      ['pmc_get_dependencies', 'pmc_get_dependents', 'pmc_query_project', 'pmc_search_symbols', 'pmc_relations', 'pmc_card'].sort(),
     );
     assert.equal(stderr, '');
   } finally {
