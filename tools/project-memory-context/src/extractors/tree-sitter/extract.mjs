@@ -29,25 +29,90 @@ const CAPTURE_TO_KIND = {
 };
 
 // Unit 1.2-A: structured class-member extraction is bounded to the JS/TS
-// family grammars (`.jsx` shares the javascript grammar). Other languages
-// keep their legacy method output byte-for-byte until unit 1.2-B maps them.
-const CLASS_MEMBER_LANGUAGES = new Set(['javascript', 'typescript', 'tsx']);
+// family grammars (`.jsx` shares the javascript grammar); unit 1.2-B1 extends
+// the same fail-closed container resolution to Python and Java enclosed types.
+// Every other language (C#, PHP, Go, Rust, …) keeps its legacy method output
+// byte-for-byte until a later unit maps it.
+//
+// Value = the enclosing node types whose top-level symbol capture authorizes a
+// container, keyed per language so a method can never match a foreign
+// same-named type. Java `record_declaration` is deliberately absent: record
+// bodies have no captured top-level container in this unit, so record methods
+// fail closed instead of inventing identity.
+const MEMBER_CONTAINER_TYPES = {
+  javascript: new Set(['class_declaration']),
+  typescript: new Set(['class_declaration']),
+  tsx: new Set(['class_declaration']),
+  python: new Set(['class_definition']),
+  java: new Set(['class_declaration', 'interface_declaration', 'enum_declaration']),
+};
 
 /**
- * Resolve the structured container for a class method, or null (fail closed).
- * A method only qualifies when its direct parent is the `class_body` of a
- * top-level, named `class_declaration` that produced a top-level class symbol.
+ * Resolve the structured container for a class method, or null (fail closed),
+ * dispatching to the small language-specific resolver over the real AST.
+ */
+function resolveMethodContainer(methodNode, topLevelContainers, rawLanguage) {
+  if (rawLanguage === 'python') return resolvePythonMethodContainer(methodNode, topLevelContainers);
+  if (rawLanguage === 'java') return resolveJavaMethodContainer(methodNode, topLevelContainers);
+  return resolveJavaScriptMethodContainer(methodNode, topLevelContainers);
+}
+
+/**
+ * JS/TS/TSX container resolution (unit 1.2-A, unchanged behavior). A method
+ * only qualifies when its direct parent is the `class_body` of a top-level,
+ * named `class_declaration` that produced a top-level class symbol.
  * Object-literal methods (parent `object`), anonymous default classes (node
  * type `class`), nested/abstract containers and non-identifier method names
  * therefore never acquire an invented container.
  */
-function resolveMethodContainer(methodNode, topLevelClasses) {
+function resolveJavaScriptMethodContainer(methodNode, topLevelContainers) {
   const body = methodNode.parent;
   if (body?.type !== 'class_body') return null;
   const classNode = body.parent;
   if (classNode?.type !== 'class_declaration') return null;
   if (!isTopLevel(classNode)) return null;
-  return topLevelClasses.get(classNode.startIndex) ?? null;
+  return topLevelContainers.get(classNode.startIndex) ?? null;
+}
+
+/**
+ * Python container resolution (unit 1.2-B1): ordinary methods are a
+ * `function_definition` and decorated methods a `decorated_definition` wrapper
+ * — both must be the direct child of the class body `block`, which must belong
+ * to an actual named top-level `class_definition` that produced a class symbol
+ * in the pre-pass (module parent, keyed by the class AST span). Nested classes,
+ * classes without a captured symbol (including decorated top-level classes,
+ * which existing extraction never captured) and functions inside other bodies
+ * therefore fail closed; no container is ever invented.
+ */
+function resolvePythonMethodContainer(methodNode, topLevelContainers) {
+  const block = methodNode.parent;
+  if (block?.type !== 'block') return null;
+  const classNode = block.parent;
+  if (classNode?.type !== 'class_definition') return null;
+  if (!isTopLevel(classNode)) return null;
+  return topLevelContainers.get(classNode.startIndex) ?? null;
+}
+
+/**
+ * Java container resolution (unit 1.2-B1) over the actual grammar shapes:
+ * class/record bodies are `class_body`, interfaces use `interface_body`, and
+ * enum members sit in `enum_body_declarations` under `enum_body`. The resolved
+ * type node must be a named top-level class/interface/enum that produced a
+ * top-level symbol in the pre-pass (keyed by the type AST span). Nested types
+ * (no nested parent identity without an existing container symbol) and record
+ * bodies fail closed; enum-constant bodies (`enum_constant` parent) also fail
+ * closed.
+ */
+function resolveJavaMethodContainer(methodNode, topLevelContainers) {
+  const body = methodNode.parent;
+  let typeNode = null;
+  if (body?.type === 'class_body') typeNode = body.parent;
+  else if (body?.type === 'interface_body') typeNode = body.parent;
+  else if (body?.type === 'enum_body_declarations') typeNode = body.parent?.parent;
+  else return null;
+  if (!MEMBER_CONTAINER_TYPES.java.has(typeNode?.type)) return null;
+  if (!isTopLevel(typeNode)) return null;
+  return topLevelContainers.get(typeNode.startIndex) ?? null;
 }
 
 /**
@@ -209,6 +274,141 @@ function isExplicitThisReceiver(paramChild) {
   return pattern?.type === 'this';
 }
 
+/**
+ * Unit 1.2-B1: count declared parameter slots for a Python class member.
+ *
+ * This is the syntactic declared signature of the method — never a runtime-call
+ * guarantee, and decorator return types are never guessed:
+ * - every top-level named parameter child counts exactly one slot (identifier,
+ *   default, typed, typed-default and splat forms alike); `comment` nodes and
+ *   the `*` / `/` separator markers are not slots;
+ * - unless the method carries the known syntactic `@staticmethod` decorator
+ *   (bare identifier only — dotted/call forms are not assumed), the FIRST
+ *   declared positional slot is the bound receiver and is excluded BY POSITION,
+ *   not by parameter name (so renamed receivers are excluded and real
+ *   arguments literally named `self`/`cls` after the receiver still count);
+ * - an undecorated, `@classmethod` or unknown-decorator method all follow
+ *   Python's ordinary bound-method convention exactly as written — a
+ *   syntactic ordinary convention only: no runtime-call guarantee is implied
+ *   and decorator return types are never resolved;
+ * - a first variadic is not an explicit positional receiver slot: it counts
+ *   one slot and is never removed wholesale. This holds for the untyped
+ *   `*args`/`**kwargs` splat forms AND for a `typed_parameter` whose FIRST
+ *   NAMED CHILD is a `list_splat_pattern` (`*args: int`) or
+ *   `dictionary_splat_pattern` (`**kw: int`) — the distinction is the actual
+ *   AST child kind, never parameter text or an identifier guess. After the
+ *   star the remaining keyword-only slots all count.
+ *
+ * Only the Python member path calls this counter; top-level Python functions
+ * keep the legacy `countArity` rule byte-for-byte (including its historical
+ * self/cls name skip), so historical global key bytes never change.
+ */
+function countPythonMemberArity(symbolNode) {
+  let funcNode = symbolNode;
+  if (funcNode.type === 'decorated_definition') {
+    funcNode = funcNode.children.find(c => c.type === 'function_definition') ?? funcNode;
+  }
+  const paramNode = funcNode.children.find(c => c.type === 'parameters');
+  if (!paramNode) return 0;
+
+  const receiverAllowed = !hasStaticMethodDecorator(symbolNode);
+  // Receiver shapes: bare identifiers plus default/typed-default forms. A
+  // typed_parameter is judged by its inner (first named) child instead, so a
+  // typed splat can never enter this set through the wrapper node type.
+  const positionalTypes = new Set([
+    'identifier', 'default_parameter', 'typed_default_parameter',
+  ]);
+  let count = 0;
+  let receiverTaken = false;
+  let afterStar = false;
+
+  for (const child of paramNode.children) {
+    if (!child.isNamed) continue;
+    if (child.type === 'comment') continue; // parameter comments are not slots
+    if (child.type === 'positional_separator') continue; // `/` marker, not a slot
+    if (child.type === 'keyword_separator') { afterStar = true; continue; // `*` marker, not a slot
+    }
+    count++;
+    if (child.type === 'list_splat_pattern') {
+      afterStar = true; // `*args` occupies the star position (counts one)
+      continue;
+    }
+    // Actual-AST child-kind distinction for typed parameters: `*args: int` /
+    // `**kw: int` are typed_parameter → list/dictionary splat pattern, i.e.
+    // variadic shapes (never positional receiver candidates), while
+    // `name: T` is typed_parameter → identifier (a real positional slot).
+    let shapeType = child.type;
+    if (child.type === 'typed_parameter') {
+      shapeType = child.children.find(c => c.isNamed)?.type ?? null;
+      if (shapeType === 'list_splat_pattern') {
+        afterStar = true; // typed `*args: int` counts one, elides no slot
+        continue;
+      }
+      if (shapeType === 'dictionary_splat_pattern') continue; // typed `**kw: int` counts one
+    }
+    if (
+      receiverAllowed && !receiverTaken && !afterStar &&
+      positionalTypes.has(shapeType)
+    ) {
+      count--; // first explicit positional slot is the bound receiver
+      receiverTaken = true;
+    }
+  }
+  return count;
+}
+
+/**
+ * Syntactic `@staticmethod` detection for Python members: a `decorator` child
+ * of the `decorated_definition` whose expression is the bare identifier
+ * `staticmethod`. Dotted (`a.b.staticmethod`), called (`staticmethod()`) and
+ * every other/unknown decorator are NOT treated as static — they keep the
+ * ordinary syntactic convention as written (receiver excluded by position; no
+ * runtime guarantee, decorator return types are never resolved).
+ */
+function hasStaticMethodDecorator(symbolNode) {
+  if (symbolNode.type !== 'decorated_definition') return false;
+  return symbolNode.children
+    .filter(c => c.type === 'decorator')
+    .some(decorator => decorator.children.some(
+      gc => gc.isNamed && gc.type === 'identifier' && gc.text === 'staticmethod',
+    ));
+}
+
+/**
+ * Unit 1.2-B1: count declared parameter slots for a Java class member.
+ *
+ * Every named child of `formal_parameters` counts one slot — `formal_parameter`
+ * and varargs `spread_parameter` are one slot each — while comment nodes
+ * (`line_comment`/`block_comment`) are ignored and an actual AST
+ * `receiver_parameter` (the explicit `Type this` form) is excluded because it
+ * is a receiver, not an argument. Java has no implicit receiver node, so
+ * ordinary and static methods share this same syntactic rule. Only the Java
+ * member path calls this counter; every other language keeps `countArity`.
+ */
+function countJavaMemberArity(symbolNode) {
+  const paramNode = symbolNode.children?.find(c => c.type === 'formal_parameters');
+  if (!paramNode) return 0;
+  let count = 0;
+  for (const child of paramNode.children) {
+    if (!child.isNamed) continue;
+    if (child.type === 'comment' || child.type.endsWith('_comment')) continue;
+    if (child.type === 'receiver_parameter') continue; // explicit receiver, not an argument
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Dispatch the member-specific declared-slot counter for unit 1.2-A/B1
+ * containers. The legacy `countArity` below is deliberately left byte-for-
+ * byte as-is (historical global/C#/PHP/other-language keys).
+ */
+function countMemberArityForLanguage(symbolNode, rawLanguage) {
+  if (rawLanguage === 'python') return countPythonMemberArity(symbolNode);
+  if (rawLanguage === 'java') return countJavaMemberArity(symbolNode);
+  return countMemberArity(symbolNode); // JS/TS/TSX (unit 1.2-B0, unchanged)
+}
+
 function normalizeLanguageName(rawLanguage) {
   // tree-sitter language names vs PMC language names
   if (rawLanguage === 'typescript') return 'ts';
@@ -255,23 +455,28 @@ export async function extractSymbolsForFile({ filePath, content }) {
   const normalizedFilePath = filePath.replace(/\\/g, '/');
   const lines = content.split('\n');
 
-  // Pre-pass (JS/TS/TSX only): map every top-level named class to its name so
-  // member methods can resolve a structured container regardless of capture
-  // ordering. Classes without a top-level class symbol (nested, abstract,
-  // anonymous) are deliberately absent, which makes their methods fail closed.
-  const topLevelClasses = new Map();
-  if (CLASS_MEMBER_LANGUAGES.has(rawLanguage)) {
+  // Pre-pass (JS/TS/TSX/Python/Java): map every top-level named container
+  // (class, and for Java also interface/enum captures) to its name so member
+  // methods can resolve a structured container regardless of capture ordering.
+  // Containers without a top-level symbol (nested, abstract, anonymous,
+  // decorated Python classes) are deliberately absent, which makes their
+  // methods fail closed. The map is keyed by the container AST span so a
+  // method can only ever resolve its actual enclosing type, never a foreign
+  // same-named one.
+  const containerTypes = MEMBER_CONTAINER_TYPES[rawLanguage];
+  const topLevelContainers = new Map();
+  if (containerTypes) {
     for (const cap of captures) {
-      if (cap.name !== 'class') continue;
-      const classNode = cap.node;
-      if (classNode.type !== 'class_declaration' || !isTopLevel(classNode)) continue;
+      if (cap.name !== 'class' && cap.name !== 'interface') continue;
+      const containerNode = cap.node;
+      if (!containerTypes.has(containerNode.type) || !isTopLevel(containerNode)) continue;
       const nameCap = captures.find(
         c =>
           c.name === 'name' &&
-          c.node.startIndex >= classNode.startIndex &&
-          c.node.endIndex <= classNode.endIndex
+          c.node.startIndex >= containerNode.startIndex &&
+          c.node.endIndex <= containerNode.endIndex
       );
-      if (nameCap) topLevelClasses.set(classNode.startIndex, nameCap.node.text);
+      if (nameCap) topLevelContainers.set(containerNode.startIndex, nameCap.node.text);
     }
   }
 
@@ -290,12 +495,12 @@ export async function extractSymbolsForFile({ filePath, content }) {
 
     const symbolNode = cap.node;
 
-    // JS/TS/TSX methods are class members, not top-level nodes: they resolve a
-    // structured container instead of the isTopLevel filter. A method whose
-    // container cannot be resolved fails closed (no invented identity).
-    const isClassMember = kind === 'method' && CLASS_MEMBER_LANGUAGES.has(rawLanguage);
+    // Unit 1.2-A/B1 methods are class members, not top-level nodes: they
+    // resolve a structured container instead of the isTopLevel filter. A method
+    // whose container cannot be resolved fails closed (no invented identity).
+    const isClassMember = kind === 'method' && containerTypes != null;
     const container = isClassMember
-      ? resolveMethodContainer(symbolNode, topLevelClasses)
+      ? resolveMethodContainer(symbolNode, topLevelContainers, rawLanguage)
       : null;
     // Everything else must be a top-level symbol.
     if (isClassMember) {
@@ -336,10 +541,10 @@ export async function extractSymbolsForFile({ filePath, content }) {
       ? 'member'
       : inferExportScope(rawLanguage, name, symbolNode);
     const codeFragment = lines.slice(startLine - 1, endLine).join('\n');
-    // Unit 1.2-B0: structured JS/TS/TSX members use the member-specific
+    // Unit 1.2-B0/B1: structured members use the language-specific
     // declared-slot counter; everything else keeps the legacy countArity.
     const arity = container
-      ? countMemberArity(symbolNode)
+      ? countMemberArityForLanguage(symbolNode, rawLanguage)
       : countArity(symbolNode, kind);
 
     symbolPromises.push(
