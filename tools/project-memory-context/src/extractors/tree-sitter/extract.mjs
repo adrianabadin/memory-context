@@ -28,6 +28,28 @@ const CAPTURE_TO_KIND = {
   method: 'method',
 };
 
+// Unit 1.2-A: structured class-member extraction is bounded to the JS/TS
+// family grammars (`.jsx` shares the javascript grammar). Other languages
+// keep their legacy method output byte-for-byte until unit 1.2-B maps them.
+const CLASS_MEMBER_LANGUAGES = new Set(['javascript', 'typescript', 'tsx']);
+
+/**
+ * Resolve the structured container for a class method, or null (fail closed).
+ * A method only qualifies when its direct parent is the `class_body` of a
+ * top-level, named `class_declaration` that produced a top-level class symbol.
+ * Object-literal methods (parent `object`), anonymous default classes (node
+ * type `class`), nested/abstract containers and non-identifier method names
+ * therefore never acquire an invented container.
+ */
+function resolveMethodContainer(methodNode, topLevelClasses) {
+  const body = methodNode.parent;
+  if (body?.type !== 'class_body') return null;
+  const classNode = body.parent;
+  if (classNode?.type !== 'class_declaration') return null;
+  if (!isTopLevel(classNode)) return null;
+  return topLevelClasses.get(classNode.startIndex) ?? null;
+}
+
 /**
  * Determine if a node is at the top level of the file (not nested inside
  * another class/function body). For Python the module is the direct parent;
@@ -190,6 +212,26 @@ export async function extractSymbolsForFile({ filePath, content }) {
   const normalizedFilePath = filePath.replace(/\\/g, '/');
   const lines = content.split('\n');
 
+  // Pre-pass (JS/TS/TSX only): map every top-level named class to its name so
+  // member methods can resolve a structured container regardless of capture
+  // ordering. Classes without a top-level class symbol (nested, abstract,
+  // anonymous) are deliberately absent, which makes their methods fail closed.
+  const topLevelClasses = new Map();
+  if (CLASS_MEMBER_LANGUAGES.has(rawLanguage)) {
+    for (const cap of captures) {
+      if (cap.name !== 'class') continue;
+      const classNode = cap.node;
+      if (classNode.type !== 'class_declaration' || !isTopLevel(classNode)) continue;
+      const nameCap = captures.find(
+        c =>
+          c.name === 'name' &&
+          c.node.startIndex >= classNode.startIndex &&
+          c.node.endIndex <= classNode.endIndex
+      );
+      if (nameCap) topLevelClasses.set(classNode.startIndex, nameCap.node.text);
+    }
+  }
+
   // Group captures: we get pairs of (kind-capture, name-capture) per symbol.
   // We want only top-level symbols. Walk captures in order; when we see a
   // kind capture (@class / @function / …) followed by a @name capture for the
@@ -205,8 +247,19 @@ export async function extractSymbolsForFile({ filePath, content }) {
 
     const symbolNode = cap.node;
 
-    // Only top-level symbols
-    if (!isTopLevel(symbolNode)) continue;
+    // JS/TS/TSX methods are class members, not top-level nodes: they resolve a
+    // structured container instead of the isTopLevel filter. A method whose
+    // container cannot be resolved fails closed (no invented identity).
+    const isClassMember = kind === 'method' && CLASS_MEMBER_LANGUAGES.has(rawLanguage);
+    const container = isClassMember
+      ? resolveMethodContainer(symbolNode, topLevelClasses)
+      : null;
+    // Everything else must be a top-level symbol.
+    if (isClassMember) {
+      if (!container) continue;
+    } else if (!isTopLevel(symbolNode)) {
+      continue;
+    }
 
     // Find the associated @name capture (next capture that is 'name' and whose
     // node is a descendant of symbolNode)
@@ -223,11 +276,22 @@ export async function extractSymbolsForFile({ filePath, content }) {
     const startLine = symbolNode.startPosition.row + 1; // 1-indexed
     const endLine = symbolNode.endPosition.row + 1;     // 1-indexed
 
-    const dedupeKey = `${kind}:${name}:${startLine}`;
+    // Container-qualified JS/TS/TSX members dedupe by their actual AST
+    // declaration span: repeated captures of the same node collapse, while
+    // distinct same-line declarations (accessor pairs, same-key duplicates)
+    // survive as separate records so future collision handling can see them.
+    // Historical non-member dedupe (functions/classes/C#/PHP) is untouched.
+    const dedupeKey = container
+      ? `${kind}:${container}:${symbolNode.startIndex}:${symbolNode.endIndex}`
+      : `${kind}:${name}:${startLine}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    const exportScope = inferExportScope(rawLanguage, name, symbolNode);
+    // Members of a structured container have the effective export scope
+    // `member` (D2); everything else keeps the language inference.
+    const exportScope = container
+      ? 'member'
+      : inferExportScope(rawLanguage, name, symbolNode);
     const codeFragment = lines.slice(startLine - 1, endLine).join('\n');
     const arity = countArity(symbolNode, kind);
 
@@ -238,6 +302,7 @@ export async function extractSymbolsForFile({ filePath, content }) {
           filePath: normalizedFilePath,
           kind,
           name,
+          ...(container && { container }),
           exportScope,
           ...(arity !== undefined && { arity }),
           range: { startLine, endLine },

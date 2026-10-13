@@ -7,3 +7,6 @@
     value: [(arrow_function)(function_expression)])) @function
 (type_alias_declaration name: (type_identifier) @name) @type
 (enum_declaration name: (identifier) @name) @class
+(class_body
+  (method_definition
+    name: [(property_identifier) (private_property_identifier)] @name) @method)
