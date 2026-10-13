@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
-import { NATIVE_EDGES_SCHEMA_SQL, persistNativeRelations, listNativeEdges, getNativeEdgesFor } from './native-relations.mjs';
+import { NATIVE_EDGES_SCHEMA_SQL, persistNativeRelations, listNativeEdges, getNativeEdgesFor, listNativeImportBindings } from './native-relations.mjs';
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -492,6 +492,10 @@ export function createSqliteGraphStore(db) {
 
     getNativeEdgesFor(endpointId) {
       return getNativeEdgesFor(db, endpointId);
+    },
+
+    listNativeImportBindings() {
+      return listNativeImportBindings(db);
     },
 
     close() {

@@ -16,7 +16,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { buildFromGraphJson, createSqliteGraphStore } from '../src/graph-store/graph-db.mjs';
 import { NATIVE_EDGES_SCHEMA_SQL, persistNativeRelations } from '../src/graph-store/native-relations.mjs';
 import { extractNativeCalls } from '../src/relations/native-calls.mjs';
-import { extractNativeImports } from '../src/relations/native-imports.mjs';
+import { extractNativeImportBindings } from '../src/relations/native-import-bindings.mjs';
 import { buildFacts } from '../src/cards/facts.mjs';
 
 // ── Fixture store ─────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ before(async () => {
     files.push({ path, content: await readFile(new URL(`./fixtures/layered-app/${path}`, import.meta.url), 'utf8') });
   }
   const calls = await extractNativeCalls({ files });
-  const imports = await extractNativeImports({ files });
+  const imports = await extractNativeImportBindings({ files });
 
   const db = new DatabaseSync(':memory:');
   db.exec(`
@@ -137,18 +137,11 @@ test('q12 + plan example: tests are the test-file symbols exercising the target 
   assert.ok(forMember.every((item) => item.symbolKey.startsWith('ts|tests/user.service.test.ts|')));
 });
 
-test('q11 (honest derivation): symbol imports are the exported top-level symbols of imported files', () => {
-  // Golden q11 expects exactly {User, UserService}. Import BINDINGS are not
-  // persisted by the unit-C seam (native_edges stores endpoints and relation
-  // only), so facts cannot be binding-exact: UserEntity is exported from the
-  // same imported file user.model.ts and honestly appears alongside User.
-  // This over-inclusion is the documented q11 gap, not a fabricated edge.
+test('q11: symbol imports match the unchanged golden exactly', async () => {
+  const golden = JSON.parse(await readFile(new URL('./fixtures/layered-app/expected.json', import.meta.url), 'utf8'));
   const facts = buildFacts(store, USER_CONTROLLER);
-  assert.deepEqual(facts.imports, [
-    { symbolKey: USER_ENTITY, relation: 'imports', kind: 'class' },
-    { symbolKey: USER, relation: 'imports', kind: 'interface' },
-    { symbolKey: USER_SERVICE, relation: 'imports', kind: 'class' },
-  ]);
+  assert.deepEqual(facts.imports.map(item => item.symbolKey),
+    [...golden.questions.find(question => question.id === 'q11-imports-user-controller').expected].sort());
 });
 
 // ── Depth option ──────────────────────────────────────────────────────────────

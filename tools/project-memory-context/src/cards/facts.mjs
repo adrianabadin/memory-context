@@ -96,11 +96,11 @@ function walkCalls(adjacency, startId, depth) {
  * construction. `depth` (default 1, positive integer) bounds the transitive
  * expansion of those named calls; imports stay file-level and one-hop.
  *
- * Symbol-level `imports`/`importedBy`/`tests` lift file-level native import
- * edges to the exported top-level registry symbols of the related files. The
- * unit-C seam persists endpoints and relation only (not the raw import
- * bindings), so the lift cannot be binding-exact; it stays conservative and
- * references only registry endpoints that exist. `tests` entries are symbols
+ * Symbol-level `imports` consume persisted, uniquely resolved binding targets
+ * that still exist in the registry. Legacy missing binding evidence returns
+ * no guessed symbol imports. `importedBy`/`tests` retain the file-scoped lift
+ * to exported symbols in importing files; they are not per-symbol usage
+ * claims. `tests` entries are symbols
  * located in test files whose file imports the target's file (file-scoped
  * path items when the target itself is a file).
  *
@@ -152,7 +152,6 @@ export function buildFacts(graphDb, symbolKey, { depth } = {}) {
   const filePath = node?.source_file ?? parsed?.path ?? null;
   const fileId = filePath === null ? null : FILE_PREFIX + filePath;
 
-  const importedFiles = fileId === null ? [] : importEdges.filter((e) => e.source.id === fileId).map((e) => e.target.path ?? e.target.id.slice(FILE_PREFIX.length));
   const importingFiles = fileId === null ? [] : importEdges.filter((e) => e.target.id === fileId).map((e) => e.source.path ?? e.source.id.slice(FILE_PREFIX.length));
   const testFiles = importingFiles.filter(isTestFilePath);
 
@@ -164,7 +163,14 @@ export function buildFacts(graphDb, symbolKey, { depth } = {}) {
 
   const callers = walkCalls(inbound, symbolKey, hops);
   const callees = walkCalls(outbound, symbolKey, hops);
-  const imports = lift(importedFiles, 'imports');
+  const bindings = typeof graphDb.listNativeImportBindings === 'function' ? graphDb.listNativeImportBindings() : [];
+  const resolved = new Map();
+  for (const binding of bindings.filter(binding => binding.sourceId === fileId && binding.target)) {
+    const target = graphDb.getNode(binding.target.id);
+    if (!target || target.source_file !== binding.target.path) continue;
+    resolved.set(binding.target.id, { symbolKey: binding.target.id, relation: 'imports', kind: binding.target.kind });
+  }
+  const imports = [...resolved.values()].sort((a, b) => byKey(a.symbolKey, b.symbolKey));
   const importedBy = lift(importingFiles, 'imports');
   const tests = lift(testFiles, 'tests');
 

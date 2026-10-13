@@ -32,6 +32,12 @@ CREATE TABLE IF NOT EXISTS native_edges (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_native_edges_edge   ON native_edges(source_id, target_id, relation);
 CREATE INDEX IF NOT EXISTS idx_native_edges_source ON native_edges(source_id, relation);
 CREATE INDEX IF NOT EXISTS idx_native_edges_target ON native_edges(target_id, relation);
+CREATE TABLE IF NOT EXISTS native_import_bindings (
+  source_id TEXT NOT NULL,
+  file_id TEXT NOT NULL,
+  evidence TEXT NOT NULL,
+  PRIMARY KEY (source_id, file_id, evidence)
+);
 `;
 
 const isNonEmptyString = value => typeof value === 'string' && value.length > 0;
@@ -85,7 +91,28 @@ export function persistNativeRelations(db, extractResult) {
     if (fact.target === undefined) {
       throw new TypeError('resolved native relation facts must carry a canonical target endpoint');
     }
-    return { source: endpointOf(fact.source, 'source'), target: endpointOf(fact.target, 'target'), relation: fact.relation };
+    const source = endpointOf(fact.source, 'source'); const target = endpointOf(fact.target, 'target');
+    if (fact.bindings !== undefined && !Array.isArray(fact.bindings)) throw new TypeError('native import bindings must be an array');
+    const bindings = (fact.bindings ?? []).map(binding => {
+      if (fact.relation !== 'imports' || source.kind !== 'file' || target.kind !== 'file' ||
+          !binding || !isNonEmptyString(binding.imported) || !isNonEmptyString(binding.local) || typeof binding.typeOnly !== 'boolean') {
+        throw new TypeError('native import bindings require file endpoints and valid syntax metadata');
+      }
+      const evidence = { imported: binding.imported, local: binding.local, typeOnly: binding.typeOnly };
+      if (binding.target !== undefined) {
+        const resolved = endpointOf(binding.target, 'binding target');
+        const parts = resolved.id.split('|');
+        if (parts.length !== 6 || parts.some(part => !part) || binding.target.symbolKey !== resolved.id ||
+            parts[1] !== target.id.slice(5) || parts[2] !== resolved.kind || binding.target.path !== parts[1] ||
+            resolved.kind === 'file' || binding.imported === '*') throw new TypeError('native import binding target must identify a symbol in its target file');
+        evidence.target = { ...resolved, symbolKey: resolved.id, path: parts[1] };
+      } else if (binding.reason !== undefined) {
+        if (!isNonEmptyString(binding.reason)) throw new TypeError('native import binding reason must be a nonempty string');
+        evidence.reason = binding.reason;
+      }
+      return evidence;
+    });
+    return { source, target, relation: fact.relation, bindings };
   });
 
   const unresolved = {};
@@ -95,18 +122,48 @@ export function persistNativeRelations(db, extractResult) {
   }
 
   // Phase 2 — write; the unique index makes repeated triples idempotent.
+  db.exec('SAVEPOINT native_relation_batch');
+  try {
   db.exec(NATIVE_EDGES_SCHEMA_SQL);
   const insert = db.prepare(
     'INSERT OR IGNORE INTO native_edges (source_id, target_id, relation, source_kind, target_kind) VALUES (?, ?, ?, ?, ?)',
   );
   let inserted = 0;
   let duplicates = 0;
+  const insertBinding = db.prepare('INSERT OR IGNORE INTO native_import_bindings (source_id, file_id, evidence) VALUES (?, ?, ?)');
   for (const edge of validated) {
     const result = insert.run(edge.source.id, edge.target.id, edge.relation, edge.source.kind, edge.target.kind);
     if (result.changes === 1) inserted += 1;
     else duplicates += 1;
+    for (const binding of edge.bindings) insertBinding.run(edge.source.id, edge.target.id, JSON.stringify(binding));
   }
+  db.exec('RELEASE native_relation_batch');
   return { inserted, duplicates, unresolved };
+  } catch (error) {
+    db.exec('ROLLBACK TO native_relation_batch; RELEASE native_relation_batch');
+    throw error;
+  }
+}
+
+// Evidence accumulates idempotently for a caller-owned immutable snapshot.
+// This is not a live refresh/replacement API; conflicting binding evidence
+// is retained and withheld by readers rather than selecting a last writer.
+export function listNativeImportBindings(db) {
+  const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'native_import_bindings'").get();
+  if (!exists) return [];
+  const rows = db.prepare('SELECT source_id, file_id, evidence FROM native_import_bindings ORDER BY source_id, file_id, evidence').all();
+  const groups = new Map();
+  for (const row of rows) {
+    const binding = JSON.parse(row.evidence);
+    const key = JSON.stringify([row.source_id, row.file_id, binding.imported, binding.local, binding.typeOnly]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ sourceId: row.source_id, fileId: row.file_id, ...binding });
+  }
+  return [...groups.values()].map(group => {
+    if (group.length === 1) return group[0];
+    const { target, reason, ...binding } = group[0];
+    return { ...binding, reason: 'ambiguous-binding-evidence' };
+  });
 }
 
 /**
