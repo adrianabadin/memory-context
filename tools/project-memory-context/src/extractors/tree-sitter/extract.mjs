@@ -31,8 +31,8 @@ const CAPTURE_TO_KIND = {
 // Unit 1.2-A: structured class-member extraction is bounded to the JS/TS
 // family grammars (`.jsx` shares the javascript grammar); unit 1.2-B1 extends
 // the same fail-closed container resolution to Python and Java enclosed types.
-// Every other language (C#, PHP, Go, Rust, …) keeps its legacy method output
-// byte-for-byte until a later unit maps it.
+// Unit 1.2-B2 resolves Go receivers and Rust impl self types directly, without
+// requiring a same-file type symbol. C#/PHP and other legacy output is unchanged.
 //
 // Value = the enclosing node types whose top-level symbol capture authorizes a
 // container, keyed per language so a method can never match a foreign
@@ -52,6 +52,8 @@ const MEMBER_CONTAINER_TYPES = {
  * dispatching to the small language-specific resolver over the real AST.
  */
 function resolveMethodContainer(methodNode, topLevelContainers, rawLanguage) {
+  if (rawLanguage === 'go') return resolveGoMethodContainer(methodNode);
+  if (rawLanguage === 'rust') return resolveRustMethodContainer(methodNode);
   if (rawLanguage === 'python') return resolvePythonMethodContainer(methodNode, topLevelContainers);
   if (rawLanguage === 'java') return resolveJavaMethodContainer(methodNode, topLevelContainers);
   return resolveJavaScriptMethodContainer(methodNode, topLevelContainers);
@@ -113,6 +115,42 @@ function resolveJavaMethodContainer(methodNode, topLevelContainers) {
   if (!MEMBER_CONTAINER_TYPES.java.has(typeNode?.type)) return null;
   if (!isTopLevel(typeNode)) return null;
   return topLevelContainers.get(typeNode.startIndex) ?? null;
+}
+
+/** Go methods carry a separate receiver list, never an enclosing type body.
+ * Only a single simple named type (optionally one pointer) is supported here;
+ * generic/scoped/complex receivers fail closed. No same-file type is invented.
+ */
+function resolveGoMethodContainer(methodNode) {
+  if (methodNode.type !== 'method_declaration' || !isTopLevel(methodNode)) return null;
+  const receiver = methodNode.childForFieldName('receiver');
+  if (!receiver || receiver.hasError) return null;
+  const slots = receiver.namedChildren.filter(c => c.type !== 'comment');
+  if (slots.length !== 1 || slots[0].type !== 'parameter_declaration') return null;
+  if (slots[0].childrenForFieldName('name').length > 1) return null;
+  let type = slots[0].childForFieldName('type');
+  if (type?.type === 'pointer_type') {
+    const children = type.namedChildren.filter(c => c.type !== 'comment');
+    if (children.length !== 1) return null;
+    type = children[0];
+  }
+  return type?.type === 'type_identifier' ? type.text : null;
+}
+
+/** Rust ownership comes from the enclosing top-level impl's `type` field,
+ * never its `trait`. Only simple named self types are supported. A generic
+ * binder is not a concrete container; scoped/generic/complex self types and
+ * nested impls remain unresolved. The old impl-class capture is preserved.
+ */
+function resolveRustMethodContainer(methodNode) {
+  const body = methodNode.parent;
+  const impl = body?.parent;
+  if (body?.type !== 'declaration_list' || impl?.type !== 'impl_item' || !isTopLevel(impl)) return null;
+  const type = impl.childForFieldName('type');
+  if (type?.type !== 'type_identifier' || type.hasError || type.text === 'Self') return null;
+  const binders = impl.childForFieldName('type_parameters')?.namedChildren ?? [];
+  if (binders.some(b => b.childForFieldName('name')?.text === type.text)) return null;
+  return type.text;
 }
 
 /**
@@ -403,7 +441,30 @@ function countJavaMemberArity(symbolNode) {
  * containers. The legacy `countArity` below is deliberately left byte-for-
  * byte as-is (historical global/C#/PHP/other-language keys).
  */
+// B2: Go grouped declarations contribute one slot per name; unnamed types
+// and variadics contribute one. Select the parameters FIELD, not the earlier
+// receiver list. Rust self_parameter and typed self patterns are receivers;
+// argument patterns (including destructuring) each contribute one slot.
+function countGoRustMemberArity(symbolNode, rawLanguage) {
+  const params = symbolNode.childForFieldName('parameters');
+  if (!params) return 0;
+  let count = 0;
+  for (const child of params.namedChildren) {
+    if (rawLanguage === 'go') {
+      if (child.type !== 'parameter_declaration' && child.type !== 'variadic_parameter_declaration') continue;
+      count += Math.max(1, child.childrenForFieldName('name').length);
+    } else {
+      if (child.type === 'self_parameter') continue;
+      if (child.type !== 'parameter' && child.type !== 'variadic_parameter') continue;
+      if (child.childForFieldName('pattern')?.type === 'self') continue;
+      count++;
+    }
+  }
+  return count;
+}
+
 function countMemberArityForLanguage(symbolNode, rawLanguage) {
+  if (rawLanguage === 'go' || rawLanguage === 'rust') return countGoRustMemberArity(symbolNode, rawLanguage);
   if (rawLanguage === 'python') return countPythonMemberArity(symbolNode);
   if (rawLanguage === 'java') return countJavaMemberArity(symbolNode);
   return countMemberArity(symbolNode); // JS/TS/TSX (unit 1.2-B0, unchanged)
@@ -498,7 +559,7 @@ export async function extractSymbolsForFile({ filePath, content }) {
     // Unit 1.2-A/B1 methods are class members, not top-level nodes: they
     // resolve a structured container instead of the isTopLevel filter. A method
     // whose container cannot be resolved fails closed (no invented identity).
-    const isClassMember = kind === 'method' && containerTypes != null;
+    const isClassMember = kind === 'method' && (containerTypes != null || rawLanguage === 'go' || rawLanguage === 'rust');
     const container = isClassMember
       ? resolveMethodContainer(symbolNode, topLevelContainers, rawLanguage)
       : null;
