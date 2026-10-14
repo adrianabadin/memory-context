@@ -81,10 +81,17 @@ afterEach(async () => {
   if (failures.length) throw new AggregateError(failures, 'test teardown failed');
 });
 
+// N4 (plan 3.4 / spec S10) makes trivial symbols (getters, or fewer than 5
+// lines without branching) skip the model entirely in explicit narrative mode.
+// These fixtures exist to prove the provider/schema/retry loops, so the symbol
+// must stay NON-TRIVIAL: six declared code lines with an actual branch.
 const USER_TS = [
   "import { db } from './db';",
   '',
   'export async function getUser(id) {',
+  '  if (!id) {',
+  '    throw new TypeError(`getUser requires an id`);',
+  '  }',
   '  return db.users.find(id);',
   '}',
   '',
@@ -106,7 +113,7 @@ async function createQueueFixture() {
     language: 'ts',
     filePath: 'src/user.ts',
     codeHash: 'hash-a',
-    range: { startLine: 3, endLine: 5 },
+    range: { startLine: 3, endLine: 8 },
     status: 'pending',
   };
 

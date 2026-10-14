@@ -19,6 +19,7 @@ import { spawnBackground } from '../src/platform.mjs';
 import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-index.mjs';
 import { buildNarrativePromptV2, normalizeSymbolKeys, PROMPT_VERSION } from '../src/cards/prompt-v2.mjs';
 import { NARRATIVE_SCHEMA, generateValidatedNarrative } from '../src/cards/narrative-schema.mjs';
+import { tryBuildTrivialNarrative } from '../src/cards/trivial-template.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -205,7 +206,7 @@ function createAgentSubagentProvider() {
  * @param {string} projectRoot
  * @param {object} [options]
  * @param {object} [options.narrativeContext] - authoritative caller-owned facts/roles context
- * @returns {Promise<{prompt: string, totalLines: number, promptVersion?: string, schema?: object}>}
+ * @returns {Promise<{prompt: string, totalLines: number, promptVersion?: string, schema?: object, trivial?: {narrative: object, proof: object}>}
  */
 export async function buildSymbolPromptMeta(symbol, projectRoot, options) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
@@ -223,7 +224,28 @@ export async function buildSymbolPromptMeta(symbol, projectRoot, options) {
   }
 
   const { prompt } = buildNarrativePromptV2({ symbol, codeSection, importsSection, narrativeContext });
-  return { prompt, totalLines, promptVersion: PROMPT_VERSION, schema: NARRATIVE_SCHEMA };
+
+  // Plan 3.4 / spec S10: attach typed trivial-template fastpath metadata in
+  // explicit narrative mode only. The prompt contract above is unchanged, the
+  // proof is derived from the real AST over the exact slice bytes already
+  // read, and any analysis or template-validation failure resolves to no
+  // metadata so callers keep the standard model-backed flow. This is never a
+  // bare caller boolean: `trivial` carries `{narrative, proof}` produced by
+  // src/cards/trivial-template.mjs itself.
+  const trivial = await tryBuildTrivialNarrative({
+    symbol,
+    projectRoot,
+    source: content,
+    knownKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+  });
+
+  return {
+    prompt,
+    totalLines,
+    promptVersion: PROMPT_VERSION,
+    schema: NARRATIVE_SCHEMA,
+    ...(trivial ? { trivial } : {}),
+  };
 }
 
 async function buildSymbolPrompt(symbol, projectRoot, options) {
@@ -386,6 +408,32 @@ export async function persistEnrichmentSuccess({
   return { memoryId, enrichedAt };
 }
 
+/**
+ * Enrich a single worklist symbol through the provider chain, or — in
+ * explicit narrative mode only — through the plan 3.4 / spec S10
+ * trivial-template fast path (typed `{trivial: proof}` result metadata, no
+ * driver invocation and no attempts). The proof is re-derived here from the
+ * inspectable source, never accepted as a caller boolean; an unreadable
+ * source, unsupported grammar, syntax error or failed template validation
+ * keeps the existing model-backed flow unchanged.
+ *
+ * @param {object} args
+ * @param {object} args.symbol
+ * @param {string} args.projectRoot
+ * @param {string} args.projectSlug
+ * @param {number} args.timeoutMs
+ * @param {string} args.enrichmentDir
+ * @param {Array} args.worklist
+ * @param {string} args.worklistFile
+ * @param {object} [args.symbolIndex]
+ * @param {string} [args.symbolIndexFile]
+ * @param {object} [args.config]
+ * @param {Array} [args.providers]
+ * @param {object} [args.env]
+ * @param {string} [args.prompt] - pre-built prompt (skips the prompt rebuild)
+ * @param {object} [args.narrativeContext] - explicit narrative opt-in (plan 3.3 / S9)
+ * @param {Function} [args.runEnrichmentWithFallbackImpl]
+ */
 export async function runQueueSymbolEnrichment({
   symbol,
   projectRoot,
@@ -425,7 +473,28 @@ export async function runQueueSymbolEnrichment({
 
   let validation = null;
 
-  if (narrativeMode) {
+  // Plan 3.4 / spec S10 fast path: in explicit narrative mode the template
+  // proof is derived from the inspectable source BEFORE any driver
+  // invocation, so a proven trivial symbol makes zero model calls (no
+  // provider/fallback attempt, no schema retry). The proof is never a caller
+  // boolean: even with a prebuilt prompt this call re-derives it from the
+  // symbol's own file, and when the source is unavailable or the analysis,
+  // template build or validation fails, the standard model-backed flow below
+  // runs unchanged.
+  const trivialTemplate = narrativeMode
+    ? await tryBuildTrivialNarrative({
+      symbol,
+      projectRoot,
+      knownKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+    })
+    : null;
+
+  if (trivialTemplate) {
+    // The template was already validated against the shared N1 schema and
+    // the authoritative known keys; it enters the exact same validated
+    // persistence path with no attempts recorded.
+    validation = { status: 'validated', narrative: trivialTemplate.narrative, attempts: 0, errors: [] };
+  } else if (narrativeMode) {
     // The N1 helper bounds schema retries to exactly one retry. Provider
     // failures abort validation immediately and keep their own semantics:
     // the schema layer must never retry a provider failure.
@@ -500,6 +569,9 @@ export async function runQueueSymbolEnrichment({
       lastModeUsed: wlEntry?.lastModeUsed ?? lastDriver?.mode ?? getLastAttemptMode(attempts),
       enrichedAt,
       ...(narrativeMode ? { promptVersion: PROMPT_VERSION, semanticSummary: validation.narrative.summary } : {}),
+      // Typed fastpath metadata (plan 3.4 / S10): the structural proof behind
+      // this template result. Absent for provider-generated narratives.
+      ...(trivialTemplate ? { trivial: trivialTemplate.proof } : {}),
     };
   }
 
@@ -753,9 +825,10 @@ export async function main({
     let schema = null;
     let knownGraphKeys = null;
     let narrativeContext = null;
+    let trivial = null;
     try {
       narrativeContext = narrativeResolver ? await narrativeResolver(symbol) : null;
-      ({ prompt, totalLines, promptVersion, schema } = await buildSymbolPromptMeta(
+      ({ prompt, totalLines, promptVersion, schema, trivial = null } = await buildSymbolPromptMeta(
         symbol,
         projectRoot,
         narrativeContext ? { narrativeContext } : undefined,
@@ -784,24 +857,91 @@ export async function main({
 
     const span = (symbol.range?.endLine ?? 0) - (symbol.range?.startLine ?? 0) + 1;
 
-    // 2. Count tokens via Ollama prompt_eval_count (num_predict:1).
-    //    Falls back to chars/4 heuristic on error or timeout.
-    let tokens;
-    try {
-      const counted = await countPromptTokensImpl({
-        baseUrl: enrichmentConfig.localModel.baseUrl,
-        model: enrichmentConfig.localModel.model,
-        prompt,
-        timeoutMs: TOKENIZE_TIMEOUT_MS,
-      });
-      tokens = counted !== null ? counted : estimateTokens(prompt);
-    } catch {
-      tokens = estimateTokens(prompt);
+    // Steps 2+3: token counting and routing. Plan 3.4 / spec S10: a
+    // structurally proven trivial symbol in explicit narrative mode skips
+    // both, because the fast path must precede the Ollama tokenizer probe
+    // and the subagent route — zero model calls means zero model calls, not
+    // merely zero enrich calls. `trivial` is typed metadata produced by
+    // src/cards/trivial-template.mjs over the real AST, never a caller
+    // boolean; runQueueSymbolEnrichment re-derives the proof from the
+    // inspectable source before persisting the template.
+    let tokens = null;
+    let routing = null;
+    if (!trivial) {
+      // 2. Count tokens via Ollama prompt_eval_count (num_predict:1).
+      //    Falls back to chars/4 heuristic on error or timeout.
+      try {
+        const counted = await countPromptTokensImpl({
+          baseUrl: enrichmentConfig.localModel.baseUrl,
+          model: enrichmentConfig.localModel.model,
+          prompt,
+          timeoutMs: TOKENIZE_TIMEOUT_MS,
+        });
+        tokens = counted !== null ? counted : estimateTokens(prompt);
+      } catch {
+        tokens = estimateTokens(prompt);
+      }
+
+      // 3. Route: file-coverage check takes priority, then token threshold
+      routing = shouldRouteToSubagent({ tokens, tokenThreshold: threshold, span, totalLines, coverageThreshold });
     }
 
-    // 3. Route: file-coverage check takes priority, then token threshold
-    const routing = shouldRouteToSubagent({ tokens, tokenThreshold: threshold, span, totalLines, coverageThreshold });
-    if (routing.route) {
+    if (trivial || !routing.route) {
+      // 4. Enrich via Ollama — sequential, awaited. For a proven trivial
+      //    symbol this persists the deterministic template with no driver
+      //    invocation and no attempts.
+      try {
+        const result = await runQueueSymbolEnrichment({
+          symbol,
+          projectRoot,
+          projectSlug: PROJECT_SLUG,
+          timeoutMs: TIMEOUT_MS,
+          enrichmentDir: _enrichmentDir,
+          worklist,
+          worklistFile,
+          symbolIndex,
+          symbolIndexFile,
+          config: enrichmentConfig,
+          providers: queueProviders,
+          env: process.env,
+          prompt, // pass pre-built prompt — no double round-trip
+          ...(narrativeContext ? { narrativeContext } : {}),
+          runEnrichmentWithFallbackImpl,
+        });
+        const elapsed = Date.now() - symbolStart;
+        if (trivial) {
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — template narrative (${trivial.proof.kind}) — no model call (${elapsed}ms)`);
+        } else {
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s — ${tokens} tokens`);
+        }
+        results.push({
+          symbolKey: symbol.symbolKey,
+          memoryId: result.memoryId,
+          elapsed,
+          // Only a validated narrative result carries a summary; the final
+          // index rebuild must keep it (S9 final-main contract, B1).
+          ...(result.semanticSummary !== undefined ? { semanticSummary: result.semanticSummary } : {}),
+        });
+      } catch (err) {
+        const elapsed = Date.now() - symbolStart;
+        console.error(`[queue] ERROR ${symbol.name}: ${err.message} (${Math.round(elapsed / 1000)}s)`);
+        errors.push({
+          symbolKey: symbol.symbolKey,
+          error: err.message,
+          elapsed,
+          failedAt: err.failedAt ?? null,
+          narrative: Boolean(narrativeContext),
+        });
+
+        const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
+        if (wlEntry) {
+          wlEntry.status = 'error';
+          wlEntry.error = err.message;
+          wlEntry.failedAt = new Date().toISOString();
+        }
+        await saveWorklistMerged(worklistFile, worklist);
+      }
+    } else {
       // Emit to subagent queue — the /enrich skill will drain this with Task subagents
       try {
         await appendSubagentQueue(_enrichmentDir, {
@@ -831,55 +971,6 @@ export async function main({
       subagentQueued.push({ symbolKey: symbol.symbolKey, tokenCount: tokens });
       const coveragePct = Math.round(routing.coverage * 100);
       console.error(`[route] ${symbol.name} → subagent-queued (${routing.reason}: ${tokens} tokens, ${coveragePct}% file coverage, ${elapsed}ms)`);
-    } else {
-      // 4. Enrich via Ollama — sequential, awaited
-      try {
-        const result = await runQueueSymbolEnrichment({
-          symbol,
-          projectRoot,
-          projectSlug: PROJECT_SLUG,
-          timeoutMs: TIMEOUT_MS,
-          enrichmentDir: _enrichmentDir,
-          worklist,
-          worklistFile,
-          symbolIndex,
-          symbolIndexFile,
-          config: enrichmentConfig,
-          providers: queueProviders,
-          env: process.env,
-          prompt, // pass pre-built prompt — no double round-trip
-          ...(narrativeContext ? { narrativeContext } : {}),
-          runEnrichmentWithFallbackImpl,
-        });
-        const elapsed = Date.now() - symbolStart;
-        console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s — ${tokens} tokens`);
-        results.push({
-          symbolKey: symbol.symbolKey,
-          memoryId: result.memoryId,
-          elapsed,
-          // Only a validated narrative result carries a summary; the final
-          // index rebuild must keep it (S9 final-main contract, B1).
-          ...(result.semanticSummary !== undefined ? { semanticSummary: result.semanticSummary } : {}),
-        });
-      } catch (err) {
-        const elapsed = Date.now() - symbolStart;
-        console.error(`[queue] ERROR ${symbol.name}: ${err.message} (${Math.round(elapsed / 1000)}s)`);
-        errors.push({
-          symbolKey: symbol.symbolKey,
-          error: err.message,
-          elapsed,
-          failedAt: err.failedAt ?? null,
-          narrative: Boolean(narrativeContext),
-        });
-
-        const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
-        if (wlEntry) {
-          wlEntry.status = 'error';
-          wlEntry.error = err.message;
-          wlEntry.failedAt = new Date().toISOString();
-        }
-        await saveWorklistMerged(worklistFile, worklist);
-      }
     }
 
     // 5. Periodic heartbeat (non-blocking)

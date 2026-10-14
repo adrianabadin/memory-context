@@ -72,6 +72,10 @@ Scope notes:
 - `symbol.language` continues to hold the programming language; it is never set to a natural-language code.
 - The instruction is part of the prompt contract; actual output quality depends on the model and is not guaranteed.
 
+## Trivial-Symbol Narrative Templates (F3.4 opt-in fast path)
+
+In explicit narrative mode (an injected `narrativeContext` / `narrativeResolver`; there is still no CLI flag, config key or automatic activation), a structurally proven trivial symbol — a getter, or fewer than 5 physical code lines without branching — receives a deterministic template narrative and makes **no model call**: the queue skips the Ollama tokenizer probe, the provider/fallback chain and the subagent route before any model-bound work. Template results persist through the same validated narrative path (validated JSON in `content`, template summary in the index `semanticSummary`, a sync-manifest upsert) with no attempt records, and empty `sideEffects`/`errors`/`contracts`/`mentions` lists mean "uninferred", never "proved absent". Triviality is proven from the real Tree-sitter AST over the declared symbol range (never from names), limited to the javascript/typescript/tsx/python/csharp grammars; unsupported grammars, syntax errors and unreadable or invalid ranges keep the standard model-backed flow. The default `pmc enrich` text flow is byte-for-byte unchanged. See `docs/DEVELOPMENT.md` ("Trivial-Symbol Template Fast Path") for the proof vocabulary and public hooks.
+
 ## Internal CLI Scripts
 
 These scripts exist in `cli/` but are not registered as `pmc` subcommands. They are used internally by the enrichment pipeline:

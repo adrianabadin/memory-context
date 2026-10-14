@@ -42,7 +42,11 @@ const symbol = {
   kind: 'function',
   language: 'js',
   filePath: 'src/a.js',
-  range: { startLine: 1, endLine: 1 },
+  // N4 (plan 3.4 / S10) trivial-template fast path: these probes prove the
+  // provider/schema/retry flow, so the declared range spans five physical
+  // lines (over the four-line trivial budget) and stays below the 80% file
+  // coverage routing threshold.
+  range: { startLine: 1, endLine: 5 },
   codeHash: 'a',
   status: 'pending',
 };
@@ -63,7 +67,7 @@ async function fixture(fn) {
   const dir = join(root, '.planning/project-memory-context/enrichment');
   await mkdir(dir, { recursive: true });
   await mkdir(join(root, 'src'));
-  await writeFile(join(root, 'src/a.js'), 'export function a(){return 1;}\n// padding\n// padding\n');
+  await writeFile(join(root, 'src/a.js'), 'export function a(){return 1;}\n// padding\n// padding\n// padding\n// padding\n// padding\n// padding\n');
   const worklist = [structuredClone(symbol)];
   const index = {};
   const wl = join(dir, 'worklist.json');
