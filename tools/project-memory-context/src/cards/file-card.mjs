@@ -35,6 +35,7 @@ export function buildFileCard(graphDb, filePath) {
   return {
     path,
     kind: 'file',
+    ...(facts.roleClassification != null ? { roleClassification: facts.roleClassification } : {}),
     exports: symbols.filter(symbol => symbol.exported).map(symbol => symbol.item).sort(compare),
     importsFrom: fileLinks(facts.imports),
     importedBy: fileLinks(facts.importedBy),

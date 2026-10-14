@@ -116,8 +116,11 @@ it per request. Missing databases produce an explicit MCP tool error and
 are never created implicitly. Dependency aliases retain their legacy array
 shape and artifact fallback for legacy schemas or partially canonicalized
 neighbors; this fallback is never native proof for the new facts tools.
-Roles, generated narratives, levels and
-role-aware stopping remain later-phase work.
+When a canonical persisted role assignment exists, symbol/file facts include
+`roleClassification: {role, layer, confidence, evidence}`. No assignment adds no
+field; explicitly unknown assignments preserve null role/layer, zero confidence,
+and empty evidence. Role queries are read-only and do not trigger classification.
+Generated narratives, levels and role-aware stopping remain later-phase work.
 
 ### CLI target resolution
 
@@ -136,6 +139,11 @@ evidence is used when available, while graph-only projects retain legacy
 traversal and other Graphify relation types remain available. Constructor
 instantiation edges do not appear as named callers/callees. File/query modes
 and depth defaults are unchanged.
+
+Assigned symbol/file targets also show `role`, `layer`, `confidence`, and
+`evidence` under `Target`, at every existing depth/focus. Unassigned targets keep
+their previous output exactly. An explicit unknown assignment shows `null` for
+role/layer, `0` confidence, and `none` evidence; it is not a new role enum.
 
 Used with `get-context`:
 

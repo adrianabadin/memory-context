@@ -176,6 +176,7 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
         communityId: ctx.target?.communityId ?? null,
         communityName: ctx.target?.communityName ?? null,
         linkedMemories: ctx.target?.linkedMemories ?? [],
+        ...(ctx.target?.roleClassification != null ? { roleClassification: ctx.target.roleClassification } : {}),
       };
       summary = [`Symbol: ${ctx.target?.name || resolved.target} (${ctx.target?.kind || 'unknown'})`];
       relevant = (ctx.neighbors || ctx.dependents || []).map((n) => ({
@@ -208,7 +209,8 @@ export async function buildRenderInput(engine, resolved, { depth, focus }) {
     }
     case 'file': {
       const ctx = await engine.queryFileContext({ filePath: resolved.target, depth });
-      target = { mode: 'file', filePath: resolved.target };
+      target = { mode: 'file', filePath: resolved.target,
+        ...(ctx.roleClassification != null ? { roleClassification: ctx.roleClassification } : {}) };
       summary = ctx.symbols && ctx.symbols.length > 0
         ? ctx.symbols.map((s) => `${s.name || 'unknown'} (${s.kind || 'symbol'})`)
         : [`File: ${resolved.target}`];

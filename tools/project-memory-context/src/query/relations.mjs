@@ -53,6 +53,12 @@ export function createRelationsReader({ projectRoot }) {
           });
         },
         listNativeEdges(filters) { return tables.has('native_edges') ? raw.listNativeEdges(filters) : []; },
+        getNodeRole(id) {
+          // Persisted roles must not revive symbols withheld by this reader's
+          // canonical registry (e.g. stale index bindings or conflicting keys).
+          if (!tables.has('node_role_assignments') || (!id.startsWith('file|') && !Object.hasOwn(symbolIndex, id))) return null;
+          return raw.getNodeRole(id);
+        },
       };
       const engine = createQueryEngine({ graphStore: store, symbolIndex, worklist });
       const endpoint = key => {

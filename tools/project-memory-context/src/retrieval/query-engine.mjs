@@ -156,8 +156,14 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     const wl    = resolveWorklistEntry(symbolKey);
     const parts = parseSymbolKeyParts(symbolKey);
     const linkedMemories = await fetchLinkedMemories(symbolKey);
+    const indexedNode = entry?.graphNodeId && typeof store.getNode === 'function' ? store.getNode(entry.graphNodeId) : null;
+    const identities = [indexedNode?.symbolKey, indexedNode?.metadata?.symbolKey,
+      indexedNode?.id?.includes('|') ? indexedNode.id : null].filter((value) => value != null);
+    const roleClassification = indexedNode && identities.length && identities.every((value) => value === symbolKey) &&
+      typeof store.getNodeRole === 'function' ? store.getNodeRole(symbolKey) : null;
     return {
       symbolKey,
+      ...(roleClassification != null ? { roleClassification } : {}),
       name:        wl?.name      ?? extractName(parts),
       filePath:    wl?.filePath  ?? extractFilePath(parts),
       kind:        wl?.kind      ?? null,
@@ -256,7 +262,9 @@ export function createQueryEngine({ graphStore, graph, symbolIndex, worklist, en
     }
 
     const depth_reached = Math.max(outTraversal.depth_reached, inTraversal.depth_reached);
-    return { symbols, neighbors, edges, depth_reached };
+    const roleClassification = typeof store.getNodeRole === 'function' ? store.getNodeRole(`file|${normalized}`) : null;
+    return { symbols, neighbors, edges, depth_reached,
+      ...(roleClassification != null ? { roleClassification } : {}) };
   }
 
   async function queryImpactScope({ symbolKeys, depth, edgeTypes, targetInfo }) {

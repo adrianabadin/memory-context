@@ -148,6 +148,7 @@ export function buildFacts(graphDb, symbolKey, { depth } = {}) {
   }
 
   const node = graphDb.getNode(symbolKey);
+  const roleClassification = typeof graphDb.getNodeRole === 'function' ? graphDb.getNodeRole(symbolKey) : null;
   const parsed = parseSymbolKey(symbolKey);
   const filePath = node?.source_file ?? parsed?.path ?? null;
   const fileId = filePath === null ? null : FILE_PREFIX + filePath;
@@ -176,6 +177,7 @@ export function buildFacts(graphDb, symbolKey, { depth } = {}) {
 
   return {
     id: symbolKey,
+    ...(roleClassification != null ? { roleClassification } : {}),
     kind: node?.kind ?? parsed?.kind ?? null,
     signature: node?.signature ?? null,
     location: {
@@ -201,6 +203,7 @@ function fileFacts(graphDb, fileId, importEdges) {
     throw new TypeError('file endpoints must carry a non-empty project-relative path');
   }
   const toPath = (endpoint) => endpoint.path ?? endpoint.id.slice(FILE_PREFIX.length);
+  const roleClassification = typeof graphDb.getNodeRole === 'function' ? graphDb.getNodeRole(fileId) : null;
 
   const fileItems = (paths, relation) =>
     [...new Set(paths)]
@@ -222,6 +225,7 @@ function fileFacts(graphDb, fileId, importEdges) {
 
   return {
     id: fileId,
+    ...(roleClassification != null ? { roleClassification } : {}),
     kind: 'file',
     signature: null,
     location: { path, startLine: null, endLine: null },
