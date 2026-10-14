@@ -1,0 +1,20 @@
+{
+  "name": "node-cli",
+  "description": "Node CLI/MCP toolchain role profile for PMC-style repositories (plan 2.2, F2 R1 bounded to node-cli). Extends generic; overrides/adds directory and side-effect mappings only.",
+  "directoryRoles": [
+    { "token": "cli", "role": "cli-command" },
+    { "token": "bin", "role": "cli-command" },
+    { "token": "commands", "role": "cli-command" },
+    { "token": "mcp", "role": "mcp-tool" },
+    { "token": "extractors", "role": "extractor" },
+    { "token": "extractor", "role": "extractor" },
+    { "token": "graph-store", "role": "store" },
+    { "token": "store", "role": "store" },
+    { "token": "stores", "role": "store" }
+  ],
+  "sideEffectRoles": [
+    { "marker": "process.argv", "role": "cli-command" },
+    { "marker": "child-process", "role": "cli-command" },
+    { "marker": "fs-write", "role": "cli-command" }
+  ]
+}

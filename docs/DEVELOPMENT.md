@@ -84,6 +84,35 @@ Nested closures and top-level expression calls have no invented outer source sym
 
 Focused checks: `node --test tests/native-calls.test.mjs tests/native-calls-blockers.test.mjs tests/native-imports.test.mjs` from `tools/project-memory-context`; keep the entire `relational-eval.test.mjs` excluded from ordinary verification as above.
 
+## Role Classifier and Profiles (plan F2 2.1–2.3, R1 bounded to generic + node-cli)
+
+`src/roles/classify.mjs` exposes `loadProfile(name)`, `classifySymbol(record, {profile, allSymbols})` and `classifyFile({path}, {profile})`. Each returns exactly `{role, layer, confidence, evidence[]}` for a file or symbol. `confidence` is a finite 0..1 heuristic evidence strength (noisy-OR over the agreeing signals' weights), not a calibrated probability or semantic-accuracy score. With no supporting evidence the classifier returns the documented unknown shape `{role: null, layer: null, confidence: 0, evidence: []}` — it never invents an "unknown" role enum. A member inherits a **uniquely** identified container's role (same file, one matching class); an ambiguous or absent container fails closed rather than resolving by array order, and a member's own stronger provided evidence (a structured decorator annotation) overrides the inherited role. Classification is pure: it reads no project, fixture, or graph at call time, never mutates its inputs, is deterministic, and never hardcodes golden keys or paths.
+
+Signals (`src/roles/signals.mjs`) cover the six S1 evidence kinds, descending by the accepted v3 §3.2 priority. Decorator and inheritance evidence each have a strong structured form (caller-provided from real syntax inspection) and a weaker marker form:
+
+| Kind | Signal | Source | Honesty label |
+|---|---|---|---|
+| decorators | `framework-annotation` (0.9) | caller-provided `annotations.decorators` | structured syntax evidence (trusted, not re-verified) |
+| decorators | `decorator-factory` (0.6) | local function named like a decorator | name marker, decorator syntax **not verified** |
+| inheritance | `structured-heritage` (0.85) | caller-provided `heritage` clauses (dotted/generic/compound-base forms) | structured syntax evidence |
+| inheritance | `container-role` (0.75) | unique same-file container | member inheritance |
+| suffix | `name-suffix` (0.6) | name ends with a stereotype (`*Service`) | name/path marker, never a verified fact |
+| directory | `directory-token` (0.5) | deepest matching path segment (`services/`) | path marker |
+| topology | `topology` (0.35) | caller-provided fan-in/fan-out | weak heuristic |
+| side-effects | `side-effect-marker` (0.3) | caller-provided markers (`child-process`) | marker, **not** a verified execution fact |
+
+Name-suffix stereotypes are gated off for abstraction kinds (`interface`/`type`) and inside test scopes (a directory token mapped to the `test` role): those symbols take their role from directory/kind, not a coincidental suffix. Both gates are profile-driven, not hardcoded.
+
+Structured heritage clauses are normalized to a base type name that recognizes the accepted v3 inheritance **forms** — dotted (`models.Model`), generic (`Repository<User>`), and compound-base (`ControllerBase`) — rather than matching the raw clause end-wise. The base name is matched against the declarative `heritageTypeRoles` table (compound base classes like `ControllerBase`/`RepositoryBase`/`ServiceBase`) and then the stereotype table (exact or suffix). This is conservative, profile-driven mapping, not a new-language extractor and never invented AST from comments or names.
+
+`loadProfile` returns a **deep-isolated** profile: `generic` is a `structuredClone` and `node-cli` is merged from clones of both profiles, so the returned tables share no object identity with the module-owned JSON. Mutating or deep-freezing a returned profile can never corrupt a later `loadProfile` result, and classification stays pure.
+
+The public resolved-profile API fails closed **before scoring** (B3): every weight in `profile.weights` must be a finite number in `[0,1]` (bad values throw `TypeError`, never silently clamped) and every role a mapping table can produce must be a declared key of `profile.roleLayers`. Legitimate declared extensions — a role added to `roleLayers` and used in a table — pass; an undeclared role or out-of-range weight throws instead of being invented. A second gate then enforces the same contract on the **actually generated signals**, after collection but before the noisy-OR arithmetic and before any return: a required-but-missing active weight (which would otherwise yield a non-finite confidence) and an implicit/hardcoded role no table declares (such as the decorator-factory role) both throw `TypeError`. This signal-level check is generic over whatever fires — no hardcoded special case and no silent clamp.
+
+Profiles are declarative JSON in `src/roles/profiles/`. `generic` is stack-agnostic (controllers/services/repositories/models/views/utils/cli/tests); `node-cli` extends it and, on the same token, **overrides** generic (e.g. `cli/` → `cli-command`, plus `mcp/`→`mcp-tool`, `extractors/`→`extractor`, `graph-store/`→`store`) to classify PMC-style repositories. This unit loads only the packaged profiles; `.planning/project-memory-context/roles.json` project overrides, remaining framework profiles, persistence/exposure (S5) and the optional LLM tie-breaker (S6) are not implemented here.
+
+Focused checks: `node --test tests/role-classify.test.mjs tests/role-classify-recovery.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.
