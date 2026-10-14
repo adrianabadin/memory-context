@@ -27,7 +27,7 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 | `sleep-config` | `cli/sleep-config.mjs` | Read, validate, or edit the global sleep-mode configuration | `pmc sleep-config show` |
 | `sleep-run` | `cli/sleep-run.mjs` | One-shot maintenance pipeline: decay evaluation, promotion, enrichment with checkpointing | `pmc sleep-run --db ./memory.db` |
 | `sleep-watch` | `cli/sleep-watch.mjs` | Idle daemon that monitors CPU/idle state and spawns sleep-run when eligible | `pmc sleep-watch` |
-| `subagent-apply` | `cli/subagent-apply.mjs` | Persists enrichment results from an agent subagent into the standard PMC pipeline | `pmc subagent-apply . --entry-id <id> --content-file <path>` |
+| `subagent-apply` | `cli/subagent-apply.mjs` | Persists enrichment results from an agent subagent into the standard PMC pipeline; entries queued with narrative metadata (`promptVersion`/`schema`/`knownGraphKeys`) are validated against the shared narrative schema first, and invalid output marks the entry `error` instead of `enriched` | `pmc subagent-apply . --entry-id <id> --content-file <path>` |
 | `sync-context` | `cli/sync.mjs` | Syncs pending enrichment data from the local graph into agent memory via MCP | `pmc sync-context` |
 | `view-context` | `bin/pmc-view-context.mjs` | Opens the PMC Graph Explorer web UI | `pmc view-context` |
 | `watch` | `cli/watch.mjs` | Watches project files for changes with debounced refresh-context triggers | `pmc watch .` |

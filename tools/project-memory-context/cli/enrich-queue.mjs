@@ -17,6 +17,8 @@ import { appendSyncEntries, appendSyncEntry, createCommunitySyncEntry, createSyn
 import { isPidAlive } from '../src/watcher-lifecycle.mjs';
 import { spawnBackground } from '../src/platform.mjs';
 import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-index.mjs';
+import { buildNarrativePromptV2, normalizeSymbolKeys, PROMPT_VERSION } from '../src/cards/prompt-v2.mjs';
+import { NARRATIVE_SCHEMA, generateValidatedNarrative } from '../src/cards/narrative-schema.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -190,7 +192,22 @@ function createAgentSubagentProvider() {
   };
 }
 
-async function buildSymbolPromptMeta(symbol, projectRoot) {
+/**
+ * Build the enrichment prompt metadata for a worklist symbol.
+ *
+ * Legacy calls (two arguments) keep the exact historical prompt text and the
+ * exact `{prompt, totalLines}` return shape. Passing an explicit
+ * `narrativeContext` (plan 3.3 / spec S9) switches to prompt v2 and adds
+ * `promptVersion` and the shared `schema`; without that context nothing about
+ * the legacy flow changes.
+ *
+ * @param {object} symbol - worklist symbol entry (name/kind/language/filePath/range)
+ * @param {string} projectRoot
+ * @param {object} [options]
+ * @param {object} [options.narrativeContext] - authoritative caller-owned facts/roles context
+ * @returns {Promise<{prompt: string, totalLines: number, promptVersion?: string, schema?: object}>}
+ */
+export async function buildSymbolPromptMeta(symbol, projectRoot, options) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
   const content = await readFile(absoluteFile, 'utf8');
   const lines = content.split('\n');
@@ -199,12 +216,18 @@ async function buildSymbolPromptMeta(symbol, projectRoot) {
   const codeSection = lines.slice(symbol.range.startLine - 1, symbol.range.endLine).join('\n');
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
 
-  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
-  return { prompt, totalLines };
+  const narrativeContext = options?.narrativeContext ?? null;
+  if (narrativeContext === null) {
+    const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
+    return { prompt, totalLines };
+  }
+
+  const { prompt } = buildNarrativePromptV2({ symbol, codeSection, importsSection, narrativeContext });
+  return { prompt, totalLines, promptVersion: PROMPT_VERSION, schema: NARRATIVE_SCHEMA };
 }
 
-async function buildSymbolPrompt(symbol, projectRoot) {
-  const { prompt } = await buildSymbolPromptMeta(symbol, projectRoot);
+async function buildSymbolPrompt(symbol, projectRoot, options) {
+  const { prompt } = await buildSymbolPromptMeta(symbol, projectRoot, options);
   return prompt;
 }
 
@@ -290,6 +313,7 @@ function createQueueProviders() {
  * @param {string} opts.symbolIndexFile
  * @param {string} opts.projectSlug
  * @param {Array}  [opts.attempts]    - enrichment attempt records to apply to worklist entry
+ * @param {string} [opts.semanticSummary] - explicit validated summary override (narrative mode)
  * @returns {Promise<{memoryId: string, enrichedAt: string}>}
  */
 export async function persistEnrichmentSuccess({
@@ -304,6 +328,7 @@ export async function persistEnrichmentSuccess({
   symbolIndexFile,
   projectSlug,
   attempts = [],
+  semanticSummary: semanticSummaryOverride,
 }) {
   const memoryId = `queue-${safeKey(symbol.symbolKey)}`;
   const enrichedAt = new Date().toISOString();
@@ -326,7 +351,7 @@ export async function persistEnrichmentSuccess({
     });
   }
 
-  const semanticSummary = symbol.semanticSummary ?? extractSemanticSummary(content);
+  const semanticSummary = semanticSummaryOverride ?? symbol.semanticSummary ?? extractSemanticSummary(content);
 
   const updatedIndex = upsertSymbolIndexEntry(symbolIndex, {
     symbolKey: symbol.symbolKey,
@@ -376,18 +401,60 @@ export async function runQueueSymbolEnrichment({
   env = process.env,
   // Accept a pre-built prompt to avoid rebuilding when already counted tokens.
   prompt: prebuiltPrompt,
+  // Explicit opt-in (plan 3.3 / spec S9): authoritative caller-owned context.
+  narrativeContext = null,
   runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
 }) {
-  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot);
-  const result = await runEnrichmentWithFallbackImpl({
-    request: { prompt, timeoutMs },
-    config,
-    providers,
-    env,
-  });
-  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+  const narrativeMode = narrativeContext !== null && narrativeContext !== undefined;
+  if (narrativeMode && (typeof narrativeContext !== 'object' || Array.isArray(narrativeContext))) {
+    throw new TypeError('narrativeContext must be an object');
+  }
+  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot, narrativeMode ? { narrativeContext } : undefined);
 
-  for (const attempt of result.attempts ?? []) {
+  // One driver invocation per bounded schema attempt. Legacy requests stay
+  // exactly `{prompt, timeoutMs}`; narrative requests add Ollama's JSON-schema
+  // `format` (documented `string | object` field on POST /api/generate).
+  const driverResults = [];
+  const invokeDriver = async (format) => {
+    const request = { prompt, timeoutMs };
+    if (format !== undefined) request.format = format;
+    const result = await runEnrichmentWithFallbackImpl({ request, config, providers, env });
+    driverResults.push(result);
+    return result;
+  };
+
+  let validation = null;
+
+  if (narrativeMode) {
+    // The N1 helper bounds schema retries to exactly one retry. Provider
+    // failures abort validation immediately and keep their own semantics:
+    // the schema layer must never retry a provider failure.
+    try {
+      validation = await generateValidatedNarrative({
+        generate: async ({ schema }) => {
+          const result = await invokeDriver(schema);
+          if (result.status !== 'succeeded') {
+            const error = new Error(getLastAttemptError(result.attempts));
+            error.providerResult = result;
+            throw error;
+          }
+          return result.content;
+        },
+        symbolKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+      });
+    } catch (error) {
+      if (!error?.providerResult) throw error;
+      // Fall through to the existing failure semantics below: attempts stay
+      // logged, the entry becomes `error`, and no further retry happens.
+    }
+  } else {
+    await invokeDriver(undefined);
+  }
+
+  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+  const attempts = driverResults.flatMap((result) => result.attempts ?? []);
+
+  for (const attempt of attempts) {
     await appendProviderEvent(enrichmentDir, {
       symbolKey: symbol.symbolKey,
       name: symbol.name,
@@ -395,10 +462,20 @@ export async function runQueueSymbolEnrichment({
     });
   }
 
-  if (result.status === 'succeeded') {
+  const lastDriver = driverResults[driverResults.length - 1];
+  const succeeded = narrativeMode ? validation?.status === 'validated' : lastDriver?.status === 'succeeded';
+
+  if (succeeded) {
+    // Narrative records carry the validated JSON in the existing `content`
+    // field and the validated summary in the existing index field — no new
+    // persisted format, no output that failed validation.
+    const content = narrativeMode
+      ? `${JSON.stringify(validation.narrative, null, 2)}`
+      : lastDriver.content;
     const { memoryId, enrichedAt } = await persistEnrichmentSuccess({
       symbol,
-      content: result.content,
+      content,
+      semanticSummary: narrativeMode ? validation.narrative.summary : undefined,
       enrichedByTag: 'enriched-by-queue',
       enrichmentDir,
       worklist,
@@ -406,30 +483,33 @@ export async function runQueueSymbolEnrichment({
       symbolIndex,
       symbolIndexFile,
       projectSlug,
-      attempts: result.attempts,
+      attempts,
     });
 
     return {
       status: 'enriched',
       symbolKey: symbol.symbolKey,
       memoryId,
-      memoryContent: result.content,
+      memoryContent: content,
       language: symbol.language,
       kind: symbol.kind,
       filePath: symbol.filePath,
       projectSlug,
       codeHash: symbol.codeHash,
-      attempts: result.attempts ?? [],
-      lastModeUsed: wlEntry?.lastModeUsed ?? result.mode ?? getLastAttemptMode(result.attempts),
+      attempts,
+      lastModeUsed: wlEntry?.lastModeUsed ?? lastDriver?.mode ?? getLastAttemptMode(attempts),
       enrichedAt,
+      ...(narrativeMode ? { promptVersion: PROMPT_VERSION, semanticSummary: validation.narrative.summary } : {}),
     };
   }
 
-  const error = getLastAttemptError(result.attempts);
+  const error = validation
+    ? `Narrative validation failed: ${validation.errors.join('; ')}`
+    : getLastAttemptError(attempts);
   const failedAt = new Date().toISOString();
 
   if (wlEntry) {
-    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, result.attempts), {
+    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, attempts), {
       status: 'error',
       error,
       failedAt,
@@ -455,8 +535,8 @@ export async function runQueueSymbolEnrichment({
     status: 'error',
     symbolKey: symbol.symbolKey,
     error,
-    attempts: result.attempts ?? [],
-    lastModeUsed: wlEntry?.lastModeUsed ?? getLastAttemptMode(result.attempts),
+    attempts,
+    lastModeUsed: wlEntry?.lastModeUsed ?? getLastAttemptMode(attempts),
     failedAt,
   };
 
@@ -549,8 +629,34 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-async function main() {
-  const enrichmentDir = resolve(PROJECT_ROOT, '.planning/project-memory-context/enrichment');
+/**
+ * Enrichment queue entry point.
+ *
+ * Every option defaults to the historical CLI behavior. The options exist for
+ * programmatic in-process callers (fixture tests); the default real queue
+ * still reads its own runtime config, builds legacy text prompts, and runs the
+ * original provider chain. `narrativeResolver` is the explicit opt-in seam for
+ * plan 3.3 / spec S9 narrative context — it is never derived from the graph or
+ * from configuration automatically, and without it no schema, promptVersion or
+ * format ever reaches the queue or subagent routes.
+ *
+ * @param {object} [options]
+ * @param {string} [options.projectRoot]
+ * @param {object} [options.config] - resolved enrichment config; skips config file reads when set
+ * @param {Array}  [options.providers]
+ * @param {(symbol: object) => Promise<object|null>} [options.narrativeResolver]
+ * @param {Function} [options.countPromptTokensImpl]
+ * @param {Function} [options.runEnrichmentWithFallbackImpl]
+ */
+export async function main({
+  projectRoot = PROJECT_ROOT,
+  config = null,
+  providers = null,
+  narrativeResolver = null,
+  countPromptTokensImpl = countPromptTokens,
+  runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
+} = {}) {
+  const enrichmentDir = resolve(projectRoot, '.planning/project-memory-context/enrichment');
   await mkdir(enrichmentDir, { recursive: true });
 
   const worklistFile = resolve(enrichmentDir, 'worklist.json');
@@ -579,8 +685,8 @@ async function main() {
   let symbolIndex = {};
   try { symbolIndex = await loadJson(symbolIndexFile); } catch {}
 
-  const enrichmentConfig = await loadRuntimeEnrichmentConfig(PROJECT_ROOT, process.env);
-  const providers = createQueueProviders();
+  const enrichmentConfig = config ?? await loadRuntimeEnrichmentConfig(projectRoot, process.env);
+  const queueProviders = providers ?? createQueueProviders();
 
   _enrichmentDir = enrichmentDir;
   _worklist = worklist;
@@ -608,7 +714,7 @@ async function main() {
       heartbeatAt: new Date().toISOString(),
       finishedAt: new Date().toISOString(),
       summary,
-    });
+    }, { projectRoot });
     console.log(JSON.stringify({ complete: true, total, enriched: summary.enriched, errors: summary.errors }));
     return;
   }
@@ -638,14 +744,34 @@ async function main() {
   for (const symbol of pending) {
     const symbolStart = Date.now();
 
-    // 1. Build prompt (also returns totalLines for file-coverage check)
+    // 1. Build prompt (also returns totalLines for file-coverage check).
+    //    The narrativeResolver call is the only opt-in path to prompt v2; a
+    //    null/absent context keeps the legacy prompt byte-for-byte.
     let prompt;
     let totalLines = 0;
+    let promptVersion = null;
+    let schema = null;
+    let knownGraphKeys = null;
+    let narrativeContext = null;
     try {
-      ({ prompt, totalLines } = await buildSymbolPromptMeta(symbol, PROJECT_ROOT));
+      narrativeContext = narrativeResolver ? await narrativeResolver(symbol) : null;
+      ({ prompt, totalLines, promptVersion, schema } = await buildSymbolPromptMeta(
+        symbol,
+        projectRoot,
+        narrativeContext ? { narrativeContext } : undefined,
+      ));
+      if (promptVersion) {
+        knownGraphKeys = [...normalizeSymbolKeys(narrativeContext?.symbolKeys)];
+      }
     } catch (err) {
       console.error(`[queue] ERROR building prompt for ${symbol.name}: ${err.message}`);
-      errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed: 0, failedAt: new Date().toISOString() });
+      errors.push({
+        symbolKey: symbol.symbolKey,
+        error: err.message,
+        elapsed: 0,
+        failedAt: new Date().toISOString(),
+        narrative: Boolean(narrativeContext),
+      });
       const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
       if (wlEntry) {
         wlEntry.status = 'error';
@@ -662,7 +788,7 @@ async function main() {
     //    Falls back to chars/4 heuristic on error or timeout.
     let tokens;
     try {
-      const counted = await countPromptTokens({
+      const counted = await countPromptTokensImpl({
         baseUrl: enrichmentConfig.localModel.baseUrl,
         model: enrichmentConfig.localModel.model,
         prompt,
@@ -687,6 +813,11 @@ async function main() {
           tokenCount: tokens,
           prompt,
           queuedAt: new Date().toISOString(),
+          // Opt-in narrative entries carry the same schema, prompt version and
+          // known canonical graph keys the apply step validates against.
+          ...(promptVersion
+            ? { promptVersion, schema, knownGraphKeys: knownGraphKeys ?? [] }
+            : {}),
         });
       } catch (qErr) {
         console.error(`[queue] WARN: failed to write subagent-queue for ${symbol.name}: ${qErr.message}`);
@@ -705,7 +836,7 @@ async function main() {
       try {
         const result = await runQueueSymbolEnrichment({
           symbol,
-          projectRoot: PROJECT_ROOT,
+          projectRoot,
           projectSlug: PROJECT_SLUG,
           timeoutMs: TIMEOUT_MS,
           enrichmentDir: _enrichmentDir,
@@ -714,17 +845,32 @@ async function main() {
           symbolIndex,
           symbolIndexFile,
           config: enrichmentConfig,
-          providers,
+          providers: queueProviders,
           env: process.env,
           prompt, // pass pre-built prompt — no double round-trip
+          ...(narrativeContext ? { narrativeContext } : {}),
+          runEnrichmentWithFallbackImpl,
         });
         const elapsed = Date.now() - symbolStart;
         console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s — ${tokens} tokens`);
-        results.push({ symbolKey: symbol.symbolKey, memoryId: result.memoryId, elapsed });
+        results.push({
+          symbolKey: symbol.symbolKey,
+          memoryId: result.memoryId,
+          elapsed,
+          // Only a validated narrative result carries a summary; the final
+          // index rebuild must keep it (S9 final-main contract, B1).
+          ...(result.semanticSummary !== undefined ? { semanticSummary: result.semanticSummary } : {}),
+        });
       } catch (err) {
         const elapsed = Date.now() - symbolStart;
         console.error(`[queue] ERROR ${symbol.name}: ${err.message} (${Math.round(elapsed / 1000)}s)`);
-        errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed, failedAt: err.failedAt ?? null });
+        errors.push({
+          symbolKey: symbol.symbolKey,
+          error: err.message,
+          elapsed,
+          failedAt: err.failedAt ?? null,
+          narrative: Boolean(narrativeContext),
+        });
 
         const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
         if (wlEntry) {
@@ -764,18 +910,25 @@ async function main() {
         codeHash: entry.codeHash,
         status: 'enriched',
         lastEnrichedAt: entry.enrichedAt,
+        ...(r.semanticSummary !== undefined ? { semanticSummary: r.semanticSummary } : {}),
       };
     }
   }
   for (const err of errors) {
     const entry = worklist.find(s => s.symbolKey === err.symbolKey);
     if (entry) {
+      // Narrative failures must never wipe a previously accepted summary;
+      // legacy error entries keep their exact historical shape (B1).
+      const current = symbolIndex[err.symbolKey];
       symbolIndex[err.symbolKey] = {
         memoryId: null,
         graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'error',
         lastEnrichedAt: err.failedAt || null,
+        ...(err.narrative && current?.semanticSummary !== undefined
+          ? { semanticSummary: current.semanticSummary }
+          : {}),
       };
     }
   }
@@ -794,10 +947,10 @@ async function main() {
     heartbeatAt: finishedAt,
     finishedAt,
     summary,
-  });
+  }, { projectRoot });
 
   const retryLaunch = await maybeLaunchRetryErrors({
-    projectRoot: PROJECT_ROOT,
+    projectRoot,
     enrichmentDir,
     summary,
     loadRetryState: async () => loadOptionalJson(resolve(enrichmentDir, 'retry-state.json')),
@@ -814,7 +967,7 @@ async function main() {
   }
 
   // Post-enrichment hook: name graph communities (graceful — never blocks the queue).
-  const naming = await maybeNameCommunities({ projectRoot: PROJECT_ROOT, enrichmentDir, summary });
+  const naming = await maybeNameCommunities({ projectRoot, enrichmentDir, summary });
   if (naming.ran) {
     console.error(`[queue] Community naming — named: ${naming.result.named}, skipped: ${naming.result.skipped}, failed: ${naming.result.failed}`);
   } else if (naming.reason === 'error') {

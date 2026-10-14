@@ -28,6 +28,8 @@ import { fileURLToPath } from 'node:url';
 
 import { loadSubagentQueue, markSubagentDone, markSubagentError } from '../src/subagent-queue.mjs';
 import { persistEnrichmentSuccess } from './enrich-queue.mjs';
+import { NARRATIVE_SCHEMA, validateNarrative } from '../src/cards/narrative-schema.mjs';
+import { PROMPT_VERSION, normalizeSymbolKeys } from '../src/cards/prompt-v2.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -75,7 +77,46 @@ Arguments:
   --content-file      File containing the enrichment text from the subagent
 
 The /enrich skill calls this after each Task subagent returns its result.
+Entries queued with narrative metadata (promptVersion/schema/knownGraphKeys)
+must contain a JSON narrative that validates against the shared NARRATIVE_SCHEMA
+before anything is persisted; invalid output marks the entry as error.
 `);
+}
+
+/**
+ * Validate an opt-in narrative queue entry against the transported metadata.
+ * Returns null when the content is acceptable, otherwise the exact error that
+ * must mark the entry as error instead of enriched.
+ */
+function narrativeProblem(entry, content) {
+  if (entry.promptVersion !== PROMPT_VERSION) {
+    return `unsupported narrative prompt version: ${entry.promptVersion ?? '(missing)'}`;
+  }
+  if (JSON.stringify(entry.schema ?? null) !== JSON.stringify(NARRATIVE_SCHEMA)) {
+    return 'queued narrative schema does not match NARRATIVE_SCHEMA';
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (parseError) {
+    return `narrative validation failed: Narrative must be a JSON object (invalid JSON: ${parseError.message})`;
+  }
+
+  let symbolKeys;
+  try {
+    // Explicit null or malformed stored collections reject; only an absent
+    // collection normalizes to an empty (fail-closed) set.
+    symbolKeys = normalizeSymbolKeys(entry.knownGraphKeys === undefined ? [] : entry.knownGraphKeys);
+  } catch (keysError) {
+    return `narrative validation failed: ${keysError.message}`;
+  }
+
+  const validation = validateNarrative(parsed, { symbolKeys });
+  if (!validation.valid) {
+    return `narrative validation failed: ${validation.errors.join('; ')}`;
+  }
+  return null;
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -136,6 +177,24 @@ export async function main(args = process.argv.slice(2)) {
     return 1;
   }
 
+  // Narrative entries (prompt v2) must validate against the transported schema
+  // and known graph keys before anything is persisted. Legacy entries skip
+  // this gate entirely and keep the exact original behavior.
+  let persistedContent = content;
+  let semanticSummaryOverride;
+  if (entry.schema != null || entry.promptVersion != null) {
+    const problem = narrativeProblem(entry, content);
+    if (problem) {
+      console.error(`[subagent-apply] ERROR: ${problem}`);
+      await markSubagentError(enrichmentDir, entryId, problem);
+      return 1;
+    }
+    const parsed = JSON.parse(persistedContent);
+    const canonical = Object.fromEntries(NARRATIVE_SCHEMA.required.map((field) => [field, parsed[field]]));
+    persistedContent = `${JSON.stringify(canonical, null, 2)}`;
+    semanticSummaryOverride = canonical.summary;
+  }
+
   // Load worklist and symbol index
   let worklist;
   try {
@@ -163,7 +222,8 @@ export async function main(args = process.argv.slice(2)) {
   try {
     ({ memoryId } = await persistEnrichmentSuccess({
       symbol,
-      content,
+      content: persistedContent,
+      semanticSummary: semanticSummaryOverride,
       enrichedByTag: 'enriched-by-subagent',
       enrichmentDir,
       worklist,

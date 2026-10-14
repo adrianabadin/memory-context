@@ -16,6 +16,8 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+import { normalizeSymbolKeys } from './cards/prompt-v2.mjs';
+
 const QUEUE_FILE = 'subagent-queue.json';
 
 function queuePath(enrichmentDir) {
@@ -44,6 +46,14 @@ async function writeQueue(enrichmentDir, queue) {
 
 /**
  * Append a new pending entry to the subagent queue.
+ *
+ * Legacy calls (no narrative metadata) produce the exact historical entry.
+ * Opt-in narrative calls must supply the complete metadata trio —
+ * `promptVersion`, the shared `schema` and `knownGraphKeys` — all at once;
+ * partial or malformed metadata rejects with TypeError before the queue file
+ * is read or written, so a rejected call can never create a silent legacy
+ * entry or store a defaulted value (N3 correction B3).
+ *
  * @returns {object} the entry as written (with generated id)
  */
 export async function appendSubagentQueue(enrichmentDir, {
@@ -55,7 +65,25 @@ export async function appendSubagentQueue(enrichmentDir, {
   tokenCount = null,
   prompt,
   queuedAt,
+  promptVersion,
+  schema,
+  knownGraphKeys,
 }) {
+  const supplied = [promptVersion, schema, knownGraphKeys].filter((value) => value !== undefined);
+  if (supplied.length > 0 && supplied.length < 3) {
+    throw new TypeError('promptVersion, schema and knownGraphKeys must be supplied together for narrative entries');
+  }
+  if (supplied.length === 3) {
+    if (typeof promptVersion !== 'string' || !promptVersion) {
+      throw new TypeError('promptVersion must be a non-empty string');
+    }
+    if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+      throw new TypeError('schema must be a JSON schema object');
+    }
+    // Rejects non-collection shapes and non-canonical raw graph IDs up front.
+    normalizeSymbolKeys(knownGraphKeys);
+  }
+
   const queue = await readQueue(enrichmentDir);
   const entry = {
     id: randomUUID(),
@@ -74,6 +102,11 @@ export async function appendSubagentQueue(enrichmentDir, {
     errorAt: null,
     error: null,
   };
+  if (supplied.length === 3) {
+    entry.promptVersion = promptVersion;
+    entry.schema = schema;
+    entry.knownGraphKeys = [...knownGraphKeys];
+  }
   queue.entries.push(entry);
   await writeQueue(enrichmentDir, queue);
   return entry;
