@@ -126,6 +126,14 @@ Overrides may use `name`, `description`, `roleLayers`, the existing eight `weigh
 
 Focused checks: `node --test tests/role-classify.test.mjs tests/role-classify-recovery.test.mjs tests/role-profiles.test.mjs` from `tools/project-memory-context`.
 
+### Role Assignment Storage
+
+The SQLite GraphStore exposes `persistNodeRoles([{ endpoint, classification }], { profile })` and read-only `getNodeRole(canonicalEndpointId)`. Endpoints use the native canonical file/symbol shapes, not raw Graphify IDs. Classifications use the four-field classifier output; custom roles require the resolved declaring profile. The default profile is generic. Unknown classifications are exactly null role/layer, zero confidence, and empty evidence.
+
+The whole batch validates before mutation. It requires one current node for each canonical endpoint and rejects conflicting/duplicate identities, malformed classifications, and undeclared role/layer pairs. A savepoint covers both the additive `node_role_assignments` table and `nodes.metadata` updates; existing metadata is preserved under `metadata.roleClassification`. A graph rebuild rematerializes assignments only onto uniquely matching current identities, so renamed Graphify IDs work but reused unrelated IDs and ambiguous identities do not inherit prior roles. Missing/ambiguous historical assignments remain stored without being exposed by `getNodeRole`. Legacy read-only databases without the table return null and are never migrated by reads.
+
+This storage API does not run production extraction, refresh, or classification automatically. Public facts/cards/context exposure is a separate R3 unit. Storage checks: `node --test tests/node-roles-store.test.mjs tests/graph-db.test.mjs tests/graph-store-parity.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.

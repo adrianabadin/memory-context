@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 
 import { NATIVE_EDGES_SCHEMA_SQL, persistNativeRelations, listNativeEdges, getNativeEdgesFor, listNativeImportBindings } from './native-relations.mjs';
+import { persistNodeRoles, getNodeRole, restoreNodeRoles } from './node-roles.mjs';
 
 // ── Schema ───────────────────────────────────────────────────────────────────
 
@@ -349,6 +350,8 @@ export function buildFromGraphJson(db, graph, contentHash) {
       insertEdge.run(link.source, link.target, link.relation);
     }
 
+    restoreNodeRoles(db);
+
     upsertMeta.run('content_hash', contentHash);
     upsertMeta.run('schema_version', String(GRAPH_SCHEMA_VERSION));
     upsertMeta.run('built_at', new Date().toISOString());
@@ -496,6 +499,14 @@ export function createSqliteGraphStore(db) {
 
     listNativeImportBindings() {
       return listNativeImportBindings(db);
+    },
+
+    persistNodeRoles(assignments, options) {
+      return persistNodeRoles(db, assignments, options);
+    },
+
+    getNodeRole(endpointId) {
+      return getNodeRole(db, endpointId);
     },
 
     close() {
