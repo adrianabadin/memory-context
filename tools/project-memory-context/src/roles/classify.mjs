@@ -196,6 +196,13 @@ function classifyWithProfile(record, profile, allSymbols) {
   const resolveRole = (r) => classifyWithProfile(r, profile, allSymbols).role;
   const signals = collectSignals(record, profile, allSymbols, resolveRole);
   assertSignals(signals, profile);
+  // A member's stronger structured annotation is an explicit role override:
+  // corroborating suffix/path markers must not outvote it through noisy-OR.
+  const inherited = signals.find((signal) => signal.signal === 'container-role');
+  const annotation = signals.find((signal) => signal.signal === 'framework-annotation');
+  if (record.kind === 'method' && inherited && annotation && annotation.weight > inherited.weight) {
+    return finalize(scoreRoles(signals.filter((signal) => signal.role === annotation.role)), profile);
+  }
   return finalize(scoreRoles(signals), profile);
 }
 

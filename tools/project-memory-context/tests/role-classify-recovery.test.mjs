@@ -85,3 +85,21 @@ test('S3/B3 implicit decorator role must be declared', async () => {
   }
   assert.ok(result.role === null || Object.hasOwn(profile.roleLayers, result.role));
 });
+
+test('S3 member annotation overrides inherited role despite agreeing weak signals', async () => {
+  const { loadProfile, classifySymbol } = await import('../src/roles/classify.mjs');
+  const profile = loadProfile('generic');
+  const container = { kind: 'class', name: 'UserService', filePath: 'src/services/user.ts' };
+  const member = { kind: 'method', name: 'getUserService', container: 'UserService', filePath: container.filePath };
+  const options = { profile, allSymbols: [container] };
+  const inherited = classifySymbol(member, options);
+  assert.equal(inherited.role, 'service');
+  assert.equal(inherited.confidence, 0.95);
+  const result = classifySymbol({ ...member, annotations: { decorators: ['Controller'] } }, options);
+  assert.equal(result.role, 'controller');
+  assert.equal(result.layer, 'presentation');
+  assert.equal(result.confidence, 0.9);
+  assert.ok(result.evidence.every((item) => item.includes('structured decorator annotation')));
+  profile.weights.frameworkAnnotation = 0.5;
+  assert.equal(classifySymbol({ ...member, annotations: { decorators: ['Controller'] } }, options).role, 'service');
+});
