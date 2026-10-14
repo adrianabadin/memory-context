@@ -143,6 +143,12 @@ Storage checks: `node --test tests/node-roles-store.test.mjs tests/graph-db.test
 
 The injected generator receives `{schema, attempt, errors}` and may return a JSON object or JSON text. Valid output returns `{status: 'validated', narrative, attempts, errors: []}` with isolated output arrays. Invalid JSON/schema/mentions gets one retry with diagnostics; a second invalid output returns `{status: 'error', narrative: null, attempts: 2, errors}`. Provider exceptions propagate without a schema retry. There is no network, graph mutation, or provider activation here; queue persistence, prompt v2, trivial templates, call ordering, hashes, and concurrency are separate F3 units. Focused check: `node --test tests/narrative-schema.test.mjs` from `tools/project-memory-context`.
 
+## Bottom-Up Narrative Ordering (F3.2)
+
+`src/cards/order.mjs` exports the pure `orderNarratives({symbolKeys, edges})`. `symbolKeys` is the unique current graph-key array; edges use native `{source: {id}, target: {id}, relation}` shapes. Only `calls` edges between supplied keys affect ordering; non-call edges and historical endpoints absent from the current graph do not invent symbols or dependencies. Invalid option/key/endpoint shapes reject without mutation.
+
+The result is an array of symbol-key batches: each strongly connected component appears once, its members sorted, and callee components precede caller components. Isolated symbols remain singleton batches. Iterative Tarjan handles deep graphs without recursive stack overflow and sorts inputs for deterministic output. This is a planner only, not queue execution or concurrency activation. Focused check: `node --test tests/cards-order.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.
