@@ -137,6 +137,12 @@ This storage API does not run production extraction, refresh, or classification 
 
 Storage checks: `node --test tests/node-roles-store.test.mjs tests/graph-db.test.mjs tests/graph-store-parity.test.mjs`. Exposure checks: `node --test tests/node-roles-exposure.test.mjs tests/card-facts.test.mjs tests/file-card.test.mjs tests/native-context-cli.test.mjs tests/mcp-relations.test.mjs` from `tools/project-memory-context`.
 
+## Structured Narrative Validation (F3.1)
+
+`src/cards/narrative-schema.mjs` exports the immutable `NARRATIVE_SCHEMA`, `validateNarrative(value, {symbolKeys})`, and `generateValidatedNarrative({generate, symbolKeys})`. The seven required fields are `summary` (at most 25 whitespace-separated words), string arrays `behavior`, `sideEffects`, `errors`, `contracts`, `mentions`, and string `changeNotes`; extra fields reject. Every mention must belong to the caller's authoritative graph-key `Set`. Validation checks structure and mention membership, not semantic truth of the narrative's other text, and never generates graph facts.
+
+The injected generator receives `{schema, attempt, errors}` and may return a JSON object or JSON text. Valid output returns `{status: 'validated', narrative, attempts, errors: []}` with isolated output arrays. Invalid JSON/schema/mentions gets one retry with diagnostics; a second invalid output returns `{status: 'error', narrative: null, attempts: 2, errors}`. Provider exceptions propagate without a schema retry. There is no network, graph mutation, or provider activation here; queue persistence, prompt v2, trivial templates, call ordering, hashes, and concurrency are separate F3 units. Focused check: `node --test tests/narrative-schema.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.
