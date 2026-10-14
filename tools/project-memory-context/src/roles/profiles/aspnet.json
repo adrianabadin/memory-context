@@ -1,0 +1,6 @@
+{
+  "name": "aspnet",
+  "description": "Caller-provided ASP.NET base types and annotation names without syntax extraction.",
+  "heritageTypeRoles": [{ "name": "DbContext", "role": "store" }, { "name": "BackgroundService", "role": "service" }],
+  "annotationRoles": [{ "annotation": "ApiController", "role": "controller" }]
+}

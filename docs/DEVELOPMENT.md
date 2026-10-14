@@ -109,9 +109,22 @@ Structured heritage clauses are normalized to a base type name that recognizes t
 
 The public resolved-profile API fails closed **before scoring** (B3): every weight in `profile.weights` must be a finite number in `[0,1]` (bad values throw `TypeError`, never silently clamped) and every role a mapping table can produce must be a declared key of `profile.roleLayers`. Legitimate declared extensions — a role added to `roleLayers` and used in a table — pass; an undeclared role or out-of-range weight throws instead of being invented. A second gate then enforces the same contract on the **actually generated signals**, after collection but before the noisy-OR arithmetic and before any return: a required-but-missing active weight (which would otherwise yield a non-finite confidence) and an implicit/hardcoded role no table declares (such as the decorator-factory role) both throw `TypeError`. This signal-level check is generic over whatever fires — no hardcoded special case and no silent clamp.
 
-Profiles are declarative JSON in `src/roles/profiles/`. `generic` is stack-agnostic (controllers/services/repositories/models/views/utils/cli/tests); `node-cli` extends it and, on the same token, **overrides** generic (e.g. `cli/` → `cli-command`, plus `mcp/`→`mcp-tool`, `extractors/`→`extractor`, `graph-store/`→`store`) to classify PMC-style repositories. This unit loads only the packaged profiles; `.planning/project-memory-context/roles.json` project overrides, remaining framework profiles, persistence/exposure (S5) and the optional LLM tie-breaker (S6) are not implemented here.
+Profiles are declarative JSON in `src/roles/profiles/`. `generic` is stack-agnostic; `node-cli` overrides its `cli/` token with `cli-command` and adds PMC conventions. Packaged `express`, `nest`, `spring`, `aspnet`, and `django` profiles extend generic with configured annotation names, base types, paths, or caller-provided side-effect markers. They do not scan dependencies, extract additional syntax, or verify runtime effects.
 
-Focused checks: `node --test tests/role-classify.test.mjs tests/role-classify-recovery.test.mjs` from `tools/project-memory-context`.
+`loadProjectProfile(projectRoot, { profileName: 'generic' })` in `src/roles/profile-loader.mjs` reads only `.planning/project-memory-context/roles.json`. Missing files return the caller-selected packaged profile without creating anything. An explicit `extends` selects a packaged base; project mappings then override matching keys. No automatic stack detection or global configuration lookup occurs.
+
+```json
+{
+  "extends": "nest",
+  "roleLayers": { "handler": "application" },
+  "directoryRoles": [{ "token": "handlers", "role": "handler" }],
+  "weights": { "directoryToken": 0.6 }
+}
+```
+
+Overrides may use `name`, `description`, `roleLayers`, the existing eight `weights`, `topologyThresholds`, `decoratorFactoryNames`, and the six mapping tables from generic. Keyed mappings merge using the same case-insensitive keys as lookup for suffixes, directory tokens, and heritage types; annotation names and side-effect markers remain exact. `decoratorFactoryNames` and `topologyRules` replace their arrays. Unknown loader options or config fields, malformed structures, unsupported topology conditions, invalid thresholds/weights, or undeclared mapped roles reject before returning a profile; malformed JSON also rejects. Returned profiles remain deep-isolated. Persistence/exposure (S5) and the optional LLM tie-breaker (S6) are separate units, not activated by loading profiles.
+
+Focused checks: `node --test tests/role-classify.test.mjs tests/role-classify-recovery.test.mjs tests/role-profiles.test.mjs` from `tools/project-memory-context`.
 
 ## Relational Evaluation Harness
 

@@ -1,6 +1,6 @@
 // tools/project-memory-context/src/roles/classify.mjs
 //
-// F2 role classifier (plan 2.3, bounded R1: generic + node-cli profiles only).
+// F2 role classifier (plan 2.3) with declarative packaged profiles.
 // Pure weighted scoring over the S1 signals; produces `{role, layer, confidence,
 // evidence[]}` for files and symbols. A member inherits a uniquely identified
 // container's role unless its own stronger provided evidence overrides. When no
@@ -26,6 +26,11 @@ import {
 
 const genericProfile = JSON.parse(readFileSync(new URL('./profiles/generic.json', import.meta.url), 'utf8'));
 const nodeCliProfile = JSON.parse(readFileSync(new URL('./profiles/node-cli.json', import.meta.url), 'utf8'));
+const frameworkProfiles = Object.fromEntries(
+  ['express', 'nest', 'spring', 'aspnet', 'django'].map((name) => [
+    name, JSON.parse(readFileSync(new URL(`./profiles/${name}.json`, import.meta.url), 'utf8')),
+  ]),
+);
 
 function dedupeByKey(items, keyFn) {
   const map = new Map();
@@ -38,7 +43,7 @@ function dedupeByKey(items, keyFn) {
 // Both inputs are deep-cloned first so the returned profile shares no object
 // identity with the module-owned JSON — mutating or freezing a returned profile
 // can never corrupt later loadProfile results (B2 isolation).
-function mergeProfiles(base, override) {
+export function mergeProfiles(base, override) {
   const b = structuredClone(base);
   const o = structuredClone(override);
   return {
@@ -48,11 +53,11 @@ function mergeProfiles(base, override) {
     weights: { ...b.weights, ...o.weights },
     topologyThresholds: { ...b.topologyThresholds, ...o.topologyThresholds },
     decoratorFactoryNames: o.decoratorFactoryNames ?? b.decoratorFactoryNames,
-    suffixRoles: dedupeByKey([...(b.suffixRoles ?? []), ...(o.suffixRoles ?? [])], (s) => s.suffix),
-    directoryRoles: dedupeByKey([...(b.directoryRoles ?? []), ...(o.directoryRoles ?? [])], (s) => s.token),
+    suffixRoles: dedupeByKey([...(b.suffixRoles ?? []), ...(o.suffixRoles ?? [])], (s) => String(s.suffix).toLowerCase()),
+    directoryRoles: dedupeByKey([...(b.directoryRoles ?? []), ...(o.directoryRoles ?? [])], (s) => String(s.token).toLowerCase()),
     annotationRoles: dedupeByKey([...(b.annotationRoles ?? []), ...(o.annotationRoles ?? [])], (s) => s.annotation),
     sideEffectRoles: dedupeByKey([...(b.sideEffectRoles ?? []), ...(o.sideEffectRoles ?? [])], (s) => s.marker),
-    heritageTypeRoles: dedupeByKey([...(b.heritageTypeRoles ?? []), ...(o.heritageTypeRoles ?? [])], (r) => r.name),
+    heritageTypeRoles: dedupeByKey([...(b.heritageTypeRoles ?? []), ...(o.heritageTypeRoles ?? [])], (r) => String(r.name).toLowerCase()),
     topologyRules: o.topologyRules ?? b.topologyRules,
   };
 }
@@ -60,6 +65,7 @@ function mergeProfiles(base, override) {
 export function loadProfile(name) {
   if (name === 'generic') return structuredClone(genericProfile);
   if (name === 'node-cli') return mergeProfiles(genericProfile, nodeCliProfile);
+  if (Object.hasOwn(frameworkProfiles, name)) return mergeProfiles(genericProfile, frameworkProfiles[name]);
   throw new TypeError(`Unknown role profile: ${name}`);
 }
 
@@ -78,7 +84,7 @@ const ROLE_TABLES = [
 // mapping table can produce must be declared in roleLayers. Legitimate declared
 // profile extensions (a role added to roleLayers AND used in a table) pass; a
 // bogus weight or undeclared role throws TypeError instead of being invented.
-function assertProfile(profile) {
+export function assertProfile(profile) {
   if (
     !profile || typeof profile !== 'object' ||
     typeof profile.roleLayers !== 'object' || profile.roleLayers === null ||

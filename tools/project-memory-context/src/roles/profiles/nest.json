@@ -1,0 +1,6 @@
+{
+  "name": "nest",
+  "description": "Caller-provided Nest annotation evidence with generic stereotype fallback.",
+  "annotationRoles": [{ "annotation": "Module", "role": "config" }, { "annotation": "Resolver", "role": "controller" }],
+  "suffixRoles": [{ "suffix": "Module", "role": "config" }, { "suffix": "Resolver", "role": "controller" }]
+}

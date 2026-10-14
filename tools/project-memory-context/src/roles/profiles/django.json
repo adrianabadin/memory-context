@@ -1,0 +1,6 @@
+{
+  "name": "django",
+  "description": "Caller-provided Django base types and conventional path markers.",
+  "heritageTypeRoles": [{ "name": "View", "role": "view" }, { "name": "Form", "role": "dto" }, { "name": "Model", "role": "model" }],
+  "directoryRoles": [{ "token": "templates", "role": "view" }, { "token": "migrations", "role": "config" }]
+}
