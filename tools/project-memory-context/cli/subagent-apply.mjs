@@ -31,6 +31,7 @@ import { persistEnrichmentSuccess, saveWorklistMerged } from './enrich-queue.mjs
 import { NARRATIVE_SCHEMA, validateNarrative } from '../src/cards/narrative-schema.mjs';
 import { PROMPT_VERSION, normalizeSymbolKeys } from '../src/cards/prompt-v2.mjs';
 import { queuedEvidenceCheck } from '../src/cards/narrative-cache.mjs';
+import { withEnrichmentWrite, withFileLockRetry } from '../src/cards/queue-state-io.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -146,6 +147,16 @@ export async function main(args = process.argv.slice(2)) {
   const worklistFile = resolve(enrichmentDir, 'worklist.json');
   const symbolIndexFile = resolve(enrichmentDir, 'symbol-index.json');
 
+  // N6B: subagent-apply shares the SAME per-directory coordinator as the
+  // queue's direct runner (one canonical enrichment dir), so its queue
+  // mutations never overlap an in-process queue completion's read-merge-write
+  // on worklist.json or subagent-queue.json. Lock retry covers only the file
+  // operation, never the apply itself.
+  const markEntryError = (id, message) => withEnrichmentWrite(
+    enrichmentDir,
+    () => withFileLockRetry(() => markSubagentError(enrichmentDir, id, message)),
+  );
+
   // Load subagent queue and find the entry
   const queue = await loadSubagentQueue(enrichmentDir);
   const entry = queue.entries.find((e) => e.id === entryId);
@@ -168,13 +179,13 @@ export async function main(args = process.argv.slice(2)) {
     content = content.trim();
   } catch (err) {
     console.error(`[subagent-apply] ERROR: cannot read content file: ${err.message}`);
-    await markSubagentError(enrichmentDir, entryId, `content-file read error: ${err.message}`);
+    await markEntryError(entryId, `content-file read error: ${err.message}`);
     return 1;
   }
 
   if (!content) {
     console.error('[subagent-apply] ERROR: content file is empty');
-    await markSubagentError(enrichmentDir, entryId, 'empty content');
+    await markEntryError(entryId, 'empty content');
     return 1;
   }
 
@@ -187,7 +198,7 @@ export async function main(args = process.argv.slice(2)) {
     const problem = narrativeProblem(entry, content);
     if (problem) {
       console.error(`[subagent-apply] ERROR: ${problem}`);
-      await markSubagentError(enrichmentDir, entryId, problem);
+      await markEntryError(entryId, problem);
       return 1;
     }
     const parsed = JSON.parse(persistedContent);
@@ -215,17 +226,19 @@ export async function main(args = process.argv.slice(2)) {
     if (!check.ok) {
       console.error(`[subagent-apply] ERROR: ${check.problem}`);
       try {
-        const staleWorklist = await loadJson(worklistFile);
-        const target = staleWorklist.find((element) => element.symbolKey === entry.symbolKey);
-        if (target) {
-          target.status = 'stale';
-          target.staleReason = 'queued-fingerprint-mismatch';
-          await saveWorklistMerged(worklistFile, staleWorklist);
-        }
+        await withEnrichmentWrite(enrichmentDir, async () => {
+          const staleWorklist = await loadJson(worklistFile);
+          const target = staleWorklist.find((element) => element.symbolKey === entry.symbolKey);
+          if (target) {
+            target.status = 'stale';
+            target.staleReason = 'queued-fingerprint-mismatch';
+            await saveWorklistMerged(worklistFile, staleWorklist);
+          }
+        });
       } catch (worklistError) {
         console.error(`[subagent-apply] WARN: could not mark ${entry.symbolKey} stale: ${worklistError.message}`);
       }
-      await markSubagentError(enrichmentDir, entryId, check.problem);
+      await markEntryError(entryId, check.problem);
       return 1;
     }
     queuedEvidence = check.evidence;
@@ -254,7 +267,7 @@ export async function main(args = process.argv.slice(2)) {
     if (superseded?.status === 'stale') {
       const problem = `queued narrative evidence is superseded: ${entry.symbolKey} was marked stale after queueing (${superseded.staleReason ?? 'unknown reason'})`;
       console.error(`[subagent-apply] ERROR: ${problem}`);
-      await markSubagentError(enrichmentDir, entryId, problem);
+      await markEntryError(entryId, problem);
       return 1;
     }
   }
@@ -290,12 +303,12 @@ export async function main(args = process.argv.slice(2)) {
     }));
   } catch (err) {
     console.error(`[subagent-apply] ERROR: persistEnrichmentSuccess failed: ${err.message}`);
-    await markSubagentError(enrichmentDir, entryId, err.message);
+    await markEntryError(entryId, err.message);
     return 1;
   }
 
-  // Mark the subagent queue entry as done
-  await markSubagentDone(enrichmentDir, entryId, { memoryId });
+  // Mark the subagent queue entry as done through the shared coordinator.
+  await withEnrichmentWrite(enrichmentDir, () => withFileLockRetry(() => markSubagentDone(enrichmentDir, entryId, { memoryId })));
 
   console.log(JSON.stringify({
     ok: true,
