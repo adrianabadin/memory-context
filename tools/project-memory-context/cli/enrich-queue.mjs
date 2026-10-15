@@ -19,7 +19,7 @@ import { spawnBackground } from '../src/platform.mjs';
 import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-index.mjs';
 import { buildNarrativePromptV2, normalizeSymbolKeys, PROMPT_VERSION } from '../src/cards/prompt-v2.mjs';
 import { NARRATIVE_SCHEMA, generateValidatedNarrative } from '../src/cards/narrative-schema.mjs';
-import { tryBuildTrivialNarrative } from '../src/cards/trivial-template.mjs';
+import { analyzeTrivialSymbol, tryBuildTrivialNarrative } from '../src/cards/trivial-template.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -432,6 +432,13 @@ export async function persistEnrichmentSuccess({
  * @param {object} [args.env]
  * @param {string} [args.prompt] - pre-built prompt (skips the prompt rebuild)
  * @param {object} [args.narrativeContext] - explicit narrative opt-in (plan 3.3 / S9)
+ * @param {boolean} [args.expectTrivialTemplate] - internal-only strictness seam
+ *   set by the main loop when it already bypassed token counting and the
+ *   subagent route on its initial trivial proof (N4 C1). It can never make a
+ *   symbol trivial: when the independent source recheck does not reproduce
+ *   the proof, the runner fails closed with the existing error semantics
+ *   instead of running a model behind bypassed routing. Callers that never
+ *   bypassed routing must not pass it and keep the standard fallback.
  * @param {Function} [args.runEnrichmentWithFallbackImpl]
  */
 export async function runQueueSymbolEnrichment({
@@ -451,6 +458,9 @@ export async function runQueueSymbolEnrichment({
   prompt: prebuiltPrompt,
   // Explicit opt-in (plan 3.3 / spec S9): authoritative caller-owned context.
   narrativeContext = null,
+  // Internal-only strictness (N4 C1): the caller bypassed routing on an
+  // earlier proof and demands that this fresh recheck agree with it.
+  expectTrivialTemplate = false,
   runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
 }) {
   const narrativeMode = narrativeContext !== null && narrativeContext !== undefined;
@@ -489,11 +499,29 @@ export async function runQueueSymbolEnrichment({
     })
     : null;
 
+  // N4 C1 (retained R3-source-recheck): when the caller already bypassed
+  // token counting and the subagent route on an earlier proof, a failed
+  // fresh recheck must never fall through to a model behind bypassed
+  // routing. Fail closed through the existing error semantics instead: an
+  // honest source-changed/unavailable message, zero attempts, no provider
+  // events, and previously accepted memory bytes, index summaries and sync
+  // manifest preserved for a later normal-queue retry. Direct callers that
+  // never bypassed routing pass no such flag and keep the standard
+  // non-trivial provider fallback below.
+  let recheckError = null;
+  if (expectTrivialTemplate && !trivialTemplate) {
+    const recheck = await analyzeTrivialSymbol({ symbol, projectRoot });
+    recheckError = `Trivial-template recheck failed for ${symbol.symbolKey}: the symbol source changed or became unavailable after the routing bypass (reason: ${recheck.reason ?? 'unavailable'}). Refusing to run model providers behind bypassed routing; retry this entry through the normal queue.`;
+  }
+
   if (trivialTemplate) {
     // The template was already validated against the shared N1 schema and
     // the authoritative known keys; it enters the exact same validated
     // persistence path with no attempts recorded.
     validation = { status: 'validated', narrative: trivialTemplate.narrative, attempts: 0, errors: [] };
+  } else if (recheckError) {
+    // Intentionally no driver invocation: the failure path below records the
+    // honest error with empty attempts and preserves accepted artifacts.
   } else if (narrativeMode) {
     // The N1 helper bounds schema retries to exactly one retry. Provider
     // failures abort validation immediately and keep their own semantics:
@@ -577,7 +605,7 @@ export async function runQueueSymbolEnrichment({
 
   const error = validation
     ? `Narrative validation failed: ${validation.errors.join('; ')}`
-    : getLastAttemptError(attempts);
+    : recheckError ?? getLastAttemptError(attempts);
   const failedAt = new Date().toISOString();
 
   if (wlEntry) {
@@ -864,7 +892,10 @@ export async function main({
     // merely zero enrich calls. `trivial` is typed metadata produced by
     // src/cards/trivial-template.mjs over the real AST, never a caller
     // boolean; runQueueSymbolEnrichment re-derives the proof from the
-    // inspectable source before persisting the template.
+    // inspectable source before persisting the template, and the internal
+    // expectTrivialTemplate seam added below makes a failed recheck fail
+    // closed (N4 C1) instead of running a model behind this bypassed
+    // routing.
     let tokens = null;
     let routing = null;
     if (!trivial) {
@@ -906,13 +937,20 @@ export async function main({
           env: process.env,
           prompt, // pass pre-built prompt — no double round-trip
           ...(narrativeContext ? { narrativeContext } : {}),
+          // Internal-only strictness (N4 C1): only this loop's initial-proof
+          // bypass may demand that the runner's independent recheck agree;
+          // a disagreement fails closed instead of reaching a model.
+          ...(trivial ? { expectTrivialTemplate: true } : {}),
           runEnrichmentWithFallbackImpl,
         });
         const elapsed = Date.now() - symbolStart;
-        if (trivial) {
-          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — template narrative (${trivial.proof.kind}) — no model call (${elapsed}ms)`);
+        // The completion message is bound to the ACTUAL result, never to the
+        // initial proof: only a real template result may claim the template
+        // path or "no model call" (N4 C1).
+        if (result.trivial) {
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — template narrative (${result.trivial.kind}) — no model call (${elapsed}ms)`);
         } else {
-          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s — ${tokens} tokens`);
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s${tokens === null ? '' : ` — ${tokens} tokens`}`);
         }
         results.push({
           symbolKey: symbol.symbolKey,
