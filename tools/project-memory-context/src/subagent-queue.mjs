@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 import { normalizeSymbolKeys } from './cards/prompt-v2.mjs';
+import { validateQueuedNarrativeEvidence } from './cards/narrative-cache.mjs';
 
 const QUEUE_FILE = 'subagent-queue.json';
 
@@ -68,6 +69,7 @@ export async function appendSubagentQueue(enrichmentDir, {
   promptVersion,
   schema,
   knownGraphKeys,
+  narrativeEvidence,
 }) {
   const supplied = [promptVersion, schema, knownGraphKeys].filter((value) => value !== undefined);
   if (supplied.length > 0 && supplied.length < 3) {
@@ -82,6 +84,28 @@ export async function appendSubagentQueue(enrichmentDir, {
     }
     // Rejects non-collection shapes and non-canonical raw graph IDs up front.
     normalizeSymbolKeys(knownGraphKeys);
+  }
+
+  // N5B (plan 3.5 / S11): the complete opt-in fingerprint evidence rides
+  // the queue entry so `subagent-apply` can re-derive it against the actual
+  // source. The whole bundle is validated — including its consistency with
+  // the transported trio and the queued symbol key — BEFORE the queue file
+  // is read or written, so a rejected call can never store a partial bundle
+  // or silently degrade into a legacy entry.
+  let normalizedEvidence;
+  if (narrativeEvidence !== undefined && narrativeEvidence !== null) {
+    if (supplied.length !== 3) {
+      throw new TypeError('narrativeEvidence requires promptVersion, schema and knownGraphKeys to be supplied together');
+    }
+    normalizedEvidence = validateQueuedNarrativeEvidence(narrativeEvidence);
+    if (normalizedEvidence.symbolKey !== symbolKey) {
+      throw new TypeError('narrativeEvidence.symbolKey must match the queued symbolKey');
+    }
+    if (normalizedEvidence.promptVersion !== promptVersion) {
+      throw new TypeError('narrativeEvidence.promptVersion must match the queued promptVersion');
+    }
+  } else if (narrativeEvidence === null) {
+    throw new TypeError('narrativeEvidence must be an object when supplied');
   }
 
   const queue = await readQueue(enrichmentDir);
@@ -106,6 +130,9 @@ export async function appendSubagentQueue(enrichmentDir, {
     entry.promptVersion = promptVersion;
     entry.schema = schema;
     entry.knownGraphKeys = [...knownGraphKeys];
+    if (normalizedEvidence) {
+      entry.narrativeEvidence = normalizedEvidence;
+    }
   }
   queue.entries.push(entry);
   await writeQueue(enrichmentDir, queue);

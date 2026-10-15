@@ -263,3 +263,162 @@ test('extractSemanticSummary returns null for empty or whitespace or non-string 
   assert.equal(extractSemanticSummary(null), null);
   assert.equal(extractSemanticSummary(undefined), null);
 });
+
+// ── N5B (plan 3.5 / S11): optional narrative fingerprint passthrough ──────
+
+const N5B_KEY = 'js|src/classify.js|function|exported|classify|1';
+const N5B_BUNDLE = {
+  narrativeHash: '1ef00ad89b212f33',
+  calleeSummaryHashes: { 'js|src/normalize.js|function|exported|normalize|1': '9a8b7c6d5e4f3a2b' },
+  promptVersion: 'v2',
+};
+
+test('upsertSymbolIndexEntry persists the complete optional narrative fingerprint bundle when supplied', () => {
+  const updated = upsertSymbolIndexEntry({}, {
+    symbolKey: N5B_KEY,
+    memoryId: 'mem_1',
+    graphNodeId: 'node-1',
+    codeHash: 'hash-1',
+    status: 'enriched',
+    lastEnrichedAt: '2026-10-15T12:00:00Z',
+    semanticSummary: 'Classifies a raw value.',
+    ...N5B_BUNDLE,
+  });
+
+  const record = updated[N5B_KEY];
+  assert.equal(record.narrativeHash, N5B_BUNDLE.narrativeHash);
+  assert.deepEqual(record.calleeSummaryHashes, N5B_BUNDLE.calleeSummaryHashes);
+  assert.equal(record.promptVersion, 'v2');
+  assert.equal(record.semanticSummary, 'Classifies a raw value.');
+});
+
+test('upsertSymbolIndexEntry adds no narrative keys when the update omits them', () => {
+  const updated = upsertSymbolIndexEntry({}, {
+    symbolKey: N5B_KEY,
+    memoryId: 'mem_1',
+    graphNodeId: null,
+    codeHash: 'hash-1',
+    status: 'enriched',
+    lastEnrichedAt: '2026-10-15T12:00:00Z',
+  });
+
+  assert.deepEqual(updated[N5B_KEY], {
+    memoryId: 'mem_1',
+    graphNodeId: null,
+    codeHash: 'hash-1',
+    status: 'enriched',
+    lastEnrichedAt: '2026-10-15T12:00:00Z',
+  }, 'legacy records must not gain null or default narrative keys');
+  assert.ok(!('narrativeHash' in updated[N5B_KEY]));
+  assert.ok(!('calleeSummaryHashes' in updated[N5B_KEY]));
+  assert.ok(!('promptVersion' in updated[N5B_KEY]));
+});
+
+test('upsertSymbolIndexEntry preserves an existing narrative bundle when the update omits it', () => {
+  const index = {
+    [N5B_KEY]: {
+      memoryId: 'mem_1',
+      graphNodeId: 'node-1',
+      codeHash: 'hash-1',
+      status: 'enriched',
+      lastEnrichedAt: '2026-10-15T12:00:00Z',
+      semanticSummary: 'Classifies a raw value.',
+      ...N5B_BUNDLE,
+    },
+  };
+
+  // This is the error path: status flips without any new accepted fingerprint.
+  const updated = upsertSymbolIndexEntry(index, {
+    symbolKey: N5B_KEY,
+    memoryId: null,
+    graphNodeId: 'node-1',
+    codeHash: 'hash-2',
+    status: 'error',
+    lastEnrichedAt: '2026-10-15T13:00:00Z',
+  });
+
+  assert.equal(updated[N5B_KEY].narrativeHash, N5B_BUNDLE.narrativeHash,
+    'a failed update must preserve the previously accepted fingerprint');
+  assert.deepEqual(updated[N5B_KEY].calleeSummaryHashes, N5B_BUNDLE.calleeSummaryHashes);
+  assert.equal(updated[N5B_KEY].promptVersion, 'v2');
+  assert.equal(updated[N5B_KEY].semanticSummary, 'Classifies a raw value.');
+});
+
+test('upsertSymbolIndexEntry clears the narrative bundle on an explicit null fingerprint', () => {
+  const index = {
+    [N5B_KEY]: {
+      memoryId: 'mem_1',
+      graphNodeId: null,
+      codeHash: 'hash-1',
+      status: 'enriched',
+      ...N5B_BUNDLE,
+    },
+  };
+
+  const updated = upsertSymbolIndexEntry(index, {
+    symbolKey: N5B_KEY,
+    memoryId: 'mem_1',
+    graphNodeId: null,
+    codeHash: 'hash-1',
+    status: 'enriched',
+    narrativeHash: null,
+  });
+
+  assert.ok(!('narrativeHash' in updated[N5B_KEY]));
+  assert.ok(!('calleeSummaryHashes' in updated[N5B_KEY]));
+  assert.ok(!('promptVersion' in updated[N5B_KEY]));
+});
+
+test('upsertSymbolIndexEntry rejects a partial or malformed narrative bundle with TypeError', () => {
+  assert.throws(
+    () => upsertSymbolIndexEntry({}, {
+      symbolKey: N5B_KEY,
+      memoryId: 'mem_1',
+      graphNodeId: null,
+      codeHash: 'hash-1',
+      status: 'enriched',
+      narrativeHash: 'abc',
+    }),
+    TypeError,
+    'a fingerprint without callee hashes and prompt version must not be persisted',
+  );
+
+  assert.throws(
+    () => upsertSymbolIndexEntry({}, {
+      symbolKey: N5B_KEY,
+      memoryId: 'mem_1',
+      graphNodeId: null,
+      codeHash: 'hash-1',
+      status: 'enriched',
+      narrativeHash: 'abc',
+      calleeSummaryHashes: { [N5B_KEY]: 'hash' },
+      promptVersion: '',
+    }),
+    TypeError,
+    'an empty prompt version must not be persisted',
+  );
+
+  assert.throws(
+    () => upsertSymbolIndexEntry({}, {
+      symbolKey: N5B_KEY,
+      memoryId: 'mem_1',
+      graphNodeId: null,
+      codeHash: 'hash-1',
+      status: 'enriched',
+      narrativeHash: 'abc',
+      calleeSummaryHashes: { node_123: 'hash' },
+      promptVersion: 'v2',
+    }),
+    TypeError,
+    'raw graph ids are not canonical callee dependency keys',
+  );
+
+  const untouched = upsertSymbolIndexEntry({}, {
+    symbolKey: N5B_KEY,
+    memoryId: 'mem_1',
+    graphNodeId: null,
+    codeHash: 'hash-1',
+    status: 'enriched',
+  });
+  assert.ok(!('narrativeHash' in untouched[N5B_KEY]), 'a rejected bundle must not leave partial keys behind');
+});

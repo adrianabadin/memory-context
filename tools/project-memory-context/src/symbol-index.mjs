@@ -1,3 +1,5 @@
+import { validateNarrativeEvidence } from './cards/narrative-cache.mjs';
+
 function extractFirstSentence(text) {
   const cleaned = text.trim();
   if (!cleaned) return null;
@@ -136,6 +138,37 @@ export function upsertSymbolIndexEntry(index, entry) {
     record.semanticSummary = null;
   } else if (existing && 'semanticSummary' in existing && existing.semanticSummary === null) {
     record.semanticSummary = null;
+  }
+
+  // N5B (plan 3.5 / S11): optional narrative fingerprint bundle
+  // `{narrativeHash, calleeSummaryHashes, promptVersion}`. Omitted fields
+  // preserve any existing bundle (or add nothing on legacy records), an
+  // explicit null clears it, and a partial or malformed bundle rejects with
+  // TypeError before any record is produced.
+  const narrativeFields = [entry.narrativeHash, entry.calleeSummaryHashes, entry.promptVersion];
+  const supplied = narrativeFields.filter((value) => value !== undefined);
+  const clearing = narrativeFields.some((value) => value === null);
+  if (clearing) {
+    const values = narrativeFields.filter((value) => value !== undefined && value !== null);
+    if (values.length > 0) {
+      throw new TypeError('narrativeHash, calleeSummaryHashes and promptVersion must be supplied together (null clears all three)');
+    }
+  } else if (supplied.length > 0) {
+    if (supplied.length < 3) {
+      throw new TypeError('narrativeHash, calleeSummaryHashes and promptVersion must be supplied together');
+    }
+    const bundle = validateNarrativeEvidence({
+      narrativeHash: entry.narrativeHash,
+      calleeSummaryHashes: entry.calleeSummaryHashes,
+      promptVersion: entry.promptVersion,
+    });
+    record.narrativeHash = bundle.narrativeHash;
+    record.calleeSummaryHashes = bundle.calleeSummaryHashes;
+    record.promptVersion = bundle.promptVersion;
+  } else if (existing && existing.narrativeHash !== undefined) {
+    record.narrativeHash = existing.narrativeHash;
+    if (existing.calleeSummaryHashes !== undefined) record.calleeSummaryHashes = existing.calleeSummaryHashes;
+    if (existing.promptVersion !== undefined) record.promptVersion = existing.promptVersion;
   }
 
   return {

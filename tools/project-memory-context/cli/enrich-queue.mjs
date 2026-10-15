@@ -20,6 +20,15 @@ import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-in
 import { buildNarrativePromptV2, normalizeSymbolKeys, PROMPT_VERSION } from '../src/cards/prompt-v2.mjs';
 import { NARRATIVE_SCHEMA, generateValidatedNarrative } from '../src/cards/narrative-schema.mjs';
 import { analyzeTrivialSymbol, tryBuildTrivialNarrative } from '../src/cards/trivial-template.mjs';
+import {
+  EXPLICIT_STALE_REASONS,
+  computeCurrentNarrativeEvidence,
+  evaluateNarrativeCache,
+  markDependentCallersStale,
+  readPreviousAcceptedSummary,
+  snapshotNarrativeContext,
+  validateNarrativeEvidence,
+} from '../src/cards/narrative-cache.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -96,7 +105,17 @@ export async function saveWorklistMerged(worklistFile, memWorklist, { loadJson: 
   for (const memEntry of memWorklist) {
     const diskEntry = diskByKey.get(memEntry.symbolKey);
     if (diskEntry?.status === 'enriched' && memEntry.status !== 'enriched' && memEntry.status !== 'already_enriched') {
-      Object.assign(memEntry, diskEntry);
+      // N5B (plan 3.5 / S11): an explicit narrative staleness mark — hash
+      // evaluation, upward callee-summary invalidation or a stale queued
+      // fingerprint — is a DELIBERATE downgrade made by this run and must
+      // survive the "disk enriched wins" guard; every other downgrade keeps
+      // the historical merge behavior unchanged.
+      const explicitStale = memEntry.status === 'stale'
+        && typeof memEntry.staleReason === 'string'
+        && EXPLICIT_STALE_REASONS.has(memEntry.staleReason);
+      if (!explicitStale) {
+        Object.assign(memEntry, diskEntry);
+      }
     }
   }
   await sj(worklistFile, memWorklist);
@@ -206,11 +225,18 @@ function createAgentSubagentProvider() {
  * @param {string} projectRoot
  * @param {object} [options]
  * @param {object} [options.narrativeContext] - authoritative caller-owned facts/roles context
+ * @param {string} [options.source] - exact source bytes already read by the
+ *   caller's cache check; when present no additional file read happens (C1
+ *   proof-read ordering). Absent: historical read.
  * @returns {Promise<{prompt: string, totalLines: number, promptVersion?: string, schema?: object, trivial?: {narrative: object, proof: object}>}
  */
 export async function buildSymbolPromptMeta(symbol, projectRoot, options) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
-  const content = await readFile(absoluteFile, 'utf8');
+  // Optional N5B seam: the queue's cache check may hand over the exact source
+  // bytes it just read so the proof/prompt consumes ONE read (preserving the
+  // C1 "initial proof read" ordering). Absent `source`, the historical read
+  // happens exactly as before.
+  const content = typeof options?.source === 'string' ? options.source : await readFile(absoluteFile, 'utf8');
   const lines = content.split('\n');
   const totalLines = lines.length;
 
@@ -292,6 +318,29 @@ function createQueueEnrichmentError(result) {
   return error;
 }
 
+/**
+ * Map an N5B cache-miss reason onto the persisted worklist `staleReason`.
+ * Unusable or absent stored proof (no artifact, corrupt bytes, missing
+ * fingerprint, invalid content/keys) requires ONE baseline regeneration;
+ * an input that genuinely differs from the stored fingerprint is the S11
+ * `narrative-hash-changed` invalidation.
+ */
+const NARRATIVE_MISSING_PROOF_REASONS = new Set([
+  'missing-stored-hash',
+  'invalid-stored-evidence',
+  'no-accepted-artifact',
+  'unreadable-artifact',
+  'corrupt-artifact',
+  'missing-content',
+  'invalid-evidence',
+  'wrong-key',
+  'invalid-content',
+]);
+
+function narrativeStaleReasonFor(reason) {
+  return NARRATIVE_MISSING_PROOF_REASONS.has(reason) ? 'narrative-hash-missing' : 'narrative-hash-changed';
+}
+
 export function buildQueueSummary(worklist) {
   return {
     enriched: worklist.filter((entry) => entry.status === 'enriched' || entry.status === 'already_enriched').length,
@@ -336,6 +385,10 @@ function createQueueProviders() {
  * @param {string} opts.projectSlug
  * @param {Array}  [opts.attempts]    - enrichment attempt records to apply to worklist entry
  * @param {string} [opts.semanticSummary] - explicit validated summary override (narrative mode)
+ * @param {object} [opts.narrativeEvidence] - complete S11 fingerprint bundle
+ *   `{symbolKey?, narrativeHash, calleeSummaryHashes, promptVersion}` for an
+ *   explicit narrative/template acceptance. Validated with TypeError before
+ *   any write; legacy calls omit it and persist exactly the historical bytes.
  * @returns {Promise<{memoryId: string, enrichedAt: string}>}
  */
 export async function persistEnrichmentSuccess({
@@ -351,15 +404,35 @@ export async function persistEnrichmentSuccess({
   projectSlug,
   attempts = [],
   semanticSummary: semanticSummaryOverride,
+  narrativeEvidence,
 }) {
   const memoryId = `queue-${safeKey(symbol.symbolKey)}`;
   const enrichedAt = new Date().toISOString();
   const memoryFile = resolve(enrichmentDir, `${safeKey(symbol.symbolKey)}.memory.json`);
 
+  // N5B (plan 3.5 / S11): validate the bundle BEFORE any write so malformed
+  // metadata can never reach the worklist, index or accepted artifact.
+  let evidence = null;
+  if (narrativeEvidence !== undefined && narrativeEvidence !== null) {
+    const validated = validateNarrativeEvidence(narrativeEvidence);
+    evidence = {
+      symbolKey: symbol.symbolKey,
+      narrativeHash: validated.narrativeHash,
+      calleeSummaryHashes: validated.calleeSummaryHashes,
+      promptVersion: validated.promptVersion,
+    };
+  }
+
+  // The PREVIOUS accepted FULL summary text (never the 200-char index
+  // truncation) is the upward-propagation comparison unit; captured before
+  // the accepted artifact is overwritten.
+  const previousAcceptedSummary = evidence ? await readPreviousAcceptedSummary(memoryFile) : null;
+
   await saveJson(memoryFile, {
     content,
     category: 'architecture',
     tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`],
+    ...(evidence ? { narrativeEvidence: evidence } : {}),
   });
 
   const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
@@ -371,6 +444,11 @@ export async function persistEnrichmentSuccess({
       error: undefined,
       failedAt: undefined,
     });
+    if (evidence) {
+      wlEntry.narrativeHash = evidence.narrativeHash;
+      wlEntry.calleeSummaryHashes = evidence.calleeSummaryHashes;
+      wlEntry.promptVersion = evidence.promptVersion;
+    }
   }
 
   const semanticSummary = semanticSummaryOverride ?? symbol.semanticSummary ?? extractSemanticSummary(content);
@@ -383,8 +461,29 @@ export async function persistEnrichmentSuccess({
     status: 'enriched',
     lastEnrichedAt: enrichedAt,
     semanticSummary,
+    ...(evidence ? {
+      narrativeHash: evidence.narrativeHash,
+      calleeSummaryHashes: evidence.calleeSummaryHashes,
+      promptVersion: evidence.promptVersion,
+    } : {}),
   });
   symbolIndex[symbol.symbolKey] = updatedIndex[symbol.symbolKey];
+
+  // S11 upward propagation: regeneration moves upward ONLY when this
+  // callee's accepted summary TEXT actually changed byte-for-byte. A callee
+  // code/role/body edit with identical summary bytes must not stale anyone.
+  if (
+    evidence
+    && typeof semanticSummary === 'string'
+    && previousAcceptedSummary !== null
+    && previousAcceptedSummary !== semanticSummary
+  ) {
+    await markDependentCallersStale({
+      worklist,
+      symbolKey: symbol.symbolKey,
+      newSummaryText: semanticSummary,
+    });
+  }
 
   await saveWorklistMerged(worklistFile, worklist);
   if (symbolIndexFile) {
@@ -406,6 +505,84 @@ export async function persistEnrichmentSuccess({
   }
 
   return { memoryId, enrichedAt };
+}
+
+/**
+ * Reconcile a validated cache hit into the worklist and symbol index:
+ * the accepted entry keeps its memoryId, summary and artifact bytes, while
+ * an explicitly stale/pending entry is restored to `enriched` and any missing
+ * stored fingerprint fields are re-aligned. Writes happen only when something
+ * actually differs — a fully consistent hit performs zero writes.
+ *
+ * @returns {Promise<{worklistDirty: boolean, indexDirty: boolean}>}
+ */
+async function reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile }) {
+  let worklistDirty = false;
+  let indexDirty = false;
+
+  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+  if (wlEntry) {
+    if (wlEntry.status !== 'enriched' && wlEntry.status !== 'already_enriched') {
+      wlEntry.status = 'enriched';
+      worklistDirty = true;
+    }
+    for (const field of ['narrativeHash', 'calleeSummaryHashes', 'promptVersion']) {
+      const value = cached.current[field];
+      if (JSON.stringify(wlEntry[field] ?? null) !== JSON.stringify(value)) {
+        wlEntry[field] = value;
+        worklistDirty = true;
+      }
+    }
+  }
+
+  const existingIndex = symbolIndex?.[symbol.symbolKey] ?? null;
+  const desired = upsertSymbolIndexEntry(symbolIndex ?? {}, {
+    symbolKey: symbol.symbolKey,
+    memoryId: wlEntry?.memoryId ?? cached.memoryId ?? null,
+    graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
+    codeHash: symbol.codeHash,
+    status: 'enriched',
+    lastEnrichedAt: wlEntry?.enrichedAt ?? cached.enrichedAt ?? null,
+    semanticSummary: cached.semanticSummary,
+    narrativeHash: cached.current.narrativeHash,
+    calleeSummaryHashes: cached.current.calleeSummaryHashes,
+    promptVersion: cached.current.promptVersion,
+  });
+  const desiredRecord = desired[symbol.symbolKey];
+  if (JSON.stringify(existingIndex) !== JSON.stringify(desiredRecord)) {
+    symbolIndex[symbol.symbolKey] = desiredRecord;
+    indexDirty = true;
+  }
+
+  if (worklistDirty) await saveWorklistMerged(worklistFile, worklist);
+  if (indexDirty && symbolIndexFile) await saveSymbolIndexMerged(symbolIndexFile, symbolIndex);
+  return { worklistDirty, indexDirty };
+}
+
+/**
+ * Honest run report for a cache reuse: status stays `enriched` (the existing
+ * framework status), attempts stay empty because no attempt happened, no
+ * template/fastpath proof is claimed, and the ACCEPTED memoryId, summary and
+ * content are reported unchanged.
+ */
+function narrativeReuseResult({ symbol, cached, wlEntry, projectSlug }) {
+  return {
+    status: 'enriched',
+    symbolKey: symbol.symbolKey,
+    memoryId: cached.memoryId,
+    memoryContent: cached.content,
+    language: symbol.language,
+    kind: symbol.kind,
+    filePath: symbol.filePath,
+    projectSlug,
+    codeHash: symbol.codeHash,
+    attempts: [],
+    lastModeUsed: wlEntry?.lastModeUsed ?? cached.lastModeUsed ?? null,
+    enrichedAt: wlEntry?.enrichedAt ?? cached.enrichedAt ?? null,
+    promptVersion: cached.current.promptVersion,
+    semanticSummary: cached.semanticSummary,
+    reused: true,
+  };
 }
 
 /**
@@ -461,13 +638,101 @@ export async function runQueueSymbolEnrichment({
   // Internal-only strictness (N4 C1): the caller bypassed routing on an
   // earlier proof and demands that this fresh recheck agree with it.
   expectTrivialTemplate = false,
+  // Internal-only provenance seam (B1 / N5B correction): the EXACT source
+  // bytes the prebuilt prompt was built from. When the caller supplies a
+  // prebuilt prompt without this snapshot, no inspectable provenance exists:
+  // the run never claims a cache hit and never persists a fingerprint
+  // fabricated from code it cannot tie to the prompt. No CLI flag, no config.
+  promptSource = null,
   runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
 }) {
   const narrativeMode = narrativeContext !== null && narrativeContext !== undefined;
   if (narrativeMode && (typeof narrativeContext !== 'object' || Array.isArray(narrativeContext))) {
     throw new TypeError('narrativeContext must be an object');
   }
-  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot, narrativeMode ? { narrativeContext } : undefined);
+  if (promptSource !== null && typeof promptSource !== 'string') {
+    throw new TypeError('promptSource must be a string when supplied');
+  }
+
+  if (narrativeMode) {
+    // B1 metadata coherence: own ALL prompt/fingerprint inputs (signature,
+    // role, callee objects, symbol keys, callers, rules) BEFORE the first
+    // await of this runner, so cache check, prompt build and accepted
+    // fingerprint derive from ONE immutable value even if the caller-owned
+    // resolver object mutates while we await. The caller's object is never
+    // written to or frozen — this is a separate owned copy.
+    narrativeContext = snapshotNarrativeContext(narrativeContext);
+  }
+
+  const readDiskSource = async () => {
+    try {
+      return await readFile(resolve(projectRoot, symbol.filePath), 'utf8');
+    } catch {
+      return null;
+    }
+  };
+
+  // B1 (N5B correction): the persisted fingerprint must ALWAYS describe the
+  // exact source snapshot the prompt was built from — never a later disk
+  // read. Resolve that snapshot first:
+  //   - caller-supplied promptSource (main loop): inspectable snapshot; a
+  //     disk that no longer equals it is a freshness failure and can never
+  //     become a cache hit (fail closed before cache acceptance),
+  //   - direct runner (no prebuilt prompt): ONE read feeds both the cache
+  //     evidence and the prompt build, so prompt and fingerprint are aligned,
+  //   - prebuilt prompt without snapshot: unprovable provenance → no cache
+  //     claim, no persisted fingerprint (see currentEvidence below).
+  let snapshot = null;
+  let snapshotFresh = false;
+  if (narrativeMode) {
+    if (typeof promptSource === 'string') {
+      snapshot = promptSource;
+      snapshotFresh = (await readDiskSource()) === snapshot;
+    } else if (prebuiltPrompt === undefined) {
+      const disk = await readDiskSource();
+      if (disk !== null) {
+        snapshot = disk;
+        snapshotFresh = true;
+      }
+    }
+  }
+
+  // N5B (plan 3.5 / S11): derive the fingerprint from the prompt snapshot
+  // and consult the accepted artifact BEFORE the template proof or any
+  // provider/tokenizer/subagent work. A hit requires freshness (disk equals
+  // the snapshot) plus a matching stored bundle and a valid accepted
+  // artifact; every miss (missing/corrupt/inconsistent/stale source) falls
+  // through to the unchanged generation flow. Malformed context/range still
+  // throws here — fail closed, before any cache write.
+  let currentEvidence = null;
+  if (narrativeMode && snapshot !== null) {
+    currentEvidence = await computeCurrentNarrativeEvidence({
+      symbol,
+      projectRoot,
+      narrativeContext,
+      source: snapshot,
+    });
+    if (snapshotFresh) {
+      const cached = await evaluateNarrativeCache({
+        symbol,
+        projectRoot,
+        narrativeContext,
+        enrichmentDir,
+        worklistEntry: worklist.find((entry) => entry.symbolKey === symbol.symbolKey) ?? null,
+        indexEntry: symbolIndex?.[symbol.symbolKey] ?? null,
+        source: snapshot,
+      });
+      if (cached.hit) {
+        const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+        await reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile });
+        return narrativeReuseResult({ symbol, cached, wlEntry, projectSlug });
+      }
+    }
+  }
+
+  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot, narrativeMode
+    ? { narrativeContext, ...(snapshot !== null ? { source: snapshot } : {}) }
+    : undefined);
 
   // One driver invocation per bounded schema attempt. Legacy requests stay
   // exactly `{prompt, timeoutMs}`; narrative requests add Ollama's JSON-schema
@@ -581,6 +846,9 @@ export async function runQueueSymbolEnrichment({
       symbolIndexFile,
       projectSlug,
       attempts,
+      // Only an explicit narrative acceptance persists the aligned
+      // fingerprint bundle; legacy text runs never carry one.
+      ...(narrativeMode && currentEvidence ? { narrativeEvidence: currentEvidence } : {}),
     });
 
     return {
@@ -799,6 +1067,54 @@ export async function main({
     }
   }
 
+  // N5B (plan 3.5 / S11): with an EXPLICIT narrative resolver, already
+  // accepted entries are hash-evaluated against the current context instead
+  // of being skipped blindly: a matching stored fingerprint plus a valid
+  // accepted artifact stays accepted (a reported reuse, no model-bound work),
+  // anything else becomes stale for regeneration in this very run. Without a
+  // resolver the historical selection is untouched.
+  let hashEvalMarked = 0;
+  if (narrativeResolver) {
+    for (const entry of worklist) {
+      if (entry.status !== 'already_enriched') continue;
+      try {
+        const context = await narrativeResolver(entry);
+        if (!context) continue;
+        // B1 metadata coherence: own the caller data before the first await
+        // so the fingerprint evaluation can never observe mid-flight
+        // mutations of the resolver's object.
+        const ownedContext = snapshotNarrativeContext(context);
+        const cached = await evaluateNarrativeCache({
+          symbol: entry,
+          projectRoot,
+          narrativeContext: ownedContext,
+          enrichmentDir,
+          worklistEntry: entry,
+          indexEntry: symbolIndex[entry.symbolKey] ?? null,
+        });
+        if (cached.hit) {
+          console.error(`[queue] REUSE ${entry.name ?? entry.symbolKey} (${entry.filePath}) — accepted narrative cache hit — no model call`);
+        } else if (cached.reason === 'source-unavailable') {
+          // Fail closed without rewriting accepted state: the regular queue
+          // path reports the honest source error for this entry.
+          console.error(`[queue] WARN: narrative hash evaluation skipped for ${entry.symbolKey}: ${cached.error?.message ?? 'source unavailable'}`);
+        } else {
+          entry.status = 'stale';
+          entry.staleReason = narrativeStaleReasonFor(cached.reason);
+          hashEvalMarked += 1;
+          console.error(`[queue] STALE ${entry.name ?? entry.symbolKey} (${entry.filePath}) — ${cached.reason} — accepted narrative will be regenerated`);
+        }
+      } catch (error) {
+        // Fail closed: an unusable source or context never becomes a cache
+        // hit and never rewrites accepted state.
+        console.error(`[queue] WARN: narrative hash evaluation failed for ${entry.symbolKey}: ${error.message}`);
+      }
+    }
+    if (hashEvalMarked > 0) {
+      await saveWorklistMerged(worklistFile, worklist);
+    }
+  }
+
   const pending = selectWorkItems(worklist, STALE_ONLY);
   const alreadyEnriched = worklist.filter(s => s.status === 'already_enriched').length;
   const staleCount = worklist.filter(s => s.status === 'stale').length;
@@ -854,12 +1170,63 @@ export async function main({
     let knownGraphKeys = null;
     let narrativeContext = null;
     let trivial = null;
+    // Complete S11 fingerprint evidence derived with the cache check; only a
+    // non-null value (explicit narrative mode) ever reaches the subagent route.
+    let currentEvidence = null;
+    // The exact source bytes the cache check just read; shared with the
+    // prompt/proof build so a miss still consumes a single proof read (C1).
+    let currentSource = null;
     try {
       narrativeContext = narrativeResolver ? await narrativeResolver(symbol) : null;
+      // N5B (plan 3.5 / S11): the cache check runs BEFORE buildSymbolPromptMeta
+      // so a validated hit can never trigger template generation, the Ollama
+      // tokenizer probe, the provider driver or the subagent route.
+      if (narrativeContext) {
+        // B1 metadata coherence: own ALL prompt/fingerprint inputs (signature,
+        // role, callee objects, symbol keys, callers, rules) IMMEDIATELY after
+        // the resolver returns and before the first await — the cache check,
+        // the prompt build, the known-key validation, the subagent evidence
+        // and the runner fingerprint all derive from this ONE owned value,
+        // even when a later awaited hook (tokenizer probe, provider) mutates
+        // the caller-owned resolver object. The caller's object itself is
+        // never written to or frozen.
+        narrativeContext = snapshotNarrativeContext(narrativeContext);
+        const cached = await evaluateNarrativeCache({
+          symbol,
+          projectRoot,
+          narrativeContext,
+          enrichmentDir,
+          worklistEntry: worklist.find((entry) => entry.symbolKey === symbol.symbolKey) ?? null,
+          indexEntry: symbolIndex[symbol.symbolKey] ?? null,
+        });
+        if (cached.hit) {
+          const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+          await reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile });
+          const elapsed = Date.now() - symbolStart;
+          console.error(`[queue] REUSE ${symbol.name} (${symbol.filePath}) — accepted narrative cache hit — no model call (${elapsed}ms)`);
+          results.push({
+            symbolKey: symbol.symbolKey,
+            memoryId: cached.memoryId,
+            elapsed,
+            // Only a validated narrative result carries a summary; reuse
+            // reports the ACCEPTED summary unchanged (S9 final-main contract).
+            semanticSummary: cached.semanticSummary,
+            reused: true,
+          });
+          continue;
+        }
+        currentEvidence = cached.current;
+        currentSource = cached.source ?? null;
+      }
       ({ prompt, totalLines, promptVersion, schema, trivial = null } = await buildSymbolPromptMeta(
         symbol,
         projectRoot,
-        narrativeContext ? { narrativeContext } : undefined,
+        narrativeContext
+          ? {
+            narrativeContext,
+            ...(typeof currentSource === 'string' ? { source: currentSource } : {}),
+          }
+          : undefined,
       ));
       if (promptVersion) {
         knownGraphKeys = [...normalizeSymbolKeys(narrativeContext?.symbolKeys)];
@@ -937,6 +1304,11 @@ export async function main({
           env: process.env,
           prompt, // pass pre-built prompt — no double round-trip
           ...(narrativeContext ? { narrativeContext } : {}),
+          // B1 provenance: hand over the EXACT source bytes this prompt was
+          // built from so the runner's fingerprint describes the actual
+          // provider prompt, never a later disk read. Absent (prompt built
+          // from an uninspectable read) → no cache claim, no fingerprint.
+          ...(narrativeContext && typeof currentSource === 'string' ? { promptSource: currentSource } : {}),
           // Internal-only strictness (N4 C1): only this loop's initial-proof
           // bypass may demand that the runner's independent recheck agree;
           // a disagreement fails closed instead of reaching a model.
@@ -992,9 +1364,16 @@ export async function main({
           prompt,
           queuedAt: new Date().toISOString(),
           // Opt-in narrative entries carry the same schema, prompt version and
-          // known canonical graph keys the apply step validates against.
+          // known canonical graph keys the apply step validates against, plus
+          // the COMPLETE S11 fingerprint evidence (N5B) so apply can re-derive
+          // it from the actual source before any accepted write.
           ...(promptVersion
-            ? { promptVersion, schema, knownGraphKeys: knownGraphKeys ?? [] }
+            ? {
+              promptVersion,
+              schema,
+              knownGraphKeys: knownGraphKeys ?? [],
+              ...(currentEvidence ? { narrativeEvidence: currentEvidence } : {}),
+            }
             : {}),
         });
       } catch (qErr) {
@@ -1034,12 +1413,21 @@ export async function main({
     const entry = worklist.find(s => s.symbolKey === r.symbolKey);
     if (entry) {
       symbolIndex[r.symbolKey] = {
-        memoryId: r.memoryId,
+        memoryId: r.memoryId ?? entry.memoryId ?? null,
         graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'enriched',
         lastEnrichedAt: entry.enrichedAt,
         ...(r.semanticSummary !== undefined ? { semanticSummary: r.semanticSummary } : {}),
+        // N5B: the aligned fingerprint survives the final index rebuild for
+        // both fresh acceptances and validated cache reuses.
+        ...(entry.narrativeHash !== undefined
+          ? {
+            narrativeHash: entry.narrativeHash,
+            calleeSummaryHashes: entry.calleeSummaryHashes,
+            promptVersion: entry.promptVersion,
+          }
+          : {}),
       };
     }
   }
@@ -1057,6 +1445,15 @@ export async function main({
         lastEnrichedAt: err.failedAt || null,
         ...(err.narrative && current?.semanticSummary !== undefined
           ? { semanticSummary: current.semanticSummary }
+          : {}),
+        // N5B: a failed narrative run preserves the previously accepted
+        // fingerprint bundle exactly like it preserves the summary.
+        ...(err.narrative && current?.narrativeHash !== undefined
+          ? {
+            narrativeHash: current.narrativeHash,
+            calleeSummaryHashes: current.calleeSummaryHashes,
+            promptVersion: current.promptVersion,
+          }
           : {}),
       };
     }

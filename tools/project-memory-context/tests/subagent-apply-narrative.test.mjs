@@ -12,7 +12,7 @@
 
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { access, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -20,6 +20,7 @@ import { appendSubagentQueue, loadSubagentQueue } from '../src/subagent-queue.mj
 import { ensureProjectMemoryContextDirs, readJsonArtifact } from '../src/artifacts.mjs';
 import { main as subagentApply } from '../cli/subagent-apply.mjs';
 import { NARRATIVE_SCHEMA } from '../src/cards/narrative-schema.mjs';
+import { computeNarrativeHash, hashCalleeSummaries } from '../src/hash.mjs';
 
 let ownedFixtureRoots = new Set();
 let fixtureRootsCreated = 0;
@@ -299,4 +300,96 @@ test('appendSubagentQueue rejects partial or malformed narrative metadata withou
     'a malformed knownGraphKeys collection must be rejected',
   );
   assert.deepEqual(await loadSubagentQueue(dirs.enrichment), before, 'rejected metadata must leave the queue untouched');
+});
+
+// -------------------------------------------------------------------
+// N5B (plan 3.5 / S11): transported fingerprint evidence never lets
+// rejected content reach an accepted write.
+// -------------------------------------------------------------------
+
+async function buildEvidence(overrides = {}) {
+  const calleeSummaryHashes = await hashCalleeSummaries({
+    'ts|src/db.ts|function|exported|find|1': 'Returns one row by primary key.',
+  });
+  const narrativeHash = await computeNarrativeHash({
+    code: 'export async function getUser(id) {\n  return id;\n}',
+    signature: 'export async function getUser(id)',
+    role: { role: 'repository', layer: 'domain', confidence: 0.9, evidence: [] },
+    calleeSummaryHashes,
+    promptVersion: 'v2',
+  });
+  return {
+    symbolKey: SYMBOL_KEY,
+    narrativeHash,
+    calleeSummaryHashes,
+    promptVersion: 'v2',
+    signature: 'export async function getUser(id)',
+    role: { role: 'repository', layer: 'domain', confidence: 0.9, evidence: [] },
+    range: { startLine: 3, endLine: 8 },
+    ...overrides,
+  };
+}
+
+test('apply with valid transported evidence still rejects invalid narrative content before any accepted write', async () => {
+  const narrative = validNarrative({ mentions: ['ghost|missing|key'] });
+  const fixture = await createApplyFixture({
+    entryOptions: narrativeEntryOptions({ narrativeEvidence: await buildEvidence() }),
+    content: JSON.stringify(narrative),
+  });
+
+  const exitCode = await applyFor(fixture);
+  assert.equal(exitCode, 1);
+
+  const queue = await loadSubagentQueue(fixture.enrichmentDir);
+  assert.equal(queue.entries[0].status, 'error');
+  assert.match(queue.entries[0].error, /Mention does not exist in graph: ghost\|missing\|key/);
+
+  const worklist = await readJsonArtifact(fixture.worklistFile);
+  assert.equal(worklist[0].status, 'subagent-queued');
+  assert.ok(!('narrativeHash' in worklist[0]), 'a rejected apply must not persist the transported fingerprint');
+  assert.ok(!('calleeSummaryHashes' in worklist[0]));
+  assert.ok(!('promptVersion' in worklist[0]));
+
+  const symbolIndex = await readJsonArtifact(join(fixture.enrichmentDir, 'symbol-index.json'));
+  assert.deepEqual(symbolIndex, {});
+  await assert.rejects(access(memoryFileFor(fixture.enrichmentDir)), { code: 'ENOENT' });
+});
+
+test('apply with valid transported evidence preserves previously accepted fingerprint, memory bytes and index record when the queued content is invalid', async () => {
+  const fixture = await createApplyFixture({
+    entryOptions: narrativeEntryOptions({ narrativeEvidence: await buildEvidence() }),
+    content: 'this is not a narrative object',
+  });
+
+  const memoryFile = memoryFileFor(fixture.enrichmentDir);
+  await writeFile(memoryFile, 'accepted before\n', 'utf8');
+  const acceptedIndex = {
+    [SYMBOL_KEY]: {
+      memoryId: 'old-memory',
+      graphNodeId: null,
+      codeHash: 'hash-a',
+      status: 'enriched',
+      lastEnrichedAt: '2026-10-01T00:00:00.000Z',
+      semanticSummary: 'Accepted before.',
+      narrativeHash: 'accepted-fp',
+      calleeSummaryHashes: { 'ts|src/db.ts|function|exported|find|1': 'accepted-hash' },
+      promptVersion: 'v2',
+    },
+  };
+  await writeJson(join(fixture.enrichmentDir, 'symbol-index.json'), acceptedIndex);
+
+  const exitCode = await applyFor(fixture);
+  assert.equal(exitCode, 1);
+
+  const queue = await loadSubagentQueue(fixture.enrichmentDir);
+  assert.equal(queue.entries[0].status, 'error');
+
+  const worklist = await readJsonArtifact(fixture.worklistFile);
+  assert.equal(worklist[0].status, 'subagent-queued');
+  assert.ok(!('narrativeHash' in worklist[0]));
+
+  assert.equal(await readFile(memoryFile, 'utf8'), 'accepted before\n',
+    'accepted memory bytes must survive a rejected apply');
+  assert.deepEqual(await readJsonArtifact(join(fixture.enrichmentDir, 'symbol-index.json')), acceptedIndex,
+    'the previously accepted fingerprint and summary must survive a rejected apply');
 });

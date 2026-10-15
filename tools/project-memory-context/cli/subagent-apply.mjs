@@ -27,9 +27,10 @@ import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadSubagentQueue, markSubagentDone, markSubagentError } from '../src/subagent-queue.mjs';
-import { persistEnrichmentSuccess } from './enrich-queue.mjs';
+import { persistEnrichmentSuccess, saveWorklistMerged } from './enrich-queue.mjs';
 import { NARRATIVE_SCHEMA, validateNarrative } from '../src/cards/narrative-schema.mjs';
 import { PROMPT_VERSION, normalizeSymbolKeys } from '../src/cards/prompt-v2.mjs';
+import { queuedEvidenceCheck } from '../src/cards/narrative-cache.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -195,6 +196,41 @@ export async function main(args = process.argv.slice(2)) {
     semanticSummaryOverride = canonical.summary;
   }
 
+  // N5B (plan 3.5 / S11): entries carrying the complete opt-in fingerprint
+  // evidence are re-derived against the ACTUAL current source bytes before
+  // any accepted write. A source change (or an unavailable source, or
+  // tampered/inconsistent evidence) rejects the apply: the queue entry is
+  // marked `error`, the worklist entry is marked `stale` with reason
+  // `queued-fingerprint-mismatch` for the next pass, and no memory file,
+  // index record or sync-manifest entry is written.
+  //
+  // B3 correction: presence is decided by OWN PROPERTY, exactly like
+  // appendSubagentQueue's "supplied" test — an explicit `null` (or any
+  // malformed value) that a hand-edit planted is a REJECTED narrative
+  // entry, never a silent downgrade into the legacy path; only an absent
+  // field (legacy trio-only entries) keeps the original apply contract.
+  let queuedEvidence = null;
+  if (Object.hasOwn(entry, 'narrativeEvidence') && entry.narrativeEvidence !== undefined) {
+    const check = await queuedEvidenceCheck({ entry, projectRoot });
+    if (!check.ok) {
+      console.error(`[subagent-apply] ERROR: ${check.problem}`);
+      try {
+        const staleWorklist = await loadJson(worklistFile);
+        const target = staleWorklist.find((element) => element.symbolKey === entry.symbolKey);
+        if (target) {
+          target.status = 'stale';
+          target.staleReason = 'queued-fingerprint-mismatch';
+          await saveWorklistMerged(worklistFile, staleWorklist);
+        }
+      } catch (worklistError) {
+        console.error(`[subagent-apply] WARN: could not mark ${entry.symbolKey} stale: ${worklistError.message}`);
+      }
+      await markSubagentError(enrichmentDir, entryId, check.problem);
+      return 1;
+    }
+    queuedEvidence = check.evidence;
+  }
+
   // Load worklist and symbol index
   let worklist;
   try {
@@ -205,6 +241,23 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   const symbolIndex = await loadOptionalJson(symbolIndexFile) ?? {};
+
+  // B2 correction: the transported proof is only valid while the worklist
+  // entry still awaits THIS queued generation. If upstream invalidation
+  // (e.g. callee-summary propagation) marked the entry `stale` after it was
+  // queued, the queued context is superseded — accepting it would silently
+  // trust outdated dependency knowledge, so reject before any accepted
+  // write and let the next pass regenerate with current context. Legacy
+  // entries without evidence keep their exact original apply contract.
+  if (queuedEvidence) {
+    const superseded = worklist.find((element) => element.symbolKey === entry.symbolKey);
+    if (superseded?.status === 'stale') {
+      const problem = `queued narrative evidence is superseded: ${entry.symbolKey} was marked stale after queueing (${superseded.staleReason ?? 'unknown reason'})`;
+      console.error(`[subagent-apply] ERROR: ${problem}`);
+      await markSubagentError(enrichmentDir, entryId, problem);
+      return 1;
+    }
+  }
 
   // Build a symbol-like object from the queue entry
   const symbol = {
@@ -232,6 +285,8 @@ export async function main(args = process.argv.slice(2)) {
       symbolIndexFile,
       projectSlug,
       attempts: [],
+      // Only a validated, source-fresh apply persists the aligned bundle.
+      ...(queuedEvidence ? { narrativeEvidence: queuedEvidence } : {}),
     }));
   } catch (err) {
     console.error(`[subagent-apply] ERROR: persistEnrichmentSuccess failed: ${err.message}`);
