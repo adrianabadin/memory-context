@@ -101,7 +101,7 @@ test('S14 independent old-tool complete-response baseline parity (conditional ar
  const base=await import(pathToFileURL(join(process.env.S14_BASELINE,'tools/project-memory-context/mcp/query-tools.mjs')));
  const a=key('sink'),b=key('root');const f=await fixture(t,{keys:[a,b],edges:[[b,a]],roles:[[b,'cli-command','entrypoint']],native:true});const old=await connect(t,f.root,base.registerQueryTools);
  const nowTools=(await f.client.listTools()).tools,oldTools=(await old.listTools()).tools;
- assert.deepEqual(nowTools.filter(t=>t.name!=='pmc_entrypoints_for'),oldTools);
+ const names=new Set(oldTools.map(t=>t.name));for(const old of oldTools)assert.ok(nowTools.some(t=>t.name===old.name),`baseline tool ${old.name} must still exist`);assert.deepEqual(nowTools.filter(t=>names.has(t.name)),oldTools);
  let count=0;for(const target of [a,b,'sink','src/sink.js','not-found'])for(const name of ['pmc_card','pmc_get_dependencies','pmc_get_dependents','pmc_relations']){
   const variants=name==='pmc_relations'?['in','out'].flatMap(direction=>[1,2,3].map(depth=>({target,direction,depth,relations:['calls']}))):name.startsWith('pmc_get_')?[{symbol:target}]:[{target}];
   for(const args of variants){const before=f.snapshot();assert.equal(JSON.stringify(await f.client.callTool({name,arguments:args})),JSON.stringify(await old.callTool({name,arguments:args})));assert.equal(f.snapshot(),before);count++;}

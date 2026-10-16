@@ -6,6 +6,7 @@ import { createQueryEngine } from '../retrieval/query-engine.mjs';
 import { resolveTarget } from '../retrieval/target-resolver.mjs';
 import { resolveStopAtRole, walkRoleBoundary } from './role-traversal.mjs';
 import { walkEntrypoints } from './entrypoints.mjs';
+import { walkImpact } from './impact.mjs';
 import { buildFacts } from '../cards/facts.mjs';
 import { buildFileCard } from '../cards/file-card.mjs';
 
@@ -29,8 +30,25 @@ export function createRelationsReader({ projectRoot }) {
       const raw = createSqliteGraphStore(db);
       const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map(row => row.name));
       const groups = new Map();
+      // S15: every known canonical FILE endpoint recognized by the same
+      // identity/card coherence the public file readers use — standalone file
+      // nodes with no registry symbols and no import edges included, so the
+      // full-known impact ranking graph never drops an existing file vertex.
+      // Contradictory identities or a foreign source_file fail closed, and a
+      // node whose current kind is not `file` is never promoted to one.
+      const knownFilePaths = new Set();
       for (const { id } of db.prepare('SELECT id FROM nodes ORDER BY id').all()) {
         const node = raw.getNode(id);
+        if (typeof id === 'string' && id.startsWith('file|')) {
+          const filePath = id.slice('file|'.length);
+          const fileKeyCoherent = [node.symbolKey, node.metadata?.symbolKey]
+            .filter(value => value != null).every(value => value === id);
+          const sourceCoherent = node.source_file == null || normalize(node.source_file) === filePath;
+          if (filePath && fileKeyCoherent && sourceCoherent &&
+              (node.node_kind === 'file' || (node.node_kind == null && raw.getNodesByFile(filePath).length > 0))) {
+            knownFilePaths.add(filePath);
+          }
+        }
         const identities = [node.symbolKey, node.metadata?.symbolKey, String(id).includes('|') ? id : null].filter(value => value != null);
         const key = identities[0];
         if (typeof key !== 'string' || identities.some(value => value !== key)) continue;
@@ -78,6 +96,7 @@ export function createRelationsReader({ projectRoot }) {
         store.listNativeEdges().some(edge => edge.source.id === `file|${path}` || edge.target.id === `file|${path}`);
       const legacyNodeIds = new Set(Object.values(index).map(entry => entry?.graphNodeId).filter(Boolean));
       return await action({ store, engine, endpoint, symbol, symbolIndex, groups, fileExists, legacyNodeIds,
+        knownFileEndpoints: [...knownFilePaths].sort(),
         nativeAvailable: tables.has('native_edges'),
         // Role names actually assigned in this project's canonical ledger;
         // consulted only when validating an explicit stopAtRole value.
@@ -221,9 +240,26 @@ export function createRelationsReader({ projectRoot }) {
     if (resolution.status !== 'resolved') return { ...resolution, matches: [], entrypoints: [], controllers: [] };
     return await walkEntrypoints(context, { resolved: resolution.resolved });
   }
+  // S15: `pmc_impact` shares the same reader, resolution contracts and
+  // per-request read-only lifecycle. The ONLY accepted option is `target`;
+  // an undocumented extra (depth/role/direction/…) is rejected loudly instead
+  // of being silently ignored, and a missing/ambiguous target keeps the
+  // existing candidate shape with empty projections. The ranking parameters
+  // (damping/tolerance/iterations) are implementation defaults reported in
+  // `rankModel`, never accepted as options.
+  async function impactIn(context, options) {
+    const unknown = Object.keys(options ?? {}).filter(key => key !== 'target');
+    if (unknown.length > 0) {
+      throw new TypeError(`pmc_impact accepts only the target option; unknown option '${unknown[0]}'`);
+    }
+    const resolution = resolve(context, options?.target);
+    if (resolution.status !== 'resolved') return { ...resolution, dependents: [], tests: [], roles: [] };
+    return await walkImpact(context, { resolved: resolution.resolved });
+  }
   return {
     relations(options) { return withContext(context => relationsIn(context, options)); },
     entrypoints(options) { return withContext(context => entrypointsIn(context, options)); },
+    impact(options) { return withContext(context => impactIn(context, options)); },
     card({ target }) {
       return withContext(context => {
         const resolution = resolve(context, target);

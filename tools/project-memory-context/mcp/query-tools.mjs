@@ -127,6 +127,16 @@ export function registerQueryTools(server, options = {}) {
     try { return textResult(await reader.entrypoints(args)); }
     catch (error) { return errorResult('pmc_entrypoints_for', error); }
   });
+  server.registerTool('pmc_impact', {
+    description: 'Dependents, covering tests and affected roles for X, ranked by a deterministic dependency-free PageRank over the full known canonical calls/imports graph; covering tests are static import/test-path candidates, never executed coverage.',
+    inputSchema: z.object({
+    target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.impact(args)); }
+    catch (error) { return errorResult('pmc_impact', error); }
+  });
   server.registerTool('pmc_card', {
     description: 'Read symbol/file facts and existing enrichment text; no role or narrative generation.',
     inputSchema: z.object({

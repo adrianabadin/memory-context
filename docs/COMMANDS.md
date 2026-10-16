@@ -176,6 +176,49 @@ edge), deduplicates them, and then advances to the smallest canonical
 caller/callee edge key — so equal-distance diamond branches resolve to the
 same actual shortest path under every node and edge insertion order.
 
+`pmc_impact({target})` returns `{status, target, dependents, tests, roles,
+rankModel}` — "dependents, covering tests, affected roles, ranked by
+PageRank". The ranking is a deterministic, dependency-free PageRank
+(`algorithm: "PageRank"`, damping `0.85`, tolerance `1e-8`, maxIterations
+`100`, `scope: "full-known-canonical-dependencies"`) computed over the FULL
+known canonical dependency graph of the project — one node per registry
+symbol plus one endpoint per known file (files with symbols, files with
+native import evidence and standalone known file nodes recognized by the
+same reader/card coherence, so an empty file vertex never disappears), one
+directed edge per grounded
+`calls` edge (caller to callee, through the same guarded adapter with its
+endpoint coherence and constructor-edge exclusions) and per file-level
+`imports` edge (importer to importee) — so the same node carries the same
+score for every target of one database state; `iterations`/`converged` report
+the actual bounded run, and a graph still moving at the bound says so
+honestly instead of faking success. The numeric parameters are reported
+implementation defaults, never accepted as options. `dependents` is the
+COMPLETE reverse closure over those grounded calls and imports: no hop cut,
+no role cut, cycles visit each canonical key once, a class/file target
+expands only to its proven registry members or exact-path symbols as
+zero-hop steps shown in `path`, and file import dependents reuse the existing
+binding-resolved inbound import lift (the exported symbols of a file whose
+resolved binding actually targets the visited symbol) — never same-file or
+name guesses. Each record is `{symbolKey, kind, distance, role, layer, rank,
+path}` sorted by rank descending then canonical key ascending; `distance`
+counts actual dependency hops and roles/layers come only from the canonical
+`node_role_assignments` ledger (explicit unknowns, excluded node kinds,
+metadata-only roles and filename guesses stay null). `tests` reuses the
+existing facts evidence (importer files plus the existing test-path filter
+plus top-level exported symbols) as STATIC referenced-test candidates —
+`provenance: "static-import-reference"`, never executed coverage — with the
+same rank/key ordering; a member target keeps its class's projection and a
+file target keeps the file-scope `file|<path>` shape. `roles` aggregates the
+canonical non-null roles of the unique affected keys (dependents and tests
+counted once per canonical key) as `{role, layer, rank, symbolKeys}` with the
+sum of the unique member ranks, sorted by rank descending then role
+ascending; the aggregated `layer` projects only when every contributing
+record carries the same known canonical layer — an absent canonical layer
+or any mixture yields null. The argument list is strict — only `target`;
+every other option is rejected; ambiguous or missing targets return their
+usual `{status, candidates}` with empty projections and no `rankModel`;
+every request opens `graph.db` read-only and changes nothing.
+
 `pmc_card({target})` returns `{status, target, facts, enrichment}` for a
 symbol or file. Symbol enrichment is the existing semantic summary; file
 cards currently return an empty enrichment string rather than inventing a
@@ -198,8 +241,9 @@ field; explicitly unknown assignments preserve null role/layer, zero confidence,
 and empty evidence. Role queries are read-only and do not trigger classification.
 Generated narratives and card levels remain later-phase work. Role-aware
 stopping ships as the `pmc_relations` `stopAtRole` option documented above,
-and entrypoint reachability ships as the `pmc_entrypoints_for` tool documented
-above; impact and card-level units stay pending.
+entrypoint reachability ships as the `pmc_entrypoints_for` tool documented
+above, and impact ranking ships as the `pmc_impact` tool documented above;
+card-level units stay pending.
 
 ### CLI target resolution
 
