@@ -138,9 +138,10 @@ export function registerQueryTools(server, options = {}) {
     catch (error) { return errorResult('pmc_impact', error); }
   });
   server.registerTool('pmc_card', {
-    description: 'Read symbol/file facts and existing enrichment text; no role or narrative generation.',
+    description: 'Read symbol/file facts and existing enrichment text; no role or narrative generation. Omit `level` for the legacy facts-only payload. With `level`, returns a leveled card capped by a deterministic token ceiling (compact 2000 essentials, extended 5000 adds relation context, deep 10000 adds role evidence); ceilings are caps, never padded, and oversized lower-priority sections are dropped before essentials.',
     inputSchema: z.object({
     target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
+    level: z.enum(['compact', 'extended', 'deep']).optional().describe('Optional detail level with a token ceiling; omit for the legacy facts-only output'),
     }).strict(),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async args => {

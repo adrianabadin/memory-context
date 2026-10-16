@@ -227,9 +227,31 @@ or file path (`file|<path>` is also accepted). Ambiguous results return `{status
 with canonical identities; missing symbols return `status: "missing"`.
 Files absent from graph nodes and native evidence also return `status: "missing"`.
 File exports, members and counts use the same validated identity registry as
-symbol queries. Unknown explicit arguments are rejected rather than silently
-discarded: `level` remains a rejected future `pmc_card` option, and
-`stopAtRole` is accepted only by `pmc_relations`.
+symbol queries.
+
+`pmc_card({target, level})` adds an optional detail level with a deterministic
+token ceiling. Omitting `level` returns the legacy facts-only payload above,
+byte-for-byte unchanged. With `level` the response is
+`{status, target, level, tokenCeiling, tokensEstimated, truncated, omittedSections, card}`:
+
+- `compact` (ceiling 2000) — essentials only: `id`, `kind`, `signature`,
+  `location`, `role` (`{role, layer, confidence}`, no evidence), `fanIn`,
+  `fanOut`, `summary` (file cards: `path`, `kind`, `role`, `symbolCount`,
+  `summary`).
+- `extended` (ceiling 5000) — essentials plus relation context
+  (`callers`, `callees`, `imports`, `importedBy`, `implements`, `tests`; file
+  cards: `exports`, `members`, `importsFrom`, `importedBy`).
+- `deep` (ceiling 10000) — extended plus `roleEvidence` (the role
+  classification evidence array).
+
+The ceilings are caps, not target lengths: nothing is padded to reach them.
+`tokensEstimated` is the real chars/4 estimate of the returned `card` payload
+(no model or provider calls). When a card would exceed its ceiling the
+lowest-priority sections are dropped first (evidence, then context), recorded
+in `omittedSections` with `truncated: true`; essentials are never dropped.
+Unknown explicit arguments are rejected rather than silently discarded:
+`stopAtRole` is accepted only by `pmc_relations`, and an invalid `level`
+value surfaces as an `isError` tool response.
 These readers require an existing `graph.db`, open it read-only, and close
 it per request. Missing databases produce an explicit MCP tool error and
 are never created implicitly. Dependency aliases retain their legacy array

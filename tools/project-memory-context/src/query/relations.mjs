@@ -9,6 +9,7 @@ import { walkEntrypoints } from './entrypoints.mjs';
 import { walkImpact } from './impact.mjs';
 import { buildFacts } from '../cards/facts.mjs';
 import { buildFileCard } from '../cards/file-card.mjs';
+import { buildLeveledCard } from '../cards/card-levels.mjs';
 
 const TYPES = ['calls', 'imports', 'imports_from', 'contains', 'method'];
 const normalize = value => String(value ?? '').replace(/\\/g, '/');
@@ -260,14 +261,19 @@ export function createRelationsReader({ projectRoot }) {
     relations(options) { return withContext(context => relationsIn(context, options)); },
     entrypoints(options) { return withContext(context => entrypointsIn(context, options)); },
     impact(options) { return withContext(context => impactIn(context, options)); },
-    card({ target }) {
+    card({ target, level } = {}) {
       return withContext(context => {
         const resolution = resolve(context, target);
         if (resolution.status !== 'resolved') return resolution;
         const { resolved } = resolution;
-        if (resolved.mode === 'file') return { status: 'resolved', target: resolved.target, facts: buildFileCard(context.store, resolved.target), enrichment: '' };
-        return { status: 'resolved', target: resolved.symbolKey, facts: buildFacts(context.store, resolved.symbolKey),
-          enrichment: context.symbol(resolved.symbolKey).semanticSummary };
+        const isFile = resolved.mode === 'file';
+        const facts = isFile ? buildFileCard(context.store, resolved.target) : buildFacts(context.store, resolved.symbolKey);
+        const enrichment = isFile ? '' : context.symbol(resolved.symbolKey).semanticSummary;
+        const outTarget = isFile ? resolved.target : resolved.symbolKey;
+        // No level -> exact legacy facts-only output, byte-for-byte unchanged.
+        if (level === undefined) return { status: 'resolved', target: outTarget, facts, enrichment };
+        const leveled = buildLeveledCard({ facts, enrichment, level });
+        return { status: 'resolved', target: outTarget, ...leveled };
       });
     },
     relatedSymbols(target, direction) {

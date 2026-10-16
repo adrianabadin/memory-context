@@ -72,12 +72,18 @@ for (const mismatch of ['index', 'kind']) {
     assert.equal(file.facts.symbolCount, 0);
   });
 }
-for (const [name, extra] of [['pmc_relations', { stopAtRoleTypo: 'controller' }], ['pmc_card', { level: 'deep' }]]) {
+for (const [name, extra] of [['pmc_relations', { stopAtRoleTypo: 'controller' }], ['pmc_card', { unsupportedOption: 'x' }]]) {
   test(`${name} rejects unsupported explicit options`, async t => {
     const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
     assert.equal((await f.call(name, { target: A, ...extra })).isError, true, 'an explicit unsupported option cannot succeed silently');
   });
 }
+// pmc_card's `level` is now a supported S16 option, so it must be accepted (not rejected).
+test('pmc_card accepts the supported level option and rejects an invalid level value', async t => {
+  const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
+  assert.notEqual((await f.call('pmc_card', { target: A, level: 'deep' })).isError, true, 'a supported level cannot be rejected');
+  assert.equal((await f.call('pmc_card', { target: A, level: 'huge' })).isError, true, 'an invalid level value cannot succeed');
+});
 test('pmc_relations validates stopAtRole strictly and keeps absent-option output identical', async t => {
   const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
   const rejected = await f.call('pmc_relations', { target: A, stopAtRole: 'contorller' });
