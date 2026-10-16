@@ -155,7 +155,7 @@ test('pmc query server retains four v1 tools and adds facts tools over MCP stdio
 
     assert.deepEqual(
       result.tools.map((tool) => tool.name).sort(),
-      ['pmc_get_dependencies', 'pmc_get_dependents', 'pmc_query_project', 'pmc_search_symbols', 'pmc_relations', 'pmc_card'].sort(),
+      ['pmc_get_dependencies', 'pmc_get_dependents', 'pmc_query_project', 'pmc_search_symbols', 'pmc_relations', 'pmc_entrypoints_for', 'pmc_card'].sort(),
     );
     assert.equal(stderr, '');
   } finally {

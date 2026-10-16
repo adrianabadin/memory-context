@@ -48,7 +48,7 @@ function builtinRoleNames() {
  * is not a well-formed generic six-part or C# seven-part key, so malformed
  * identities fail closed instead of being guessed.
  */
-function parseKey(key) {
+export function parseKey(key) {
   if (typeof key !== 'string') return null;
   const parts = key.split('|');
   if (parts.length === 6 && parts.every(Boolean)) {
@@ -62,6 +62,73 @@ function parseKey(key) {
     return { path: parts[1], kind: parts[4], name: parts[5], member: container != null, container };
   }
   return null;
+}
+
+const layerOf = value =>
+  typeof value === 'string' && value.length > 0 ? value : null;
+
+/**
+ * Shared canonical role/ownership resolver for the role-aware walkers (S13
+ * `stopAtRole` and S14 `pmc_entrypoints_for`). It exposes exactly the two
+ * primitives both walks need and nothing else:
+ *
+ *   * `roleDetails(key)` — `{role, layer}` from the canonical
+ *     `node_role_assignments` ledger via `store.getNodeRole`, or `null`. An
+ *     explicit assignment always wins, including an explicit unknown (null
+ *     role), which never falls back to container inheritance. A member without
+ *     its own assignment inherits only when its CURRENT node kind is
+ *     role-eligible (`symbol`/`member`), its canonical key proves the
+ *     container, and exactly one same-file container of a container kind
+ *     resolves — fail closed otherwise (no foreign, prefix or ambiguous
+ *     ownership guess, never `metadata.roleClassification`).
+ *   * `provenContainerOf(key)` — the unique same-file registry container for a
+ *     structured member key, or null.
+ */
+export function createRoleResolver(store, registryKeys) {
+  const containerCache = new Map();
+  const provenContainerOf = key => {
+    if (containerCache.has(key)) return containerCache.get(key);
+    const parsed = parseKey(key);
+    let owner = null;
+    if (parsed && parsed.member && parsed.container) {
+      const owners = registryKeys.filter(candidate => {
+        if (candidate === key) return false;
+        const other = parseKey(candidate);
+        return other !== null && !other.member && other.path === parsed.path &&
+          other.name === parsed.container && CONTAINER_KINDS.has(other.kind);
+      });
+      if (owners.length === 1) owner = owners[0];
+    }
+    containerCache.set(key, owner);
+    return owner;
+  };
+
+  const roleDetails = key => {
+    const explicit = store.getNodeRole(key);
+    // An explicit assignment always wins — including an explicit unknown
+    // (null role), which must not fall back to container inheritance.
+    if (explicit) {
+      if (typeof explicit.role !== 'string' || explicit.role.length === 0) return null;
+      return { role: explicit.role, layer: layerOf(explicit.layer) };
+    }
+    const parsed = parseKey(key);
+    if (!parsed || !parsed.member || !parsed.container) return null;
+    // Correction B2 (S13): the node's CURRENT kind must be role-eligible BEFORE
+    // any inheritance runs — exactly the canonical node-roles.mjs allowed-kind
+    // guard (`node_kind` symbol/member): a doc/config/data node never acquires
+    // a role through container fallback, so it can neither match nor reach
+    // owner projection.
+    const current = store.getNode(key);
+    if (!current || (current.node_kind !== 'symbol' && current.node_kind !== 'member')) return null;
+    const containerKey = provenContainerOf(key);
+    if (!containerKey) return null;
+    const container = store.getNodeRole(containerKey);
+    if (!container) return null;
+    if (typeof container.role !== 'string' || container.role.length === 0) return null;
+    return { role: container.role, layer: layerOf(container.layer) };
+  };
+
+  return { roleDetails, provenContainerOf };
 }
 
 /**
@@ -97,43 +164,12 @@ export async function walkRoleBoundary(context, { resolved, direction, relations
   const startKey = symbolTarget ? resolved.symbolKey : `file|${resolved.target}`;
   const registryKeys = Object.keys(context.symbolIndex);
 
-  const containerCache = new Map();
-  const provenContainerOf = key => {
-    if (containerCache.has(key)) return containerCache.get(key);
-    const parsed = parseKey(key);
-    let owner = null;
-    if (parsed && parsed.member && parsed.container) {
-      const owners = registryKeys.filter(candidate => {
-        if (candidate === key) return false;
-        const other = parseKey(candidate);
-        return other !== null && !other.member && other.path === parsed.path &&
-          other.name === parsed.container && CONTAINER_KINDS.has(other.kind);
-      });
-      if (owners.length === 1) owner = owners[0];
-    }
-    containerCache.set(key, owner);
-    return owner;
-  };
-
+  // Shared canonical role/ownership resolution (byte-exact S13 semantics via
+  // createRoleResolver; S14 consumes the same helper with its layer).
+  const { roleDetails, provenContainerOf } = createRoleResolver(store, registryKeys);
   const roleOf = key => {
-    const explicit = store.getNodeRole(key);
-    // An explicit assignment always wins — including an explicit unknown
-    // (null role), which must not fall back to container inheritance.
-    if (explicit) return typeof explicit.role === 'string' && explicit.role.length > 0 ? explicit.role : null;
-    const parsed = parseKey(key);
-    if (!parsed || !parsed.member || !parsed.container) return null;
-    // Correction B2: the node's CURRENT kind must be role-eligible BEFORE any
-    // inheritance runs (self-start and traversed members alike) — exactly the
-    // canonical node-roles.mjs allowed-kind guard (`node_kind` symbol/member):
-    // a doc/config/data node never acquires a role through container fallback,
-    // so it can neither match nor reach owner projection.
-    const current = store.getNode(key);
-    if (!current || (current.node_kind !== 'symbol' && current.node_kind !== 'member')) return null;
-    const containerKey = provenContainerOf(key);
-    if (!containerKey) return null;
-    const container = store.getNodeRole(containerKey);
-    if (!container) return null;
-    return typeof container.role === 'string' && container.role.length > 0 ? container.role : null;
+    const details = roleDetails(key);
+    return details === null ? null : details.role;
   };
 
   const edges = new Map();

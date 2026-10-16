@@ -5,6 +5,7 @@ import { createSqliteGraphStore } from '../graph-store/graph-db.mjs';
 import { createQueryEngine } from '../retrieval/query-engine.mjs';
 import { resolveTarget } from '../retrieval/target-resolver.mjs';
 import { resolveStopAtRole, walkRoleBoundary } from './role-traversal.mjs';
+import { walkEntrypoints } from './entrypoints.mjs';
 import { buildFacts } from '../cards/facts.mjs';
 import { buildFileCard } from '../cards/file-card.mjs';
 
@@ -206,8 +207,23 @@ export function createRelationsReader({ projectRoot }) {
     return { status: 'resolved', target: resolved.symbolKey ?? resolved.target, direction: incoming ? 'in' : 'out', depth,
       edges: [...edges.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) };
   }
+  // S14: `pmc_entrypoints_for` shares the same reader, resolution contracts and
+  // per-request read-only lifecycle. The ONLY accepted option is `target`; an
+  // undocumented extra (depth/role/direction/…) is rejected loudly instead of
+  // being silently ignored, and a missing/ambiguous target keeps the existing
+  // candidate shape with empty projections instead of inventing a resolved one.
+  async function entrypointsIn(context, options) {
+    const unknown = Object.keys(options ?? {}).filter(key => key !== 'target');
+    if (unknown.length > 0) {
+      throw new TypeError(`pmc_entrypoints_for accepts only the target option; unknown option '${unknown[0]}'`);
+    }
+    const resolution = resolve(context, options?.target);
+    if (resolution.status !== 'resolved') return { ...resolution, matches: [], entrypoints: [], controllers: [] };
+    return await walkEntrypoints(context, { resolved: resolution.resolved });
+  }
   return {
     relations(options) { return withContext(context => relationsIn(context, options)); },
+    entrypoints(options) { return withContext(context => entrypointsIn(context, options)); },
     card({ target }) {
       return withContext(context => {
         const resolution = resolve(context, target);

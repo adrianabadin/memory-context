@@ -117,6 +117,16 @@ export function registerQueryTools(server, options = {}) {
     try { return textResult(await reader.relations(args)); }
     catch (error) { return errorResult('pmc_relations', error); }
   });
+  server.registerTool('pmc_entrypoints_for', {
+    description: 'Which CLI commands, MCP tools, routes, or `main` functions reach X: complete reverse call reachability from the target, returning the canonical role match union plus its `entrypoints` (role entrypoint/cli-command/mcp-tool or an entrypoint layer) and `controllers` (role controller) projections with distance and evidence path.',
+    inputSchema: z.object({
+    target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.entrypoints(args)); }
+    catch (error) { return errorResult('pmc_entrypoints_for', error); }
+  });
   server.registerTool('pmc_card', {
     description: 'Read symbol/file facts and existing enrichment text; no role or narrative generation.',
     inputSchema: z.object({

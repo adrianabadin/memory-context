@@ -140,6 +140,42 @@ ignored as success. Roles are read only from the `node_role_assignments`
 ledger through the canonical role getter; metadata-only legacy roles never
 match.
 
+`pmc_entrypoints_for({target})` returns `{status, target, matches, entrypoints,
+controllers}` — "which CLI commands, MCP tools, routes, or `main` functions
+reach X". The walk is complete reverse `calls` reachability over the known
+graph: iterative, each key visited once (cycles terminate), no hop limit, and
+no cut at an intermediate controller or entrypoint, so an upstream `main` is
+still reported behind a matching controller. Only actual call relations are
+followed (native plus legacy through the same adapter, with constructor-edge
+exclusions intact); imports and other relation types are never treated as
+calls. `matches` is the deduplicated union — dedup key: canonical symbol key —
+of application entrypoint evidence (canonical role `entrypoint`, `cli-command`
+or `mcp-tool`, or any canonical classification with layer `entrypoint`, which
+is how the fixture's role `cli` main qualifies) and controller evidence
+(canonical role `controller`; express route handlers are classified
+`controller`). `entrypoints` and `controllers` are the two projections of that
+union (they may overlap when the canonical data justifies it); each match is
+`{symbolKey, role, layer, distance, path}`, sorted by distance then canonical
+key, where `distance` counts actual call hops (`path` includes the zero-hop
+membership step when a class or file target expands to its proven members) and
+`path` is the full evidence chain from the selected target. A recognized
+entrypoint or controller target matches at distance 0 and the walk still
+continues upstream. Membership expansion is fail-closed exactly like the
+`stopAtRole` guards: only proven current registry containers/members expand,
+an explicit unknown assignment never matches or inherits, excluded node kinds
+never self-match or inherit, metadata-only legacy roles never count, and
+foreign, prefix or ambiguous same-file names never invent ownership; matching
+members keep their actual method key, never a projected owner class. The
+argument list is strict — only `target`; `depth`, `direction` and `stopAtRole`
+are rejected here as unknown options — ambiguous or missing targets return
+their usual `{status, candidates}` with empty projections, and every request
+opens `graph.db` read-only and changes nothing. Parent ties are chosen
+deterministically: each hop unions one-hop call edges queried per individual
+sorted frontier key (never a batched multi-seed scan that could drop a tied
+edge), deduplicates them, and then advances to the smallest canonical
+caller/callee edge key — so equal-distance diamond branches resolve to the
+same actual shortest path under every node and edge insertion order.
+
 `pmc_card({target})` returns `{status, target, facts, enrichment}` for a
 symbol or file. Symbol enrichment is the existing semantic summary; file
 cards currently return an empty enrichment string rather than inventing a
@@ -161,8 +197,9 @@ When a canonical persisted role assignment exists, symbol/file facts include
 field; explicitly unknown assignments preserve null role/layer, zero confidence,
 and empty evidence. Role queries are read-only and do not trigger classification.
 Generated narratives and card levels remain later-phase work. Role-aware
-stopping now ships as the `pmc_relations` `stopAtRole` option documented
-above; entrypoint, impact and card-level units stay pending.
+stopping ships as the `pmc_relations` `stopAtRole` option documented above,
+and entrypoint reachability ships as the `pmc_entrypoints_for` tool documented
+above; impact and card-level units stay pending.
 
 ### CLI target resolution
 
