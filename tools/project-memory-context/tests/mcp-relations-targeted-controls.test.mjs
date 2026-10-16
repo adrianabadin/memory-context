@@ -90,6 +90,16 @@ test('B3 strict options reject variants; known arguments remain valid', async t 
   }
   assert.equal(payload(await f.call('pmc_relations', { target: A, direction: 'outbound', relations: [], depth: 3 })).status, 'resolved');
   assert.equal(payload(await f.call('pmc_card', { target: A })).facts.id, A);
+  // S13 legitimate addition: pmc_relations now accepts the optional stopAtRole
+  // (pmc_card above still rejects it), and its empty boundary changes nothing.
+  const accepted = payload(await f.call('pmc_relations', { target: A, stopAtRole: 'controller' }));
+  assert.equal(accepted.status, 'resolved');
+  assert.equal(accepted.stoppedAtRole, 'controller');
+  assert.deepEqual(accepted.matches, []);
+  const baseline = payload(await f.call('pmc_relations', { target: A }));
+  const withoutOption = { status: accepted.status, target: accepted.target, direction: accepted.direction,
+    depth: accepted.depth, edges: accepted.edges };
+  assert.deepEqual(withoutOption, baseline, 'stopAtRole only appends its own keys; the default fields stay identical');
 });
 test('B4 normalized absent/existing paths and canonical file IDs', async t => {
   const f = await fixture(t, { nodes: [node(A, A, 'src/a.js'), { id: 'file|src/empty.js', label: 'src/empty.js', kind: 'file', source_file: 'src/empty.js' }] });

@@ -104,12 +104,13 @@ export function registerQueryTools(server, options = {}) {
   );
 
   server.registerTool('pmc_relations', {
-    description: 'Read typed canonical relationships from graph.db; ambiguous targets return candidates.',
+    description: 'Read typed canonical relationships from graph.db; ambiguous targets return candidates; optional stopAtRole stops the walk at the first node with that canonical role.',
     inputSchema: z.object({
     target: z.string().min(1).describe('Canonical key, path#name, graph node ID, symbol name or file path'),
     direction: z.enum(['in', 'out', 'inbound', 'outbound']).default('out'),
     relations: z.array(z.enum(['calls', 'imports', 'imports_from', 'contains', 'method'])).optional(),
     depth: z.number().int().min(1).max(3).default(1),
+    stopAtRole: z.string().min(1).optional().describe('Optional canonical role name: traversal stops expanding at the first node with this role'),
     }).strict(),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async args => {

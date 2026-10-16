@@ -104,7 +104,7 @@ These scripts exist in `cli/` but are not registered as `pmc` subcommands. They 
 
 ### Facts-only MCP tools
 
-`pmc_relations({target, direction: "in" | "out", relations?, depth?})`
+`pmc_relations({target, direction: "in" | "out", relations?, depth?, stopAtRole?})`
 returns `{status, target, direction, depth, edges}` for a resolved target.
 Edges carry typed canonical symbol endpoints (`symbolKey`, registry `id`,
 `kind`, `path`) or file endpoints (`file|<path>`, `kind: "file"`, `path`).
@@ -112,6 +112,33 @@ Edges carry typed canonical symbol endpoints (`symbolKey`, registry `id`,
 from 1 through 3 (default 1); relation types are `calls`, `imports`,
 `imports_from`, `contains`, and `method`. Symbol import edges are file-scoped
 and marked `scope: "file"`, not individual symbol-use claims.
+
+The optional `stopAtRole` argument takes a nonempty canonical role name —
+from the packaged profile `roleLayers` vocabulary or a role actually
+assigned in the project's canonical role ledger — and switches the
+traversal to a role-stopping bounded walk over exactly the requested
+direction/relations/depth: the first node on each traversed path whose
+persisted role equals the requested role is retained as a boundary but
+never expanded, while every tie or additional boundary is kept. Only with
+the option present does the response add `stoppedAtRole` and `matches`
+(`{symbolKey, role, distance, path}`, sorted by distance then canonical
+key; `distance` counts relation hops and `path` is the evidence chain from
+the start to the boundary); without it the response stays byte-identical to
+the shape above. A matching start is a depth-0 boundary with no walk. A
+container-level start may expand to its proven members at distance 0, and a
+matched member projects to its uniquely resolved owner only when that
+owner's own canonical role also equals the requested role — a non-matching,
+absent, or explicitly unknown owner is never advertised, so the matching
+member stays the boundary with its own role and path. Class or file
+answers therefore reach class boundaries only through genuinely matching
+owners; a member-level start keeps member boundaries. A member inherits a
+container role only while its current node kind is role-eligible
+(`symbol`/`member`, the same guard as the canonical role ledger), so an
+excluded node such as a `doc` member neither matches nor inherits. Empty,
+unknown, or non-string values reject with a tool error instead of being
+ignored as success. Roles are read only from the `node_role_assignments`
+ledger through the canonical role getter; metadata-only legacy roles never
+match.
 
 `pmc_card({target})` returns `{status, target, facts, enrichment}` for a
 symbol or file. Symbol enrichment is the existing semantic summary; file
@@ -121,8 +148,9 @@ or file path (`file|<path>` is also accepted). Ambiguous results return `{status
 with canonical identities; missing symbols return `status: "missing"`.
 Files absent from graph nodes and native evidence also return `status: "missing"`.
 File exports, members and counts use the same validated identity registry as
-symbol queries. Unknown explicit arguments, including future `level` or
-`stopAtRole` options, are rejected rather than silently discarded.
+symbol queries. Unknown explicit arguments are rejected rather than silently
+discarded: `level` remains a rejected future `pmc_card` option, and
+`stopAtRole` is accepted only by `pmc_relations`.
 These readers require an existing `graph.db`, open it read-only, and close
 it per request. Missing databases produce an explicit MCP tool error and
 are never created implicitly. Dependency aliases retain their legacy array
@@ -132,7 +160,9 @@ When a canonical persisted role assignment exists, symbol/file facts include
 `roleClassification: {role, layer, confidence, evidence}`. No assignment adds no
 field; explicitly unknown assignments preserve null role/layer, zero confidence,
 and empty evidence. Role queries are read-only and do not trigger classification.
-Generated narratives, levels and role-aware stopping remain later-phase work.
+Generated narratives and card levels remain later-phase work. Role-aware
+stopping now ships as the `pmc_relations` `stopAtRole` option documented
+above; entrypoint, impact and card-level units stay pending.
 
 ### CLI target resolution
 

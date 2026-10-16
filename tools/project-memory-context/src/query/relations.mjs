@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createSqliteGraphStore } from '../graph-store/graph-db.mjs';
 import { createQueryEngine } from '../retrieval/query-engine.mjs';
 import { resolveTarget } from '../retrieval/target-resolver.mjs';
+import { resolveStopAtRole, walkRoleBoundary } from './role-traversal.mjs';
 import { buildFacts } from '../cards/facts.mjs';
 import { buildFileCard } from '../cards/file-card.mjs';
 
@@ -76,7 +77,20 @@ export function createRelationsReader({ projectRoot }) {
         store.listNativeEdges().some(edge => edge.source.id === `file|${path}` || edge.target.id === `file|${path}`);
       const legacyNodeIds = new Set(Object.values(index).map(entry => entry?.graphNodeId).filter(Boolean));
       return await action({ store, engine, endpoint, symbol, symbolIndex, groups, fileExists, legacyNodeIds,
-        nativeAvailable: tables.has('native_edges') });
+        nativeAvailable: tables.has('native_edges'),
+        // Role names actually assigned in this project's canonical ledger;
+        // consulted only when validating an explicit stopAtRole value.
+        assignedRoleNames() {
+          if (!tables.has('node_role_assignments')) return [];
+          const names = new Set();
+          for (const row of db.prepare('SELECT classification FROM node_role_assignments').all()) {
+            try {
+              const classification = JSON.parse(row.classification);
+              if (classification && typeof classification.role === 'string' && classification.role.length > 0) names.add(classification.role);
+            } catch { /* a malformed stored classification is not a usable role name */ }
+          }
+          return [...names];
+        } });
     } finally { db.close(); }
   }
   function resolve(context, target) {
@@ -108,12 +122,18 @@ export function createRelationsReader({ projectRoot }) {
     }
     return { status: 'resolved', resolved };
   }
-  async function relationsIn(context, { target, direction = 'out', relations = ['calls', 'imports'], depth = 1 }) {
+  async function relationsIn(context, { target, direction = 'out', relations = ['calls', 'imports'], depth = 1, stopAtRole }) {
     if (!['in', 'out', 'inbound', 'outbound'].includes(direction)) throw new TypeError('direction must be in, out, inbound or outbound');
     if (!Number.isInteger(depth) || depth < 1 || depth > 3) throw new TypeError('depth must be an integer from 1 to 3');
     if (!Array.isArray(relations) || relations.some(type => !TYPES.includes(type))) throw new TypeError('unsupported relation type');
+    // S13: validate the optional role predicate before resolving, exactly like
+    // the other option validators; absent (undefined) is a no-op.
+    const roleStop = resolveStopAtRole(context, stopAtRole);
     const resolution = resolve(context, target);
     if (resolution.status !== 'resolved') return { ...resolution, edges: [] };
+    if (roleStop !== undefined) {
+      return await walkRoleBoundary(context, { resolved: resolution.resolved, direction, relations, depth, stopAtRole: roleStop });
+    }
     const { store, engine, endpoint } = context;
     const { resolved } = resolution; const incoming = direction === 'in' || direction === 'inbound';
     const edges = new Map();

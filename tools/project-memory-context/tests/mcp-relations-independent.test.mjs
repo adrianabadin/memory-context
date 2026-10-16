@@ -72,12 +72,26 @@ for (const mismatch of ['index', 'kind']) {
     assert.equal(file.facts.symbolCount, 0);
   });
 }
-for (const [name, extra] of [['pmc_relations', { stopAtRole: 'controller' }], ['pmc_card', { level: 'deep' }]]) {
+for (const [name, extra] of [['pmc_relations', { stopAtRoleTypo: 'controller' }], ['pmc_card', { level: 'deep' }]]) {
   test(`${name} rejects unsupported explicit options`, async t => {
     const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
     assert.equal((await f.call(name, { target: A, ...extra })).isError, true, 'an explicit unsupported option cannot succeed silently');
   });
 }
+test('pmc_relations validates stopAtRole strictly and keeps absent-option output identical', async t => {
+  const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
+  const rejected = await f.call('pmc_relations', { target: A, stopAtRole: 'contorller' });
+  assert.equal(rejected.isError, true, 'an unknown role value cannot be ignored as success');
+  assert.match(rejected.content[0].text, /unknown role/);
+  const baseline = payload(await f.call('pmc_relations', { target: A, direction: 'in', relations: ['calls'], depth: 1 }));
+  assert.deepEqual(Object.keys(baseline).sort(), ['depth', 'direction', 'edges', 'status', 'target'],
+    'the default response keeps exactly its prior key set');
+  const accepted = payload(await f.call('pmc_relations', { target: A, direction: 'in', relations: ['calls'], depth: 1, stopAtRole: 'controller' }));
+  assert.equal(accepted.status, 'resolved');
+  assert.equal(accepted.stoppedAtRole, 'controller');
+  assert.deepEqual(accepted.matches, [], 'a known role with no assignment is an empty boundary, not an unknown-role error');
+  assert.deepEqual(accepted.edges, baseline.edges, 'an empty boundary preserves the default edge set');
+});
 for (const name of ['pmc_card', 'pmc_relations']) {
   test(`${name} does not resolve an absent file`, async t => {
     const f = await fixture(t, { nodes: [node(A, A, 'src/a.js')] });
