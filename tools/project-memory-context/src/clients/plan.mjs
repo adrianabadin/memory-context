@@ -44,7 +44,7 @@ async function resolveCapability({
         targetPath = target(contextRoots.projectRoot);
       } else if (capabilitySpec.target === 'globalConfig') {
         targetPath = target(contextRoots.homeDir);
-      } else if (capabilitySpec.target === 'AGENTS.md' || capabilitySpec.target === 'CLAUDE.md' || capabilitySpec.target === '.cursorrules' || capabilitySpec.target === 'README-SETUP.md') {
+      } else if (capabilitySpec.target === 'AGENTS.md' || capabilitySpec.target === 'CLAUDE.md' || capabilitySpec.target === '.cursorrules' || capabilitySpec.target === 'README-SETUP.md' || capabilitySpec.target === '.pi/settings.json') {
         targetPath = join(contextRoots.projectRoot, capabilitySpec.target);
       } else if (capabilitySpec.target === 'skillsDir') {
         targetPath = target(contextRoots.projectRoot);

@@ -27,4 +27,8 @@ export const CLIENT_MARKERS = Object.freeze({
     project: ['.kimi-code'],
     instructionFiles: [],
   }),
+  pi: Object.freeze({
+    project: ['.pi'],
+    instructionFiles: [],
+  }),
 });
