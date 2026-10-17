@@ -294,6 +294,128 @@ Focused check: `node --test tests/mcp-entrypoints.test.mjs tests/mcp-stop-at-rol
 
 Focused check: `node --test tests/s15-independent-verification.test.mjs tests/pagerank.test.mjs tests/mcp-impact.test.mjs tests/mcp-stop-at-role.test.mjs tests/mcp-relations.test.mjs tests/mcp-relations-independent.test.mjs tests/mcp-relations-targeted-controls.test.mjs tests/query.test.mjs tests/mcp-entrypoints.test.mjs` from `tools/project-memory-context`.
 
+## Offline Evaluation Report (F5.2A / S20)
+
+`src/evaluation/offline-report.mjs` exports the pure, synchronous `buildOfflineEvaluationReport(input)` (plan F5 5.2 / spec S20, "Evaluación offline primero" selected by the user): a deterministic LOCAL evaluation/report BUILDER that performs arithmetic only over evidence the caller explicitly supplies. It runs no evaluation, no model, no judge and no agent; each of its four sections reports `status: 'measured'` only when attributable evidence was provided for it, and otherwise `status: 'not-measured'` with null numerics — never a fabricated score. Accepted top-level input keys are exactly `relationQuestions`, `narratives`, `authoritativeKeys`, `recordedTaskEvidence` and `judgeEvidence`; unknown keys, wrong types, malformed entries, duplicate `id`/`taskId`/`sampleId` values and non-integer or negative file-read counts all fail closed with `TypeError`. The report is plain JSON (`JSON.stringify(report)` works locally), deterministic and byte-stable for identical input, free of timestamps/randomness/environment reads, and caller inputs are never mutated. Example (asserted verbatim by `tests/offline-report.test.mjs`): input fixtures demonstrate arithmetic, NOT real performance.
+
+```js
+import { buildOfflineEvaluationReport } from './src/evaluation/offline-report.mjs';
+
+const A = 'ts|src/a.ts|function|exported|a|0';
+const B = 'ts|src/b.ts|class|exported|B|0';
+const C = 'ts|src/c.ts|function|exported|c|1';
+const narrative = (mentions) => ({
+  summary: 'Valid summary within the word limit', behavior: [], sideEffects: [],
+  errors: [], contracts: [], changeNotes: '', mentions,
+});
+
+const report = buildOfflineEvaluationReport({
+  relationQuestions: [
+    { id: 'q1-callers-find-by-id', expected: [A, B], observed: [A] },
+    { id: 'q2-callees-find-by-id', expected: [C], observed: [C, B] },
+  ],
+  narratives: [{ id: 'n1', narrative: narrative([A, 'ghost|nowhere|function|exported|ghost|0']) }],
+  authoritativeKeys: new Set([A, B, C]),
+  recordedTaskEvidence: [
+    { taskId: 't1', success: true, fileReads: 3 },
+    { taskId: 't2', success: false, fileReads: 1 },
+  ],
+  judgeEvidence: [{ sampleId: 's1', verdict: 'pass' }],
+});
+```
+
+Exact output of that input:
+
+```json
+{
+  "kind": "offline-evaluation-report",
+  "relationAccuracy": {
+    "status": "measured",
+    "questionCount": 2,
+    "exactMatchCount": 0,
+    "exactMatchRate": 0,
+    "totalTruePositives": 2,
+    "totalFalsePositives": 1,
+    "totalFalseNegatives": 1,
+    "microPrecision": 0.6666666666666666,
+    "microRecall": 0.6666666666666666,
+    "microF1": 0.6666666666666666,
+    "macroPrecision": 0.75,
+    "macroRecall": 0.75,
+    "questions": [
+      {
+        "id": "q1-callers-find-by-id",
+        "expectedValues": ["ts|src/a.ts|function|exported|a|0", "ts|src/b.ts|class|exported|B|0"],
+        "observedValues": ["ts|src/a.ts|function|exported|a|0"],
+        "truePositives": 1, "falsePositives": 0, "falseNegatives": 1,
+        "precision": 1, "recall": 0.5, "exactMatch": false
+      },
+      {
+        "id": "q2-callees-find-by-id",
+        "expectedValues": ["ts|src/c.ts|function|exported|c|1"],
+        "observedValues": ["ts|src/b.ts|class|exported|B|0", "ts|src/c.ts|function|exported|c|1"],
+        "truePositives": 1, "falsePositives": 1, "falseNegatives": 0,
+        "precision": 0.5, "recall": 1, "exactMatch": false
+      }
+    ]
+  },
+  "narrativeMentionValidity": {
+    "status": "measured",
+    "narrativeCount": 1,
+    "totalMentions": 2,
+    "validMentions": 1,
+    "invalidMentions": 1,
+    "mentionValidity": 0.5,
+    "unknownMentions": ["ghost|nowhere|function|exported|ghost|0"],
+    "invalidNarratives": [
+      { "id": "n1", "errors": ["Mention does not exist in graph: ghost|nowhere|function|exported|ghost|0"] }
+    ]
+  },
+  "agentTaskSuccess": {
+    "status": "measured",
+    "taskCount": 2,
+    "successCount": 1,
+    "failureCount": 1,
+    "successRate": 0.5,
+    "totalFileReads": 4,
+    "meanFileReadsPerTask": 2,
+    "tasks": [
+      { "taskId": "t1", "success": true, "fileReads": 3 },
+      { "taskId": "t2", "success": false, "fileReads": 1 }
+    ]
+  },
+  "sampledJudge": {
+    "status": "measured",
+    "sampleCount": 1,
+    "passCount": 1,
+    "failCount": 0,
+    "passRate": 1,
+    "samples": [ { "sampleId": "s1", "verdict": "pass" } ]
+  }
+}
+```
+
+### Relation accuracy formulas (`relationQuestions: [{id, expected, observed}]`)
+
+Values are deduplicated and canonically sorted (ascending, input-order independent) before any arithmetic; questions are reported sorted by `id`. With `E` = deduplicated expected values, `O` = deduplicated observed values, `TP = |E ∩ O|`, `FP = |O \ E|`, `FN = |E \ O|` per question:
+
+- `precision = TP / |O|` when `|O| > 0`, else `null` (undefined denominator — never an invented 0 or 1).
+- `recall = TP / |E|` when `|E| > 0`, else `null`.
+- `exactMatch = (FP == 0 && FN == 0)` — two empty sets match exactly.
+- Aggregates: `microPrecision = ΣTP / (ΣTP + ΣFP)` and `microRecall = ΣTP / (ΣTP + ΣFN)` over all questions, each `null` when its denominator is 0; `microF1 = 2·P·R / (P + R)` when both micro values are non-null and `P + R > 0`, `0` when both are `0`, and `null` if either is `null`; `macroPrecision`/`macroRecall` are the means over only the per-question values that are non-null (`null` when no per-question value is defined); `exactMatchRate = exactMatchCount / questionCount` (`null` when `questionCount` is 0).
+
+### Missing-evidence policy (all sections)
+
+An absent or empty evidence array yields `status: 'not-measured'` with an explicit `reason`, zero counts and `null` numerics — an empty evaluation is NOT a score of 0 or 1. `buildOfflineEvaluationReport({})` is valid and returns the all-not-measured skeleton with stable top-level key order `kind`, `relationAccuracy`, `narrativeMentionValidity`, `agentTaskSuccess`, `sampledJudge`.
+
+### Structural validity vs. semantic judge (honesty boundary)
+
+`narrativeMentionValidity` is STRUCTURAL validity only: `mentionValidity = validMentions / totalMentions` (`null` when `totalMentions` is 0) against the caller-supplied authoritative key `Set`, plus the shared `validateNarrative` verdict per narrative in `invalidNarratives` (schema shape, ≤25-word summary, mention membership). It is never "semantic faithfulness": whether a narrative's prose faithfully describes the symbol cannot be decided deterministically and is NOT measured here. The `sampledJudge` section never runs a judge — it aggregates `verdict: 'pass' | 'fail'` records from a sampled LLM-judge run the caller performed and recorded elsewhere, keyed by `sampleId`; without such recorded evidence its `passRate` stays `null`. Similarly `agentTaskSuccess` aggregates only RECORDED task evidence keyed by `taskId` (success boolean and the ACTUAL recorded integer `fileReads` count); `status: 'measured'` attests only to arithmetic over the supplied records, never to "real agent success". When evidence provenance is missing or ambiguous, this module rejects the input (`TypeError`) or reports `not-measured` — it never guesses a measured result, defines no metric thresholds and adds no CI gating.
+
+### Scope limits
+
+Source-only opt-in unit: no CLI command, package export change, MCP tool, persistence, schema, config or dependency was added, and all existing modules/MCP/CLI outputs are unchanged byte-for-byte. There is no `.github/workflows` in this checkout, so no CI seam was touched; wiring this report into CI, real live-judge measurement and live-agent task acceptance remain pending the separate F5.2 closure unit. Focused check: `node --test tests/offline-report.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.
