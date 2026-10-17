@@ -6,6 +6,7 @@ import { cursorAdapter } from './adapters/cursor.mjs';
 import { antigravityAdapter } from './adapters/antigravity.mjs';
 import { genericAdapter } from './adapters/generic.mjs';
 import { codexAdapter } from './adapters/codex.mjs';
+import { kimiAdapter } from './adapters/kimi.mjs';
 
 export const CLIENT_REGISTRY = Object.freeze([
   opencodeAdapter,
@@ -14,6 +15,7 @@ export const CLIENT_REGISTRY = Object.freeze([
   antigravityAdapter,
   genericAdapter,
   codexAdapter,
+  kimiAdapter,
 ]);
 
 export function validateRegistry(registry = CLIENT_REGISTRY, probeTable = PROBE_TABLE, contextRoots = null) {
