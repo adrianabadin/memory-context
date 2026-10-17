@@ -1,0 +1,71 @@
+# F5.2B / S21 — offline GitHub Actions golden gate (OFFLINE policy).
+#
+# Blocks on:
+#   - install failures (npm ci from the existing lockfile, no dependency edits),
+#   - focused F5/core golden test failures,
+#   - any covered exact golden regression observed by tools/offline-eval.mjs
+#     (exact answer-set equality, no precision thresholds).
+#
+# Deliberately absent: credentials/secrets, providers/models/inference,
+# pull_request_target, continue-on-error, `|| true`, piped exit codes,
+# relational-eval.test.mjs, generated production state. The report artifact is
+# uploaded on success AND failure (the runner prints its report before exiting
+# nonzero on golden mismatch); a hard runner error leaves an empty/absent
+# report, which is warned about rather than papered over.
+name: PMC Offline Evaluation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: tools/project-memory-context
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tools/project-memory-context/package-lock.json
+
+      # Fresh install from package-lock.json; the tracked node_modules tree is
+      # never trusted as a cache (npm ci removes and reinstalls it).
+      - name: Install declared dependencies from lockfile
+        id: install
+        run: npm ci
+
+      - name: Focused F5/core golden tests
+        run: >-
+          node --test
+          tests/offline-eval-runner.test.mjs
+          tests/offline-report.test.mjs
+          tests/card-facts.test.mjs
+          tests/mcp-relations.test.mjs
+
+      # Report goes to a file via shell redirection (no pipe), so the runner's
+      # nonzero exit status still fails the job. Runs even when a previous
+      # step failed so the artifact exists whenever evaluation could execute.
+      - name: Offline golden evaluation (gate)
+        if: always() && steps.install.outcome == 'success'
+        run: node tools/offline-eval.mjs > offline-evaluation-report.json
+
+      - name: Upload offline evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmc-offline-evaluation-report
+          path: tools/project-memory-context/offline-evaluation-report.json
+          if-no-files-found: warn
+          retention-days: 7

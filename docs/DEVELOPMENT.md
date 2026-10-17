@@ -416,6 +416,80 @@ An absent or empty evidence array yields `status: 'not-measured'` with an explic
 
 Source-only opt-in unit: no CLI command, package export change, MCP tool, persistence, schema, config or dependency was added, and all existing modules/MCP/CLI outputs are unchanged byte-for-byte. There is no `.github/workflows` in this checkout, so no CI seam was touched; wiring this report into CI, real live-judge measurement and live-agent task acceptance remain pending the separate F5.2 closure unit. Focused check: `node --test tests/offline-report.test.mjs` from `tools/project-memory-context`.
 
+## Offline Evaluation Runner and CI Golden Gate (F5.2B / S21)
+
+`tools/offline-eval.mjs` is a source-tree runner — deliberately NOT an npm package command or `package.json` script — that turns the F5.2A `buildOfflineEvaluationReport` builder into a reproducible LOCAL golden gate over the layered-app fixture. OFFLINE policy: it measures only evidence that deterministically exists. No models, providers, credentials, inference, thresholds or not-yet-measured metrics are involved.
+
+### Invocation
+
+From `tools/project-memory-context` (requires `node:sqlite`, i.e. Node ≥ 22.5; verified on Node 24):
+
+```
+node tools/offline-eval.mjs --help
+node tools/offline-eval.mjs
+node tools/offline-eval.mjs --expected /path/to/owned-expected.json
+node tools/offline-eval.mjs --fixture-dir /path/to/owned-layered-app-copy
+node tools/offline-eval.mjs > offline-evaluation-report.json   # CI gate: redirect, never a pipe
+```
+
+Options: `--help`/`-h` prints the usage text and exits 0; `--expected <path>` selects an explicitly owned golden questions input (default `tests/fixtures/layered-app/expected.json`); `--fixture-dir <path>` selects an owned copy of the layered-app sources (default `tests/fixtures/layered-app`). Unknown flags, missing values, missing paths and malformed JSON/shape exit 2 with an `offline-eval: `-prefixed stderr message and an empty stdout. The runner only READS the stored fixture and the authoritative `expected.json` (hash-verified byte-identical before/after in tests): every run assembles its own isolated fixture in a fresh `mkdtemp` directory (with `HOME`/`USERPROFILE`/`TMPDIR`/`TEMP`/`TMP` pointed inside it for the run) using the existing native extractors (`extractNativeCalls`, `extractNativeImportBindings`), the shared graph.db build seam and the approved F2 `generic` role ledger (`classifySymbol`/`persistNodeRoles`), then removes it.
+
+### Covered question IDs (observed via the current public query/card surface)
+
+Observed answers come from the live MCP surface (in-memory `McpServer` + `registerQueryTools`) — never from copied expected arrays or hardcoded outputs:
+
+| covered question id | public call → observed field |
+|---|---|
+| `q1-callers-user-service-find-by-id` | `pmc_relations` (findById, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q2-callees-user-service-find-by-id` | `pmc_relations` (findById, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q3-dependents-format-name` | `pmc_relations` (formatName, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q4-callers-main` | `pmc_relations` (main, in/calls/depth 1) → `edges[].source.symbolKey` (expected empty) |
+| `q5-callees-main` | `pmc_relations` (main, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q6-dependencies-render-user` | `pmc_relations` (renderUser, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q7-nearest-controller-user-service` | `pmc_relations` (UserService class, in/calls/depth 1, `stopAtRole: 'controller'`) → `matches[].symbolKey` |
+| `q8-entrypoint-user-service` | `pmc_entrypoints_for` (UserService class) → `entrypoints[].symbolKey` |
+| `q9-callers-user-repository-find-one` | `pmc_relations` (findOne, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q10-callees-user-repository-find-one` | `pmc_relations` (findOne, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q11-imports-user-controller` | `pmc_relations` (UserController class, out/imports/depth 1) → `edges[].target.symbolKey` |
+| `q12-tests-user-service` | `pmc_impact` (UserService class) → `tests[].symbolKey` |
+
+All 12 golden questions are covered and listed verbatim in the report's `coveredQuestionIds`. Any golden question NOT in the coverage table is reported as `notMeasuredQuestions: [{id, reason: 'not-covered-by-current-public-api'}]` — never evaluated by proxy and never forced to pass. Conversely, a covered question missing from the supplied input is a runner error (exit 2), not a silent pass.
+
+### Report shape and exit codes
+
+stdout carries exactly one deterministic pretty-JSON document (byte-identical across runs — two independent isolated runs are asserted equal in tests):
+
+```json
+{
+  "kind": "offline-evaluation-run",
+  "fixture": "layered-app",
+  "coveredQuestionIds": ["q1-callers-user-service-find-by-id", "… all 12 …"],
+  "notMeasuredQuestions": [],
+  "gate": { "status": "pass", "mismatchedQuestionIds": [] },
+  "evaluation": { "kind": "offline-evaluation-report", "relationAccuracy": { "…": "…" }, "narrativeMentionValidity": { "…": "…" }, "agentTaskSuccess": { "…": "…" }, "sampledJudge": { "…": "…" } }
+}
+```
+
+Exit codes: `0` — evaluation succeeded and every covered question matched the golden expectation EXACTLY (set equality after canonical dedup/sort; no precision or accuracy thresholds); `1` — a covered golden question mismatched: the full honest report is printed on stdout first, each mismatch is diagnosed on stderr (`offline-eval: golden mismatch: <id> …`), and the nonzero status is preserved; `2` — runner error, malformed golden/fixture input or CLI misuse: empty stdout, `offline-eval: ` diagnostic on stderr.
+
+### GitHub Actions workflow (`.github/workflows/pmc-offline-evaluation.yml`)
+
+- Triggers: `push` to `main` plus `pull_request`; workflow-level `permissions: contents: read` (no secrets anywhere); job `timeout-minutes: 15`; `ubuntu-latest`; Node 24 via `actions/setup-node@v4` with the npm download cache keyed on the existing `package-lock.json`.
+- Install: `npm ci` in `tools/project-memory-context` — reproducible from the checked-in lockfile (lockfileVersion 3, dependency specs verified in sync with `package.json`); the tracked `node_modules` tree is never trusted as a cache (`npm ci` removes and reinstalls it). No dependency versions are edited and no packages are added.
+- Tests: an explicit focused file array — `tests/offline-eval-runner.test.mjs`, `tests/offline-report.test.mjs`, `tests/card-facts.test.mjs`, `tests/mcp-relations.test.mjs`. `tests/relational-eval.test.mjs` is never executed or imported; no existing checks are removed or disabled.
+- Gate: `node tools/offline-eval.mjs > offline-evaluation-report.json` — shell redirection (never a pipe or `|| true`), so the runner's nonzero exit fails the job; the step runs with `if: always() && steps.install.outcome == 'success'` so the report is produced even when the test step failed, while an install failure skips it. No `continue-on-error` anywhere.
+- Artifact: `actions/upload-artifact@v4` with `if: always()`, name `pmc-offline-evaluation-report`, the single report JSON, 7-day retention, `if-no-files-found: warn` — a hard runner error (exit 2) emits no JSON; shell redirection may still create an empty artifact file. An empty file is not a measured report, and the job remains failed.
+
+### What this gate does NOT measure (honesty limits)
+
+- `evaluation.relationAccuracy` — measured: exact deterministic answer-set equality over the 12 covered questions. There is no “accuracy ≥ X” threshold; a single extra or missing key fails the gate.
+- `evaluation.narrativeMentionValidity` — `not-measured` (`no-narrative-evidence`): the layered-app fixture contains NO validated narrative artifacts (only an ignored `x.memory.json` scope marker), so no narratives are supplied. Mention validity remains structural validity, never semantic faithfulness.
+- `evaluation.agentTaskSuccess` — `not-measured` (`no-recorded-task-evidence`): no recorded agent runs or file-read counts exist; nothing is fabricated to fill the numbers.
+- `evaluation.sampledJudge` — `not-measured` (`no-recorded-judge-evidence`): no sampled LLM-judge verdicts exist; this runner never calls a model.
+- Real Pi session acceptance, live sampled-judge measurement and live agent-task success remain PENDING the F5.2 closure unit. The original S20 scope (“Eval metrics in CI: relation accuracy, narrative faithfulness (mention validity plus a sampled LLM judge), and agent task success with file-read counts.”) is only partially wired: the offline deterministic relation gate runs in CI today; the judge and agent portions wait for real recorded evidence. Whole F5 is NOT complete — cards remain source-only.
+
+Code mapping: `tools/offline-eval.mjs` (CLI, isolated fixture assembly, MCP observation, gating) → `mcp/query-tools.mjs` (the public `pmc_relations` / `pmc_entrypoints_for` / `pmc_impact` surface) → `src/evaluation/offline-report.mjs` (`buildOfflineEvaluationReport` arithmetic). Focused check: `node --test tests/offline-eval-runner.test.mjs tests/offline-report.test.mjs tests/card-facts.test.mjs tests/mcp-relations.test.mjs` from `tools/project-memory-context`.
+
 ## Relational Evaluation Harness
 
 The relational evaluation harness benchmarks relation retrieval (callers, callees, dependents, dependencies, nearest controller, entrypoint, tests) against golden answers.
