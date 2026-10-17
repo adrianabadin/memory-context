@@ -36,6 +36,7 @@ test('applyEnrichmentResult updates both graph and symbol index for bidirectiona
     memoryId: 'mem_999',
     graphNodeId: 'node-1',
     codeHash: 'hash-z',
+    semanticSummary: 'Fetches a user and normalizes the response.',
     status: 'enriched',
     lastEnrichedAt: '2026-05-15T13:00:00Z',
   });

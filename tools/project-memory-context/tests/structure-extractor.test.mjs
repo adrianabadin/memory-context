@@ -25,13 +25,19 @@ test('detectStructureContext ignores generated build directories', async () => {
   await mkdir(join(root, 'src', 'app'), { recursive: true });
   await mkdir(join(root, '.next', 'server'), { recursive: true });
   await mkdir(join(root, 'graphify-out', 'cache'), { recursive: true });
+  await mkdir(join(root, '.worktrees', 'feat-branch'), { recursive: true });
+  await mkdir(join(root, '.planning', 'docs'), { recursive: true });
   await writeFile(join(root, 'src', 'index.ts'), 'export {}\n', 'utf8');
 
   const result = await detectStructureContext(root);
 
   assert.equal(result.rootDirectories.includes('.next'), false);
   assert.equal(result.rootDirectories.includes('graphify-out'), false);
+  assert.equal(result.rootDirectories.includes('.worktrees'), false);
+  assert.equal(result.rootDirectories.includes('.planning'), false);
   assert.equal(result.keySubtrees.some((item) => item.startsWith('.next/')), false);
   assert.equal(result.keySubtrees.some((item) => item.startsWith('graphify-out/')), false);
+  assert.equal(result.keySubtrees.some((item) => item.startsWith('.worktrees/')), false);
+  assert.equal(result.keySubtrees.some((item) => item.startsWith('.planning/')), false);
   assert.equal(result.rootDirectories.includes('src'), true);
 });

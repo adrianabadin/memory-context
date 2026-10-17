@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { saveWorklistMerged, saveSymbolIndexMerged } from '../cli/enrich-queue.mjs';
+
+// Deterministic scheduling ticks used by the concurrency controls below:
+// every injected load/save yields a turn, so an unserialized read -> merge ->
+// write sequence provably interleaves instead of racing on wall-clock time.
+async function tick() {
+  await new Promise((resolve) => setImmediate(resolve));
+}
 
 // --- saveWorklistMerged ---
 
@@ -97,4 +106,69 @@ test('saveSymbolIndexMerged: disk file missing → writes mem without error', as
   const memIndex = { k1: { status: 'pending' } };
   await assert.doesNotReject(saveSymbolIndexMerged('/fake/symbol-index.json', memIndex, { loadJson: mockLoad, saveJson: mockSave }));
   assert.equal(savedData.k1.status, 'pending');
+});
+
+// -------------------------------------------------------------------
+// N6B concurrency controls: two writers holding their own full copies of the
+// same file (the queue and `pmc subagent-apply` shape) must never interleave
+// the load -> merge -> save sequence. Injected IO yields a turn at every
+// step, so an unlocked implementation deterministically loses a record here —
+// no wall-clock timing involved.
+// -------------------------------------------------------------------
+
+test('concurrent saveWorklistMerged transactions on one file never lose an enriched record or revert an explicit stale mark', async () => {
+  const worklistFile = join(tmpdir(), 'pmc-merge-serialize-worklist', 'worklist.json');
+  let disk = [
+    { symbolKey: 'k1', status: 'pending' },
+    { symbolKey: 'k2', status: 'pending' },
+    { symbolKey: 'k3', status: 'enriched', memoryId: 'disk-k3' },
+  ];
+  const loadJson = async () => { await tick(); return structuredClone(disk); };
+  const saveJson = async (_path, data) => { await tick(); disk = structuredClone(data); };
+
+  // Each writer carries its own full snapshot, as both real entry points do.
+  // k3 keeps the explicit S11 staleness mark in BOTH snapshots, so only an
+  // interleaved (unlocked) load can revert it or drop the other writer's
+  // accepted record.
+  const writerA = [
+    { symbolKey: 'k1', status: 'enriched', memoryId: 'a' },
+    { symbolKey: 'k2', status: 'pending' },
+    { symbolKey: 'k3', status: 'stale', staleReason: 'callee-summary-changed' },
+  ];
+  const writerB = [
+    { symbolKey: 'k1', status: 'pending' },
+    { symbolKey: 'k2', status: 'enriched', memoryId: 'b' },
+    { symbolKey: 'k3', status: 'stale', staleReason: 'callee-summary-changed' },
+  ];
+
+  await Promise.all([
+    saveWorklistMerged(worklistFile, writerA, { loadJson, saveJson }),
+    saveWorklistMerged(worklistFile, writerB, { loadJson, saveJson }),
+  ]);
+
+  assert.deepEqual(disk, [
+    { symbolKey: 'k1', status: 'enriched', memoryId: 'a' },
+    { symbolKey: 'k2', status: 'enriched', memoryId: 'b' },
+    { symbolKey: 'k3', status: 'stale', staleReason: 'callee-summary-changed' },
+  ], 'serialized read-merge-write keeps every accepted record and the explicit stale mark');
+});
+
+test('concurrent saveSymbolIndexMerged transactions never drop an enriched index record', async () => {
+  const symbolIndexFile = join(tmpdir(), 'pmc-merge-serialize-index', 'symbol-index.json');
+  let disk = {};
+  const loadJson = async () => { await tick(); return structuredClone(disk); };
+  const saveJson = async (_path, data) => { await tick(); disk = structuredClone(data); };
+
+  const writerA = { k1: { status: 'enriched', memoryId: 'a', semanticSummary: 'A.' } };
+  const writerB = { k2: { status: 'enriched', memoryId: 'b', semanticSummary: 'B.' } };
+
+  await Promise.all([
+    saveSymbolIndexMerged(symbolIndexFile, writerA, { loadJson, saveJson }),
+    saveSymbolIndexMerged(symbolIndexFile, writerB, { loadJson, saveJson }),
+  ]);
+
+  assert.deepEqual(Object.keys(disk).sort(), ['k1', 'k2'],
+    'both enriched index records must survive — an unlocked overlap lets the last writer wipe the first');
+  assert.equal(disk.k1.memoryId, 'a');
+  assert.equal(disk.k2.memoryId, 'b');
 });

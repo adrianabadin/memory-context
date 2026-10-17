@@ -128,3 +128,11 @@ test('computeSymbolDelta: matching hashVersion with different codeHash goes to s
   assert.equal(delta.stale[0].staleReason, 'code-hash-changed');
   assert.equal(delta.unchanged.length, 0);
 });
+
+// ── N5A preserve pins: engine outputs must not change ───────────────
+
+test('hashSymbol and hashFile outputs are pinned (N5A engine parity)', async () => {
+  assert.equal(await hashSymbol('abc'), '44bc2cf5ad770999');
+  assert.equal(await hashFile('abc'), '44bc2cf5ad770999');
+  assert.equal(await hashSymbol('a b'), '10dda12a5dc0b218');
+});

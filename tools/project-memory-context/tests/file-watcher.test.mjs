@@ -10,7 +10,15 @@ test('shouldWatch accepts source files and rejects ignored paths', () => {
   assert.equal(shouldWatch('src/app.py'), false);
   assert.equal(shouldWatch('node_modules/foo/index.js'), false);
   assert.equal(shouldWatch('.planning/state.json'), false);
+  assert.equal(shouldWatch('.planning/source.ts'), false);
+  assert.equal(shouldWatch('.worktrees/branch/src/app.ts'), false);
+  assert.equal(shouldWatch('graphify-out/graph.json'), false);
+  assert.equal(shouldWatch('graphify-out/bundle.js'), false);
+  assert.equal(shouldWatch('.graphify_analysis.json'), false);
+  assert.equal(shouldWatch('.graphify_test.ts'), false);
   assert.equal(shouldWatch('dist/bundle.js'), false);
+  assert.equal(shouldWatch('.opencode/plugins/pmc.ts'), false);
+  assert.equal(shouldWatch('nested/.opencode/config.js'), false);
   assert.equal(shouldWatch('README.md'), false);
 });
 

@@ -7,6 +7,7 @@ const state = {
   graphData: null,
   worklistData: null,
   contextData: null,
+  communityNames: {},
   selectedNode: null,
   activeOnly: false,
   searchQuery: "",
@@ -14,15 +15,24 @@ const state = {
   enabledTypes: new Set(["file", "class", "method", "function", "interface"]),
 };
 
+// Resolve a community ID to its descriptive name, falling back to "Community {ID}"
+// when no mapping exists (empty table, missing DB, or failed fetch).
+function getCommunityName(id) {
+  return state.communityNames[String(id)] ?? `Community ${id}`;
+}
+state.getCommunityName = getCommunityName;
+
 async function loadData() {
-  const [graphRes, worklistRes, contextRes] = await Promise.all([
+  const [graphRes, worklistRes, contextRes, communitiesRes] = await Promise.all([
     fetch("/api/graph"),
     fetch("/api/worklist"),
     fetch("/api/context"),
+    fetch("/api/communities"),
   ]);
   state.graphData = await graphRes.json();
   state.worklistData = await worklistRes.json();
   state.contextData = await contextRes.json();
+  state.communityNames = await communitiesRes.json();
   return state;
 }
 

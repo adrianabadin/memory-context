@@ -40,7 +40,7 @@ function safeKey(key) {
   return key.replace(/[^a-zA-Z0-9_-]+/g, '_');
 }
 
-async function buildSymbolPrompt(symbol, projectRoot, maxCodeLines = 80) {
+export async function buildSymbolPrompt(symbol, projectRoot, maxCodeLines = 80) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
   const content = await readFile(absoluteFile, 'utf8');
   const lines = content.split('\n');
@@ -54,7 +54,7 @@ async function buildSymbolPrompt(symbol, projectRoot, maxCodeLines = 80) {
     truncated = true;
   }
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
-  return `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}${truncated ? ` (truncated from ${totalSymbolLines} lines)` : ''}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation (max 150 words) with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
+  return `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}${truncated ? ` (truncated from ${totalSymbolLines} lines)` : ''}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation (max 150 words) with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
 }
 
 function parseArgs(argv) {

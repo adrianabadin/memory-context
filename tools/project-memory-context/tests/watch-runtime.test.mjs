@@ -5,7 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { createWatchRuntime } from '../cli/watch.mjs';
+import { createWatchRuntime, statusCommand } from '../cli/watch.mjs';
 import { readWatchPidRecord } from '../src/watcher-lifecycle.mjs';
 import { readWatchPending } from '../src/watch-debounce.mjs';
 
@@ -125,47 +125,86 @@ test('tick never overlaps refreshes and refresh errors keep pending intact', asy
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-watch-runtime-'));
   const clock = { value: 1_000_000 };
   let resolveRefresh;
+  let releaseFirstHeartbeat;
+  let resolveRefreshStarted;
   let calls = 0;
+  const refreshStarted = new Promise((resolveStarted) => { resolveRefreshStarted = resolveStarted; });
+  const firstHeartbeat = new Promise((resolveHeartbeat) => { releaseFirstHeartbeat = resolveHeartbeat; });
+  let heartbeatWrites = 0;
   const runtime = createWatchRuntime({
     projectRoot,
     startedAt: new Date(clock.value).toISOString(),
     deps: {
       now: () => clock.value,
       pid: 7777,
+      mkdir: async () => {},
+      writeFile: async (path) => {
+        if (!path.endsWith('watch.pid')) return;
+        heartbeatWrites += 1;
+        if (heartbeatWrites === 1) {
+          await firstHeartbeat;
+        }
+      },
+      rename: async () => {},
       refreshContext: () => {
         calls += 1;
-        return new Promise((res) => { resolveRefresh = res; });
+        return new Promise((res) => {
+          resolveRefresh = res;
+          resolveRefreshStarted();
+        });
       },
     },
   });
 
-  await runtime.onFsEvent('src/foo.mjs');
-  clock.value += QUIET;
-  const first = runtime.tick();           // starts refresh, stays in-flight
-  const second = await runtime.tick();    // must skip: refresh in progress
-  assert.equal(second.refreshed, false);
-  assert.equal(calls, 1);
-  resolveRefresh();
-  await first;
+  try {
+    await runtime.onFsEvent('src/foo.mjs');
+    clock.value += QUIET;
+    const first = runtime.tick();
+    // Release independently, allowing the second heartbeat to win under the old ordering.
+    setImmediate(releaseFirstHeartbeat);
+    let second;
+    let deadlockTimer;
+    try {
+      const timeout = new Promise((_, reject) => {
+        deadlockTimer = setTimeout(() => reject(new Error('refresh start deadlock')), 250);
+      });
+      await Promise.race([refreshStarted, timeout]);
+      second = runtime.tick();
+      const skipped = await Promise.race([second, timeout]);
+      assert.equal(skipped.refreshed, false);
+      assert.equal(calls, 1);
+      resolveRefresh();
+      const firstResult = await first;
+      assert.equal(firstResult.refreshed, true);
+    } finally {
+      clearTimeout(deadlockTimer);
+      releaseFirstHeartbeat();
+      resolveRefresh?.();
+      await Promise.allSettled(second ? [first, second] : [first]);
+    }
 
-  // Error path: failing refresh leaves pending for retry on next tick
-  const refreshCalls = [];
-  const failing = createWatchRuntime({
-    projectRoot,
-    startedAt: new Date(clock.value).toISOString(),
-    deps: {
-      now: () => clock.value,
-      pid: 7777,
-      refreshContext: async () => { refreshCalls.push(1); throw new Error('boom'); },
-    },
-  });
-  await failing.onFsEvent('src/bar.mjs');
-  clock.value += QUIET;
-  const result = await failing.tick();
-  assert.equal(result.refreshed, false);
-  assert.equal(refreshCalls.length, 1);
-  assert.deepEqual(Object.keys(failing.getPending()), ['src/bar.mjs']);
-  await rm(projectRoot, { recursive: true, force: true });
+    // Error path: failing refresh leaves pending for retry on next tick
+    const refreshCalls = [];
+    const failing = createWatchRuntime({
+      projectRoot,
+      startedAt: new Date(clock.value).toISOString(),
+      deps: {
+        now: () => clock.value,
+        pid: 7777,
+        refreshContext: async () => { refreshCalls.push(1); throw new Error('boom'); },
+      },
+    });
+    await failing.onFsEvent('src/bar.mjs');
+    clock.value += QUIET;
+    const result = await failing.tick();
+    assert.equal(result.refreshed, false);
+    assert.equal(refreshCalls.length, 1);
+    assert.deepEqual(Object.keys(failing.getPending()), ['src/bar.mjs']);
+  } finally {
+    releaseFirstHeartbeat();
+    resolveRefresh?.();
+    await rm(projectRoot, { recursive: true, force: true });
+  }
 });
 
 test('setPending seeds inherited pending from a previous run', async () => {
@@ -176,4 +215,41 @@ test('setPending seeds inherited pending from a previous run', async () => {
   assert.equal(result.refreshed, true);
   assert.equal(refreshCalls.length, 1);
   await rm(projectRoot, { recursive: true, force: true });
+});
+
+test('statusCommand prints watch status and includes sync state reports', async () => {
+  const printed = [];
+  const deps = {
+    readWatchPidRecord: async () => ({ pid: 1234, startedAt: '2026-05-19', lastHeartbeat: '2026-05-20' }),
+    isWatcherAlive: () => true,
+    readWatchPending: async () => ({ 'src/a.mjs': 1 }),
+    readSyncState: async () => ({
+      status: 'finished',
+      pid: 9999,
+      startedAt: '2026-05-20T20:50:00.000Z',
+      heartbeatAt: '2026-05-20T20:55:00.000Z',
+      finishedAt: '2026-05-20T20:55:01.000Z',
+      summary: { synced: 5, errors: 0, pending: 0 },
+    }),
+    deriveSyncState: (state) => ({
+      state: 'finished',
+      runtime: {
+        pid: state.pid,
+        startedAt: state.startedAt,
+        heartbeatAt: state.heartbeatAt,
+        finishedAt: state.finishedAt,
+        summary: state.summary,
+      }
+    }),
+    logFn: (msg) => printed.push(JSON.parse(msg)),
+  };
+
+  await statusCommand('/fake/root', deps);
+
+  assert.equal(printed.length, 1);
+  assert.equal(printed[0].alive, true);
+  assert.equal(printed[0].pid, 1234);
+  assert.equal(printed[0].pendingFiles, 1);
+  assert.equal(printed[0].sync.state, 'finished');
+  assert.equal(printed[0].sync.pid, 9999);
 });

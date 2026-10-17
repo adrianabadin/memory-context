@@ -1,0 +1,6 @@
+{
+  "name": "express",
+  "description": "Express path and caller-provided router markers; not runtime route detection.",
+  "directoryRoles": [{ "token": "routes", "role": "controller" }, { "token": "middleware", "role": "adapter" }],
+  "sideEffectRoles": [{ "marker": "express-router", "role": "controller" }]
+}

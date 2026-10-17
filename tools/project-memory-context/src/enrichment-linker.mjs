@@ -18,6 +18,7 @@ export function applyEnrichmentResult({ graph, symbolIndex, result }) {
     graphNodeId: result.graphNodeId,
     memoryId: result.memoryId,
     codeHash: result.codeHash,
+    semanticSummary: result.semanticSummary,
     status: result.status,
     lastEnrichedAt: result.enrichedAt,
   });

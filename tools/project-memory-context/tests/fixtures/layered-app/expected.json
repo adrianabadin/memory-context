@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "fixture": "layered-app",
+  "description": "Golden relational answers for layered TypeScript application fixture",
+  "symbols": {
+    "ts|src/controllers/user.controller.ts|function|local|Controller|0": {
+      "role": "decorator",
+      "layer": "presentation"
+    },
+    "ts|src/controllers/user.controller.ts|class|exported|UserController|0": {
+      "role": "controller",
+      "layer": "presentation"
+    },
+    "ts|src/controllers/user.controller.ts|method|member|UserController.getUser|1": {
+      "future": true,
+      "role": "controller",
+      "layer": "presentation",
+      "container": "ts|src/controllers/user.controller.ts|class|exported|UserController|0"
+    },
+    "ts|src/services/user.service.ts|class|exported|UserService|0": {
+      "role": "service",
+      "layer": "application"
+    },
+    "ts|src/services/user.service.ts|method|member|UserService.findById|1": {
+      "future": true,
+      "role": "service",
+      "layer": "application",
+      "container": "ts|src/services/user.service.ts|class|exported|UserService|0"
+    },
+    "ts|src/repositories/user.repository.ts|class|exported|UserRepository|0": {
+      "role": "repository",
+      "layer": "data"
+    },
+    "ts|src/repositories/user.repository.ts|method|member|UserRepository.findOne|1": {
+      "future": true,
+      "role": "repository",
+      "layer": "data",
+      "container": "ts|src/repositories/user.repository.ts|class|exported|UserRepository|0"
+    },
+    "ts|src/db/client.ts|class|exported|DatabaseClient|0": {
+      "role": "client",
+      "layer": "infrastructure"
+    },
+    "ts|src/db/client.ts|method|member|DatabaseClient.query|2": {
+      "future": true,
+      "role": "client",
+      "layer": "infrastructure",
+      "container": "ts|src/db/client.ts|class|exported|DatabaseClient|0"
+    },
+    "ts|src/models/user.model.ts|interface|exported|User|0": {
+      "role": "model",
+      "layer": "domain"
+    },
+    "ts|src/models/user.model.ts|class|exported|UserEntity|0": {
+      "role": "model",
+      "layer": "domain"
+    },
+    "ts|src/interfaces/user-repository.ts|interface|exported|IUserRepository|0": {
+      "role": "interface",
+      "layer": "domain"
+    },
+    "ts|src/utils/format.ts|function|exported|formatName|1": {
+      "role": "util",
+      "layer": "cross-cutting"
+    },
+    "ts|src/views/user.view.ts|function|exported|renderUser|1": {
+      "role": "view",
+      "layer": "presentation"
+    },
+    "ts|src/cli/main.ts|function|exported|main|0": {
+      "role": "cli",
+      "layer": "entrypoint"
+    },
+    "ts|tests/user.service.test.ts|function|exported|testUserService|0": {
+      "role": "test",
+      "layer": "test"
+    }
+  },
+  "questions": [
+    {
+      "id": "q1-callers-user-service-find-by-id",
+      "type": "callers",
+      "relationType": "calls",
+      "target": "ts|src/services/user.service.ts|method|member|UserService.findById|1",
+      "expected": [
+        "ts|src/controllers/user.controller.ts|method|member|UserController.getUser|1",
+        "ts|tests/user.service.test.ts|function|exported|testUserService|0"
+      ]
+    },
+    {
+      "id": "q2-callees-user-service-find-by-id",
+      "type": "callees",
+      "relationType": "calls",
+      "target": "ts|src/services/user.service.ts|method|member|UserService.findById|1",
+      "expected": [
+        "ts|src/repositories/user.repository.ts|method|member|UserRepository.findOne|1",
+        "ts|src/utils/format.ts|function|exported|formatName|1"
+      ]
+    },
+    {
+      "id": "q3-dependents-format-name",
+      "type": "dependents",
+      "relationType": "calls",
+      "target": "ts|src/utils/format.ts|function|exported|formatName|1",
+      "expected": [
+        "ts|src/services/user.service.ts|method|member|UserService.findById|1",
+        "ts|src/views/user.view.ts|function|exported|renderUser|1"
+      ]
+    },
+    {
+      "id": "q4-callers-main",
+      "type": "callers",
+      "relationType": "calls",
+      "target": "ts|src/cli/main.ts|function|exported|main|0",
+      "expected": []
+    },
+    {
+      "id": "q5-callees-main",
+      "type": "callees",
+      "relationType": "calls",
+      "target": "ts|src/cli/main.ts|function|exported|main|0",
+      "expected": [
+        "ts|src/controllers/user.controller.ts|method|member|UserController.getUser|1"
+      ]
+    },
+    {
+      "id": "q6-dependencies-render-user",
+      "type": "dependencies",
+      "relationType": "calls",
+      "target": "ts|src/views/user.view.ts|function|exported|renderUser|1",
+      "expected": [
+        "ts|src/utils/format.ts|function|exported|formatName|1"
+      ]
+    },
+    {
+      "id": "q7-nearest-controller-user-service",
+      "type": "nearest_controller",
+      "target": "ts|src/services/user.service.ts|class|exported|UserService|0",
+      "expected": [
+        "ts|src/controllers/user.controller.ts|class|exported|UserController|0"
+      ]
+    },
+    {
+      "id": "q8-entrypoint-user-service",
+      "type": "entrypoint",
+      "target": "ts|src/services/user.service.ts|class|exported|UserService|0",
+      "expected": [
+        "ts|src/cli/main.ts|function|exported|main|0"
+      ]
+    },
+    {
+      "id": "q9-callers-user-repository-find-one",
+      "type": "callers",
+      "relationType": "calls",
+      "target": "ts|src/repositories/user.repository.ts|method|member|UserRepository.findOne|1",
+      "expected": [
+        "ts|src/services/user.service.ts|method|member|UserService.findById|1"
+      ]
+    },
+    {
+      "id": "q10-callees-user-repository-find-one",
+      "type": "callees",
+      "relationType": "calls",
+      "target": "ts|src/repositories/user.repository.ts|method|member|UserRepository.findOne|1",
+      "expected": [
+        "ts|src/db/client.ts|method|member|DatabaseClient.query|2"
+      ]
+    },
+    {
+      "id": "q11-imports-user-controller",
+      "type": "dependencies",
+      "relationType": "imports",
+      "target": "ts|src/controllers/user.controller.ts|class|exported|UserController|0",
+      "expected": [
+        "ts|src/models/user.model.ts|interface|exported|User|0",
+        "ts|src/services/user.service.ts|class|exported|UserService|0"
+      ]
+    },
+    {
+      "id": "q12-tests-user-service",
+      "type": "tests",
+      "target": "ts|src/services/user.service.ts|class|exported|UserService|0",
+      "expected": [
+        "ts|tests/user.service.test.ts|function|exported|testUserService|0"
+      ]
+    }
+  ]
+}

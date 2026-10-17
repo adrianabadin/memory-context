@@ -2,7 +2,7 @@
 (function_declaration name: (identifier) @name) @function
 
 ; Method declarations (receiver functions)
-(method_declaration name: (field_identifier) @name) @function
+(method_declaration name: (field_identifier) @name) @method
 
 ; Struct type declarations (map to class)
 (type_declaration

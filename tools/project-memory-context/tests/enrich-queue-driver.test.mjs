@@ -1,7 +1,9 @@
-import test from 'node:test';
+import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { createRequire, syncBuiltinESMExports } from 'node:module';
+import { access, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 
 import {
@@ -12,6 +14,7 @@ import {
   finalizeQueueState,
   buildQueueState,
   maybeLaunchRetryErrors,
+  maybeNameCommunities,
 } from '../cli/enrich-queue.mjs';
 import {
   ensureProjectMemoryContextDirs,
@@ -19,8 +22,93 @@ import {
   writeJsonArtifact,
 } from '../src/artifacts.mjs';
 
+const childProcess = createRequire(import.meta.url)('node:child_process');
+let deniedNativeSpawns = [];
+let originalChildProcessSpawn;
+let ownedFixtureRoots = new Set();
+let fixtureRootsCreated = 0;
+let fixtureRootsRemoved = 0;
+beforeEach(() => {
+  originalChildProcessSpawn = childProcess.spawn;
+  deniedNativeSpawns = [];
+  ownedFixtureRoots = new Set();
+  fixtureRootsCreated = 0;
+  fixtureRootsRemoved = 0;
+  childProcess.spawn = (...args) => {
+    deniedNativeSpawns.push(args);
+    throw new Error('Denied native spawn in test');
+  };
+  syncBuiltinESMExports();
+});
+afterEach(async () => {
+  const failures = [];
+  try {
+    assert.equal(deniedNativeSpawns.length, 0, 'test must not attempt a native child process');
+  } catch (error) {
+    failures.push(error);
+  }
+
+  try {
+    for (const root of ownedFixtureRoots) {
+      try {
+        await rm(root, { recursive: true, force: true });
+        fixtureRootsRemoved += 1;
+        await assert.rejects(access(root), { code: 'ENOENT' });
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    try {
+      assert.equal(fixtureRootsRemoved, fixtureRootsCreated, 'every owned fixture root must be removed');
+    } catch (error) {
+      failures.push(error);
+    }
+  } finally {
+    ownedFixtureRoots.clear();
+    try {
+      childProcess.spawn = originalChildProcessSpawn;
+    } catch (error) {
+      failures.push(error);
+    } finally {
+      try {
+        syncBuiltinESMExports();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+  }
+
+  if (failures.length) throw new AggregateError(failures, 'test teardown failed');
+});
+
+function createFinalizeOptions({ projectRoot, enrichmentDir }, spawnBackground) {
+  const openCalls = [];
+  const handles = [];
+  return {
+    openCalls,
+    handles,
+    options: {
+      projectRoot,
+      spawnBackground,
+      open: async (path, flags) => {
+        const handle = {
+          fd: 80 + handles.length,
+          closed: false,
+          closeCount: 0,
+          async close() { this.closeCount += 1; this.closed = true; },
+        };
+        openCalls.push({ path, flags });
+        handles.push(handle);
+        return handle;
+      },
+    },
+  };
+}
+
 async function createQueueFixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'pmc-enrich-queue-'));
+  ownedFixtureRoots.add(projectRoot);
+  fixtureRootsCreated += 1;
   const dirs = await ensureProjectMemoryContextDirs(projectRoot);
   const sourceDir = join(projectRoot, 'src');
   await mkdir(sourceDir, { recursive: true });
@@ -337,8 +425,14 @@ test('writeQueueState persists running heartbeat with pid and summary', async ()
 });
 
 test('finalizeQueueState persists failed terminal state with lastError', async () => {
-  const { dirs } = await createQueueFixture();
+  const { projectRoot, dirs } = await createQueueFixture();
   const queueStateFile = join(dirs.enrichment, 'queue-state.json');
+
+  const terminalSpawnCalls = [];
+  const tracking = createFinalizeOptions({ projectRoot, enrichmentDir: dirs.enrichment }, (...args) => {
+    terminalSpawnCalls.push(args);
+    return 9876;
+  });
 
   await finalizeQueueState({
     queueStateFile,
@@ -349,12 +443,88 @@ test('finalizeQueueState persists failed terminal state with lastError', async (
     finishedAt: '2026-05-20T21:02:00.000Z',
     lastError: 'fatal queue error',
     summary: { pending: 3, enriched: 2, errors: 1 },
-  });
+  }, tracking.options);
 
+  assert.equal(deniedNativeSpawns.length, 0, 'finalizeQueueState must not attempt a native child process');
+  assert.equal(terminalSpawnCalls.length, 1);
+  assert.deepEqual(terminalSpawnCalls[0], [
+    process.execPath,
+    [fileURLToPath(new URL('../cli/sync.mjs', import.meta.url)), '--background'],
+    { cwd: projectRoot, stdio: ['ignore', 80, 81] },
+  ]);
+  assert.deepEqual(tracking.openCalls, [
+    { path: join(dirs.enrichment, 'sync-stdout.log'), flags: 'a' },
+    { path: join(dirs.enrichment, 'sync-stderr.log'), flags: 'a' },
+  ]);
+  assert.deepEqual(tracking.handles.map(({ closeCount }) => closeCount), [1, 1]);
   const payload = await readJsonArtifact(queueStateFile);
   assert.equal(payload.status, 'failed');
   assert.equal(payload.finishedAt, '2026-05-20T21:02:00.000Z');
   assert.equal(payload.lastError, 'fatal queue error');
+});
+
+test('finalizeQueueState unconditionally auto-spawns background sync and handles spawn errors', async () => {
+  const { projectRoot, dirs } = await createQueueFixture();
+  const queueStateFile = join(dirs.enrichment, 'queue-state.json');
+
+  const spawnCalls = [];
+  const tracking = createFinalizeOptions({ projectRoot, enrichmentDir: dirs.enrichment }, (cmd, args, opts) => {
+    spawnCalls.push({ cmd, args, opts });
+    return 9876;
+  });
+
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'finished',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    finishedAt: '2026-05-20T21:02:00.000Z',
+    summary: { pending: 0, enriched: 2, errors: 0 },
+  }, tracking.options);
+
+  assert.equal(deniedNativeSpawns.length, 0, 'finalizeQueueState must not attempt a native child process');
+  assert.equal(spawnCalls.length, 1);
+  assert.equal(spawnCalls[0].cmd, process.execPath);
+  assert.deepEqual(spawnCalls[0].args, [fileURLToPath(new URL('../cli/sync.mjs', import.meta.url)), '--background']);
+  assert.deepEqual(spawnCalls[0].opts, {
+    cwd: projectRoot,
+    stdio: ['ignore', 80, 81],
+  });
+  assert.deepEqual(tracking.openCalls, [
+    { path: join(dirs.enrichment, 'sync-stdout.log'), flags: 'a' },
+    { path: join(dirs.enrichment, 'sync-stderr.log'), flags: 'a' },
+  ]);
+  assert.deepEqual(tracking.handles.map(({ closed }) => closed), [true, true]);
+  assert.deepEqual(tracking.handles.map(({ closeCount }) => closeCount), [1, 1]);
+
+  // Test spawn error does not throw and both opened handles are still closed.
+  const failedSpawnIntent = [];
+  const failedSpawnHandles = createFinalizeOptions({ projectRoot, enrichmentDir: dirs.enrichment }, (...args) => {
+    failedSpawnIntent.push(args);
+    throw new Error('mock spawn error');
+  });
+  await finalizeQueueState({
+    queueStateFile,
+    status: 'finished',
+    pid: 4242,
+    startedAt: '2026-05-20T21:00:00.000Z',
+    heartbeatAt: '2026-05-20T21:00:30.000Z',
+    finishedAt: '2026-05-20T21:02:00.000Z',
+    summary: { pending: 0, enriched: 2, errors: 0 },
+  }, failedSpawnHandles.options);
+  assert.deepEqual(failedSpawnHandles.handles.map(({ closed }) => closed), [true, true]);
+  assert.deepEqual(failedSpawnHandles.handles.map(({ closeCount }) => closeCount), [1, 1]);
+  assert.deepEqual(failedSpawnIntent, [[
+    process.execPath,
+    [fileURLToPath(new URL('../cli/sync.mjs', import.meta.url)), '--background'],
+    { cwd: projectRoot, stdio: ['ignore', 80, 81] },
+  ]]);
+  assert.deepEqual(failedSpawnHandles.openCalls, [
+    { path: join(dirs.enrichment, 'sync-stdout.log'), flags: 'a' },
+    { path: join(dirs.enrichment, 'sync-stderr.log'), flags: 'a' },
+  ]);
+  assert.equal(deniedNativeSpawns.length, 0, 'native child-process spawn attempts are denied');
 });
 
 test('buildQueueState normalizes missing summary fields to zero', () => {
@@ -419,4 +589,56 @@ test('maybeLaunchRetryErrors skips spawn when summary.errors is 0', async () => 
   assert.equal(result.launched, false);
   assert.equal(result.reason, 'no-errors');
   assert.equal(launches.length, 0);
+});
+
+// ── maybeNameCommunities (post-enrich naming hook, task 3.1) ────────────────────
+
+test('maybeNameCommunities runs the naming pipeline when symbols were enriched', async () => {
+  const calls = [];
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 3, errors: 0 },
+    runNaming: async (spec) => {
+      calls.push(spec);
+      return { named: 2, skipped: 1, failed: 0 };
+    },
+  });
+
+  assert.equal(result.ran, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].projectRoot, '/repo');
+  assert.deepEqual(result.result, { named: 2, skipped: 1, failed: 0 });
+});
+
+test('maybeNameCommunities skips naming when no symbols were enriched', async () => {
+  const calls = [];
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 0, errors: 0 },
+    runNaming: async (spec) => {
+      calls.push(spec);
+      return { named: 0, skipped: 0, failed: 0 };
+    },
+  });
+
+  assert.equal(result.ran, false);
+  assert.equal(result.reason, 'nothing-enriched');
+  assert.equal(calls.length, 0);
+});
+
+test('maybeNameCommunities never throws when the naming pipeline fails', async () => {
+  const result = await maybeNameCommunities({
+    projectRoot: '/repo',
+    enrichmentDir: '/repo/.planning/project-memory-context/enrichment',
+    summary: { enriched: 1, errors: 0 },
+    runNaming: async () => {
+      throw new Error('graph.db locked');
+    },
+  });
+
+  assert.equal(result.ran, false);
+  assert.equal(result.reason, 'error');
+  assert.match(result.error, /graph\.db locked/);
 });

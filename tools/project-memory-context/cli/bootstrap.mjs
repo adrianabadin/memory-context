@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { access, constants, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, readdirSync } from 'node:fs';
@@ -9,6 +9,7 @@ import { bootstrapProjectInstall } from '../src/setup-bootstrap.mjs';
 import { spawnBackground } from '../src/platform.mjs';
 import { runGraphifyUpdate, installGraphify } from '../src/graphify-runner.mjs';
 import { openGraphDb } from '../src/graph-store/graph-db.mjs';
+import { shouldIgnoreDir, isGraphifyScope } from '../src/walk-ignores.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PMC_CLI_ROOT = resolve(__dirname);
@@ -114,17 +115,22 @@ async function runStageA(projectRoot) {
   return true;
 }
 
-function findFiles(dir, exts, ignore, projectRoot) {
+export function findFiles(dir, exts, ignoreOrProjectRoot, maybeProjectRoot) {
+  const projectRoot = maybeProjectRoot ?? ignoreOrProjectRoot ?? dir;
   const results = [];
   try {
     const entries = readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
-      const full = resolve(dir, entry.name);
-      if (ignore.some(i => full.includes(i))) continue;
       if (entry.isDirectory()) {
-        results.push(...findFiles(full, exts, ignore, projectRoot));
-      } else if (exts.some(e => entry.name.endsWith(e))) {
-        results.push(full.replace(`${projectRoot}\\`, '').replace(`${projectRoot}/`, '').replace(/\\/g, '/'));
+        if (entry.name === '.opencode' || shouldIgnoreDir(entry.name)) continue;
+        results.push(...findFiles(resolve(dir, entry.name), exts, projectRoot));
+      } else if (entry.isFile()) {
+        if (isGraphifyScope(entry.name)) continue;
+        const ext = entry.name.substring(entry.name.lastIndexOf('.'));
+        if (exts.includes(ext)) {
+          const rel = relative(projectRoot, resolve(dir, entry.name)).replace(/\\/g, '/');
+          results.push(rel);
+        }
       }
     }
   } catch { /* skip inaccessible dirs */ }
@@ -134,10 +140,9 @@ function findFiles(dir, exts, ignore, projectRoot) {
 async function runStageB(projectRoot) {
   log('Running stage-b (build-worklist)...');
 
-  const ignore = ['node_modules', 'dist', '.git', 'bin', 'obj', '.opencode', '.planning', '.next'];
   const files = [
-    ...findFiles(projectRoot, ['.ts', '.mjs', '.js'], ignore, projectRoot),
-    ...findFiles(projectRoot, ['.cs'], ignore, projectRoot),
+    ...findFiles(projectRoot, ['.ts', '.mjs', '.js'], projectRoot),
+    ...findFiles(projectRoot, ['.cs'], projectRoot),
   ];
 
   log(`  Found ${files.filter(f => f.endsWith('.cs')).length} CS files, ${files.filter(f => !f.endsWith('.cs')).length} TS/JS files`);

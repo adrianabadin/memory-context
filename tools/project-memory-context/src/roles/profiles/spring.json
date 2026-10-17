@@ -1,0 +1,5 @@
+{
+  "name": "spring",
+  "description": "Caller-provided Spring annotation evidence with generic stereotype fallback.",
+  "annotationRoles": [{ "annotation": "Repository", "role": "repository" }, { "annotation": "Configuration", "role": "config" }, { "annotation": "ControllerAdvice", "role": "controller" }]
+}

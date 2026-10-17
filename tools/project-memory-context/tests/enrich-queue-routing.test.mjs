@@ -87,6 +87,7 @@ test('persistEnrichmentSuccess writes memory file and updates worklist and symbo
     // Symbol index updated
     assert.equal(symbolIndex[symbol.symbolKey].status, 'enriched');
     assert.equal(symbolIndex[symbol.symbolKey].memoryId, memoryId);
+    assert.equal(symbolIndex[symbol.symbolKey].semanticSummary, 'foo is a function that returns 42.');
 
     // Memory file written
     const { readFile: rf } = await import('node:fs/promises');
@@ -96,6 +97,48 @@ test('persistEnrichmentSuccess writes memory file and updates worklist and symbo
     // enrichedByTag appears in sync-manifest (not in memory.json tags)
     assert.ok(Array.isArray(memoryContent.tags));
     assert.ok(memoryContent.tags.includes('symbol'));
+  } finally {
+    await rm(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test('persistEnrichmentSuccess extracts semanticSummary from Responsibility section and persists to index', async () => {
+  const { projectRoot, enrichmentDir } = await makeTempProject();
+  try {
+    const worklistFile = join(enrichmentDir, 'worklist.json');
+    const symbolIndexFile = join(enrichmentDir, 'symbol-index.json');
+    const symbol = makeSymbol();
+    const worklist = [{ ...symbol, status: 'pending' }];
+    const symbolIndex = {};
+
+    await writeFile(worklistFile, JSON.stringify(worklist, null, 2), 'utf8');
+    await writeFile(symbolIndexFile, JSON.stringify(symbolIndex, null, 2), 'utf8');
+
+    const content = `
+## Responsibility
+Calculates compound interest with daily accrual. Returns annualized yield.
+
+## Inputs
+- principal: number
+`;
+
+    await persistEnrichmentSuccess({
+      symbol,
+      content,
+      enrichedByTag: 'enriched-by-queue',
+      enrichmentDir,
+      worklist,
+      worklistFile,
+      symbolIndex,
+      symbolIndexFile,
+      projectSlug: 'test-project',
+      attempts: [],
+    });
+
+    assert.equal(
+      symbolIndex[symbol.symbolKey].semanticSummary,
+      'Calculates compound interest with daily accrual.',
+    );
   } finally {
     await rm(projectRoot, { recursive: true, force: true });
   }

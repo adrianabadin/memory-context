@@ -39,3 +39,61 @@ test('backfillGraphNode updates the matching node and preserves unrelated data',
   assert.equal(updated.nodes[0].metadata.other, 'keep-me');
   assert.equal(updated.nodes[1].metadata.memoryId, undefined);
 });
+
+test('backfillGraphNode does not overwrite a conflicting symbol identity', () => {
+  const graph = { nodes: [{ id: 'node-1', metadata: { symbolKey: 'different' } }] };
+  const updated = backfillGraphNode({ graph, symbolKey: 'wanted', graphNodeId: 'node-1', memoryId: 'mem' });
+  assert.equal(updated.nodes[0].metadata.symbolKey, 'different');
+  assert.equal(updated.nodes[0].metadata.memoryId, undefined);
+});
+
+test('backfillGraphNode leaves graph node unchanged when legacy key conflicts with matching metadata key', () => {
+  const graph = { nodes: [{
+    id: 'node-1',
+    symbolKey: 'legacy-other',
+    metadata: { symbolKey: 'wanted', memoryId: 'before' },
+  }] };
+  const updated = backfillGraphNode({ graph, symbolKey: 'wanted', graphNodeId: 'node-1', memoryId: 'after' });
+  assert.deepEqual(updated.nodes[0], graph.nodes[0]);
+});
+
+test('backfillGraphNode rejects conflicting legacy identity without a graph node id', () => {
+  const node = Object.freeze({
+    id: 'node-1',
+    symbolKey: 'other',
+    metadata: Object.freeze({ symbolKey: 'wanted', memoryId: 'before', semanticSummary: 'keep' }),
+  });
+  const graph = Object.freeze({ nodes: Object.freeze([node]), marker: 'unchanged' });
+
+  for (const graphNodeId of [undefined, null]) {
+    const updated = backfillGraphNode({
+      graph,
+      symbolKey: 'wanted',
+      graphNodeId,
+      memoryId: 'after',
+      semanticSummary: 'replace',
+      codeHash: 'new-hash',
+      enrichedAt: 'now',
+      status: 'enriched',
+    });
+
+    assert.notEqual(updated, graph);
+    assert.equal(updated.nodes[0], node);
+    assert.deepEqual(node, {
+      id: 'node-1',
+      symbolKey: 'other',
+      metadata: { symbolKey: 'wanted', memoryId: 'before', semanticSummary: 'keep' },
+    });
+    assert.equal(updated.marker, 'unchanged');
+  }
+});
+
+test('backfillGraphNode does not pick the first of duplicate target ids', () => {
+  const graph = { nodes: [
+    { id: 'node-1', metadata: {} },
+    { id: 'node-1', metadata: {} },
+  ] };
+  const updated = backfillGraphNode({ graph, symbolKey: 'wanted', graphNodeId: 'node-1', memoryId: 'mem' });
+  assert.equal(updated.nodes[0].metadata.memoryId, undefined);
+  assert.equal(updated.nodes[1].metadata.memoryId, undefined);
+});

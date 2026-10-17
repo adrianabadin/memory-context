@@ -27,7 +27,11 @@ import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { loadSubagentQueue, markSubagentDone, markSubagentError } from '../src/subagent-queue.mjs';
-import { persistEnrichmentSuccess } from './enrich-queue.mjs';
+import { persistEnrichmentSuccess, saveWorklistMerged } from './enrich-queue.mjs';
+import { NARRATIVE_SCHEMA, validateNarrative } from '../src/cards/narrative-schema.mjs';
+import { PROMPT_VERSION, normalizeSymbolKeys } from '../src/cards/prompt-v2.mjs';
+import { queuedEvidenceCheck } from '../src/cards/narrative-cache.mjs';
+import { withEnrichmentWrite, withFileLockRetry } from '../src/cards/queue-state-io.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -75,7 +79,46 @@ Arguments:
   --content-file      File containing the enrichment text from the subagent
 
 The /enrich skill calls this after each Task subagent returns its result.
+Entries queued with narrative metadata (promptVersion/schema/knownGraphKeys)
+must contain a JSON narrative that validates against the shared NARRATIVE_SCHEMA
+before anything is persisted; invalid output marks the entry as error.
 `);
+}
+
+/**
+ * Validate an opt-in narrative queue entry against the transported metadata.
+ * Returns null when the content is acceptable, otherwise the exact error that
+ * must mark the entry as error instead of enriched.
+ */
+function narrativeProblem(entry, content) {
+  if (entry.promptVersion !== PROMPT_VERSION) {
+    return `unsupported narrative prompt version: ${entry.promptVersion ?? '(missing)'}`;
+  }
+  if (JSON.stringify(entry.schema ?? null) !== JSON.stringify(NARRATIVE_SCHEMA)) {
+    return 'queued narrative schema does not match NARRATIVE_SCHEMA';
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch (parseError) {
+    return `narrative validation failed: Narrative must be a JSON object (invalid JSON: ${parseError.message})`;
+  }
+
+  let symbolKeys;
+  try {
+    // Explicit null or malformed stored collections reject; only an absent
+    // collection normalizes to an empty (fail-closed) set.
+    symbolKeys = normalizeSymbolKeys(entry.knownGraphKeys === undefined ? [] : entry.knownGraphKeys);
+  } catch (keysError) {
+    return `narrative validation failed: ${keysError.message}`;
+  }
+
+  const validation = validateNarrative(parsed, { symbolKeys });
+  if (!validation.valid) {
+    return `narrative validation failed: ${validation.errors.join('; ')}`;
+  }
+  return null;
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -104,6 +147,16 @@ export async function main(args = process.argv.slice(2)) {
   const worklistFile = resolve(enrichmentDir, 'worklist.json');
   const symbolIndexFile = resolve(enrichmentDir, 'symbol-index.json');
 
+  // N6B: subagent-apply shares the SAME per-directory coordinator as the
+  // queue's direct runner (one canonical enrichment dir), so its queue
+  // mutations never overlap an in-process queue completion's read-merge-write
+  // on worklist.json or subagent-queue.json. Lock retry covers only the file
+  // operation, never the apply itself.
+  const markEntryError = (id, message) => withEnrichmentWrite(
+    enrichmentDir,
+    () => withFileLockRetry(() => markSubagentError(enrichmentDir, id, message)),
+  );
+
   // Load subagent queue and find the entry
   const queue = await loadSubagentQueue(enrichmentDir);
   const entry = queue.entries.find((e) => e.id === entryId);
@@ -126,14 +179,69 @@ export async function main(args = process.argv.slice(2)) {
     content = content.trim();
   } catch (err) {
     console.error(`[subagent-apply] ERROR: cannot read content file: ${err.message}`);
-    await markSubagentError(enrichmentDir, entryId, `content-file read error: ${err.message}`);
+    await markEntryError(entryId, `content-file read error: ${err.message}`);
     return 1;
   }
 
   if (!content) {
     console.error('[subagent-apply] ERROR: content file is empty');
-    await markSubagentError(enrichmentDir, entryId, 'empty content');
+    await markEntryError(entryId, 'empty content');
     return 1;
+  }
+
+  // Narrative entries (prompt v2) must validate against the transported schema
+  // and known graph keys before anything is persisted. Legacy entries skip
+  // this gate entirely and keep the exact original behavior.
+  let persistedContent = content;
+  let semanticSummaryOverride;
+  if (entry.schema != null || entry.promptVersion != null) {
+    const problem = narrativeProblem(entry, content);
+    if (problem) {
+      console.error(`[subagent-apply] ERROR: ${problem}`);
+      await markEntryError(entryId, problem);
+      return 1;
+    }
+    const parsed = JSON.parse(persistedContent);
+    const canonical = Object.fromEntries(NARRATIVE_SCHEMA.required.map((field) => [field, parsed[field]]));
+    persistedContent = `${JSON.stringify(canonical, null, 2)}`;
+    semanticSummaryOverride = canonical.summary;
+  }
+
+  // N5B (plan 3.5 / S11): entries carrying the complete opt-in fingerprint
+  // evidence are re-derived against the ACTUAL current source bytes before
+  // any accepted write. A source change (or an unavailable source, or
+  // tampered/inconsistent evidence) rejects the apply: the queue entry is
+  // marked `error`, the worklist entry is marked `stale` with reason
+  // `queued-fingerprint-mismatch` for the next pass, and no memory file,
+  // index record or sync-manifest entry is written.
+  //
+  // B3 correction: presence is decided by OWN PROPERTY, exactly like
+  // appendSubagentQueue's "supplied" test — an explicit `null` (or any
+  // malformed value) that a hand-edit planted is a REJECTED narrative
+  // entry, never a silent downgrade into the legacy path; only an absent
+  // field (legacy trio-only entries) keeps the original apply contract.
+  let queuedEvidence = null;
+  if (Object.hasOwn(entry, 'narrativeEvidence') && entry.narrativeEvidence !== undefined) {
+    const check = await queuedEvidenceCheck({ entry, projectRoot });
+    if (!check.ok) {
+      console.error(`[subagent-apply] ERROR: ${check.problem}`);
+      try {
+        await withEnrichmentWrite(enrichmentDir, async () => {
+          const staleWorklist = await loadJson(worklistFile);
+          const target = staleWorklist.find((element) => element.symbolKey === entry.symbolKey);
+          if (target) {
+            target.status = 'stale';
+            target.staleReason = 'queued-fingerprint-mismatch';
+            await saveWorklistMerged(worklistFile, staleWorklist);
+          }
+        });
+      } catch (worklistError) {
+        console.error(`[subagent-apply] WARN: could not mark ${entry.symbolKey} stale: ${worklistError.message}`);
+      }
+      await markEntryError(entryId, check.problem);
+      return 1;
+    }
+    queuedEvidence = check.evidence;
   }
 
   // Load worklist and symbol index
@@ -146,6 +254,23 @@ export async function main(args = process.argv.slice(2)) {
   }
 
   const symbolIndex = await loadOptionalJson(symbolIndexFile) ?? {};
+
+  // B2 correction: the transported proof is only valid while the worklist
+  // entry still awaits THIS queued generation. If upstream invalidation
+  // (e.g. callee-summary propagation) marked the entry `stale` after it was
+  // queued, the queued context is superseded — accepting it would silently
+  // trust outdated dependency knowledge, so reject before any accepted
+  // write and let the next pass regenerate with current context. Legacy
+  // entries without evidence keep their exact original apply contract.
+  if (queuedEvidence) {
+    const superseded = worklist.find((element) => element.symbolKey === entry.symbolKey);
+    if (superseded?.status === 'stale') {
+      const problem = `queued narrative evidence is superseded: ${entry.symbolKey} was marked stale after queueing (${superseded.staleReason ?? 'unknown reason'})`;
+      console.error(`[subagent-apply] ERROR: ${problem}`);
+      await markEntryError(entryId, problem);
+      return 1;
+    }
+  }
 
   // Build a symbol-like object from the queue entry
   const symbol = {
@@ -163,7 +288,8 @@ export async function main(args = process.argv.slice(2)) {
   try {
     ({ memoryId } = await persistEnrichmentSuccess({
       symbol,
-      content,
+      content: persistedContent,
+      semanticSummary: semanticSummaryOverride,
       enrichedByTag: 'enriched-by-subagent',
       enrichmentDir,
       worklist,
@@ -172,15 +298,17 @@ export async function main(args = process.argv.slice(2)) {
       symbolIndexFile,
       projectSlug,
       attempts: [],
+      // Only a validated, source-fresh apply persists the aligned bundle.
+      ...(queuedEvidence ? { narrativeEvidence: queuedEvidence } : {}),
     }));
   } catch (err) {
     console.error(`[subagent-apply] ERROR: persistEnrichmentSuccess failed: ${err.message}`);
-    await markSubagentError(enrichmentDir, entryId, err.message);
+    await markEntryError(entryId, err.message);
     return 1;
   }
 
-  // Mark the subagent queue entry as done
-  await markSubagentDone(enrichmentDir, entryId, { memoryId });
+  // Mark the subagent queue entry as done through the shared coordinator.
+  await withEnrichmentWrite(enrichmentDir, () => withFileLockRetry(() => markSubagentDone(enrichmentDir, entryId, { memoryId })));
 
   console.log(JSON.stringify({
     ok: true,

@@ -14,6 +14,7 @@ const PACKAGE_ROOT = resolve(TEST_DIR, '..');
 test('resolveCommand maps the new agent-facing names', () => {
   const expected = new Map([
     ['map-project', resolve(PACKAGE_ROOT, 'cli', 'bootstrap.mjs')],
+    ['backfill-symbol-keys', resolve(PACKAGE_ROOT, 'cli', 'backfill-symbol-keys.mjs')],
     ['get-context', resolve(PACKAGE_ROOT, 'cli', 'context.mjs')],
     ['enrich-status', resolve(PACKAGE_ROOT, 'cli', 'status.mjs')],
     ['init-project', resolve(PACKAGE_ROOT, 'cli', 'init.mjs')],
@@ -101,6 +102,7 @@ test('help output matches the supported dispatch table', async () => {
   const output = stdout.join('');
   assert.equal(exitCode, 0);
   assert.match(output, /doctor/);
+  assert.match(output, /backfill-symbol-keys/);
   assert.match(output, /enrich/);
   assert.match(output, /enrich-status/);
   assert.match(output, /get-context/);

@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -28,10 +28,26 @@ export async function readSyncManifest(enrichmentDir) {
   }
 }
 
-export async function writeSyncManifest(enrichmentDir, manifest) {
+/**
+ * Atomically persist the manifest.
+ *
+ * Each call writes to a process- and call-unique temporary file and then
+ * renames it onto the final path. rename(2) is atomic on the same filesystem,
+ * so concurrent PMC processes (enrich workers, watcher, sync) never expose a
+ * partially written or concatenated JSON document to readers, and never clobber
+ * each other's temp file.
+ */
+export async function writeSyncManifest(enrichmentDir, manifest, deps = {}) {
+  const mkdirImpl = deps.mkdir ?? mkdir;
+  const writeFileImpl = deps.writeFile ?? writeFile;
+  const renameImpl = deps.rename ?? rename;
+
   const path = manifestPath(enrichmentDir);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  const tempPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
+
+  await mkdirImpl(dirname(path), { recursive: true });
+  await writeFileImpl(tempPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  await renameImpl(tempPath, path);
 }
 
 async function withManifestLock(enrichmentDir, operation) {
@@ -65,6 +81,24 @@ export function createSyncEntry({ action, keyTag, content, category, tags, sourc
     addedAt: new Date().toISOString(),
     syncedAt: null,
   };
+}
+
+/**
+ * Build a pending upsert sync entry for a named graph community, so the
+ * community name is persisted into agent-memory by `pmc sync-context`.
+ *
+ * @param {{ communityId: string|number, name: string, projectSlug?: string }} input
+ */
+export function createCommunitySyncEntry({ communityId, name, projectSlug }) {
+  const id = String(communityId);
+  return createSyncEntry({
+    action: 'upsert',
+    keyTag: `key:community:${id}`,
+    content: `## Community ${id}: ${name}\n\nDescriptive name for graph community ${id}.`,
+    category: 'architecture',
+    tags: ['community', `community:${id}`, `project:${projectSlug ?? 'project'}`],
+    source: 'name-communities',
+  });
 }
 
 export async function appendSyncEntry(enrichmentDir, entry) {

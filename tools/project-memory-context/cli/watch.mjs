@@ -6,6 +6,7 @@ import { watch } from 'node:fs';
 import { shouldWatch } from '../src/file-watcher.mjs';
 import { refreshContext } from './refresh-context.mjs';
 import { spawnBackground } from '../src/platform.mjs';
+import { readSyncState, deriveSyncState } from '../src/sync-state.mjs';
 import {
   WATCH_HEARTBEAT_INTERVAL_MS,
   isPidAlive,
@@ -91,16 +92,38 @@ export function createWatchRuntime({ projectRoot, startedAt, quietMs = WATCH_QUI
   };
 }
 
-async function statusCommand(projectRoot) {
-  const record = await readWatchPidRecord(projectRoot);
-  const alive = isWatcherAlive(record, projectRoot);
-  const pendingFiles = Object.keys(await readWatchPending(projectRoot)).length;
-  console.log(JSON.stringify({
+export async function statusCommand(projectRoot, deps = {}) {
+  const readWatchPidRecordImpl = deps.readWatchPidRecord ?? readWatchPidRecord;
+  const isWatcherAliveImpl = deps.isWatcherAlive ?? isWatcherAlive;
+  const readWatchPendingImpl = deps.readWatchPending ?? readWatchPending;
+  const readSyncStateImpl = deps.readSyncState ?? readSyncState;
+  const deriveSyncStateImpl = deps.deriveSyncState ?? deriveSyncState;
+  const logFn = deps.logFn ?? console.log;
+
+  const record = await readWatchPidRecordImpl(projectRoot);
+  const alive = isWatcherAliveImpl(record, projectRoot);
+  const pendingFiles = Object.keys(await readWatchPendingImpl(projectRoot)).length;
+
+  const enrichmentDir = resolve(projectRoot, '.planning/project-memory-context/enrichment');
+  const syncStatePath = resolve(enrichmentDir, 'sync-state.json');
+  const syncState = await readSyncStateImpl(syncStatePath);
+  const derivedSync = deriveSyncStateImpl(syncState, new Date().toISOString());
+
+  logFn(JSON.stringify({
     alive,
     pid: record?.pid ?? null,
     startedAt: record?.startedAt ?? null,
     lastHeartbeat: record?.lastHeartbeat ?? null,
     pendingFiles,
+    sync: derivedSync.runtime ? {
+      state: derivedSync.state,
+      pid: derivedSync.runtime.pid,
+      startedAt: derivedSync.runtime.startedAt,
+      heartbeatAt: derivedSync.runtime.heartbeatAt,
+      finishedAt: derivedSync.runtime.finishedAt,
+      lastError: derivedSync.runtime.lastError,
+      summary: derivedSync.runtime.summary,
+    } : null,
   }, null, 2));
 }
 

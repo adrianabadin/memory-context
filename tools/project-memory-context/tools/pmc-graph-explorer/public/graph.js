@@ -1,4 +1,16 @@
 const COMMUNITY_COLORS = d3.scaleOrdinal(d3.schemeTableau10);
+
+// Status ring colors — drawn as an outer ring around each node.
+// Only nodes present in the worklist get a ring; untracked nodes have none.
+const STATUS_RING_COLOR = {
+  enriched:         '#22c55e',  // green-500
+  stale:            '#f59e0b',  // amber-500
+  error:            '#ef4444',  // red-500
+  pending:          '#94a3b8',  // slate-400 (subtle — never enriched)
+  already_enriched: '#22c55e',  // same green as enriched
+  'subagent-queued': '#a78bfa', // violet-400 — queued for subagent enrichment
+};
+
 const EDGE_RELATION_THICKNESS = {
   imports_from: 2,
   imports: 1.5,
@@ -38,6 +50,8 @@ export function createGraph(state, callbacks) {
   const { nodes, links } = state.graphData;
   const activeIds = callbacks.getActiveNodeIds();
   const enrichedIds = callbacks.getEnrichedNodeIds();
+  // Full status map: graphNodeId → status string ('enriched', 'stale', 'error', 'pending', …)
+  const worklistStatusMap = callbacks.getWorklistStatusMap ? callbacks.getWorklistStatusMap() : new Map();
 
   const defs = svg.append("defs");
   const filter = defs.append("filter").attr("id", "glow");
@@ -72,6 +86,16 @@ export function createGraph(state, callbacks) {
     .attr("stroke-width", 2)
     .attr("filter", "url(#glow)")
     .attr("class", "active-halo");
+
+  // Status ring: drawn for every node that has a worklist entry.
+  // Ring sits just outside the node fill circle, inside the active halo.
+  nodeGroups.filter((d) => worklistStatusMap.has(d.id))
+    .append("circle")
+    .attr("r", (d) => nodeRadius(d) + 3)
+    .attr("fill", "none")
+    .attr("stroke", (d) => STATUS_RING_COLOR[worklistStatusMap.get(d.id)] || '#94a3b8')
+    .attr("stroke-width", 2.5)
+    .attr("class", "status-ring");
 
   nodeGroups.append("circle")
     .attr("r", (d) => nodeRadius(d))
@@ -118,9 +142,14 @@ export function createGraph(state, callbacks) {
 
   nodeGroups
     .on("mouseover", (event, d) => {
-      const status = enrichedIds.has(d.id) ? "enriched" : "not enriched";
+      const status = worklistStatusMap.get(d.id) || (enrichedIds.has(d.id) ? "enriched" : "not tracked");
       const active = activeIds.has(d.id) ? " | IN CONTEXT" : "";
-      tooltip.innerHTML = `<strong>${d.label}</strong><br><code>${d.source_file}:${d.source_location}</code><br>Community ${d.community} | ${status}${active}`;
+      const ringColor = STATUS_RING_COLOR[status];
+      const statusBadge = ringColor
+        ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ringColor};margin-right:4px;vertical-align:middle;"></span>`
+        : '';
+      const communityName = state.communityNames?.[String(d.community)] ?? `Community ${d.community}`;
+      tooltip.innerHTML = `<strong>${d.label}</strong><br><code>${d.source_file}:${d.source_location}</code><br>${communityName} | ${statusBadge}${status}${active}`;
       tooltip.classList.add("visible");
       tooltip.style.left = `${event.offsetX + 12}px`;
       tooltip.style.top = `${event.offsetY - 8}px`;

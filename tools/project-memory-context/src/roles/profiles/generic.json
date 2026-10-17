@@ -1,0 +1,107 @@
+{
+  "name": "generic",
+  "description": "Stack-agnostic layered-application role profile (plan 2.2, F2 R1 bounded to generic).",
+  "roleLayers": {
+    "entrypoint": "entrypoint",
+    "cli": "entrypoint",
+    "cli-command": "entrypoint",
+    "mcp-tool": "entrypoint",
+    "controller": "presentation",
+    "view": "presentation",
+    "component": "presentation",
+    "decorator": "presentation",
+    "service": "application",
+    "dto": "application",
+    "repository": "data",
+    "store": "data",
+    "model": "domain",
+    "interface": "domain",
+    "client": "infrastructure",
+    "adapter": "infrastructure",
+    "config": "infrastructure",
+    "extractor": "infrastructure",
+    "util": "cross-cutting",
+    "test": "test"
+  },
+  "weights": {
+    "frameworkAnnotation": 0.9,
+    "structuredHeritage": 0.85,
+    "containerRole": 0.75,
+    "nameSuffix": 0.6,
+    "decoratorFactory": 0.6,
+    "directoryToken": 0.5,
+    "topology": 0.35,
+    "sideEffectMarker": 0.3
+  },
+  "decoratorFactoryNames": [
+    "Controller",
+    "Service",
+    "Injectable",
+    "Component",
+    "Module",
+    "Entity",
+    "Api",
+    "RestController",
+    "ApiController",
+    "Middleware"
+  ],
+  "suffixRoles": [
+    { "suffix": "Controller", "role": "controller" },
+    { "suffix": "Service", "role": "service" },
+    { "suffix": "Repository", "role": "repository" },
+    { "suffix": "Store", "role": "store" },
+    { "suffix": "Client", "role": "client" },
+    { "suffix": "Adapter", "role": "adapter" },
+    { "suffix": "Dto", "role": "dto" },
+    { "suffix": "View", "role": "view" },
+    { "suffix": "Model", "role": "model" },
+    { "suffix": "Config", "role": "config" }
+  ],
+  "directoryRoles": [
+    { "token": "controllers", "role": "controller" },
+    { "token": "services", "role": "service" },
+    { "token": "repositories", "role": "repository" },
+    { "token": "repos", "role": "repository" },
+    { "token": "models", "role": "model" },
+    { "token": "interfaces", "role": "interface" },
+    { "token": "views", "role": "view" },
+    { "token": "utils", "role": "util" },
+    { "token": "helpers", "role": "util" },
+    { "token": "cli", "role": "cli" },
+    { "token": "commands", "role": "cli-command" },
+    { "token": "mcp", "role": "mcp-tool" },
+    { "token": "components", "role": "component" },
+    { "token": "adapters", "role": "adapter" },
+    { "token": "config", "role": "config" },
+    { "token": "tests", "role": "test" },
+    { "token": "test", "role": "test" },
+    { "token": "__tests__", "role": "test" }
+  ],
+  "annotationRoles": [
+    { "annotation": "Controller", "role": "controller" },
+    { "annotation": "RestController", "role": "controller" },
+    { "annotation": "ApiController", "role": "controller" },
+    { "annotation": "Injectable", "role": "service" },
+    { "annotation": "Service", "role": "service" },
+    { "annotation": "Entity", "role": "model" },
+    { "annotation": "Component", "role": "component" }
+  ],
+  "heritageTypeRoles": [
+    { "name": "ControllerBase", "role": "controller" },
+    { "name": "RepositoryBase", "role": "repository" },
+    { "name": "ServiceBase", "role": "service" }
+  ],
+  "topologyThresholds": { "fanOut": 8, "fanIn": 8, "lowFanIn": 2 },
+  "topologyRules": [
+    { "when": "highFanOutLowFanIn", "role": "controller" },
+    { "when": "highFanIn", "role": "util" }
+  ],
+  "sideEffectRoles": [
+    { "marker": "db-client", "role": "repository" },
+    { "marker": "http", "role": "adapter" },
+    { "marker": "fetch", "role": "adapter" },
+    { "marker": "fs-write", "role": "cli" },
+    { "marker": "child-process", "role": "cli" },
+    { "marker": "process.argv", "role": "cli" }
+  ]
+}

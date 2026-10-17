@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -16,6 +16,7 @@ import {
   markEntriesSynced,
   removeSyncedEntries,
   clearManifest,
+  createCommunitySyncEntry,
 } from '../src/sync-manifest.mjs';
 
 let tmpDir;
@@ -74,6 +75,34 @@ describe('sync-manifest', () => {
       assert.deepEqual(entry.tags, []);
       assert.equal(entry.source, 'unknown');
       assert.equal(entry.symbolKey, null);
+    });
+  });
+
+  describe('createCommunitySyncEntry', () => {
+    it('builds an upsert entry for a named community', () => {
+      const entry = createCommunitySyncEntry({
+        communityId: '7',
+        name: 'Graph Storage',
+        projectSlug: 'memory-context',
+      });
+
+      assert.equal(entry.action, 'upsert');
+      assert.equal(entry.key_tag, 'key:community:7');
+      assert.match(entry.content, /Graph Storage/);
+      assert.ok(entry.tags.includes('community'));
+      assert.ok(entry.tags.includes('project:memory-context'));
+      assert.equal(entry.source, 'name-communities');
+      assert.equal(entry.status, 'pending');
+    });
+
+    it('coerces a numeric community id to a stable string key', () => {
+      const entry = createCommunitySyncEntry({
+        communityId: 3,
+        name: 'Retrieval Layer',
+        projectSlug: 'demo',
+      });
+
+      assert.equal(entry.key_tag, 'key:community:3');
     });
   });
 
@@ -236,6 +265,60 @@ describe('sync-manifest', () => {
       const after = await readSyncManifest(tmpDir);
       assert.equal(after.entries.length, 5);
       assert.equal(getPendingEntries(after).length, 5);
+    });
+  });
+
+  describe('writeSyncManifest atomicity', () => {
+    it('writes to a unique temp file then renames onto the manifest path', async () => {
+      const finalPath = join(tmpDir, 'sync-manifest.json');
+      const writes = [];
+      const renames = [];
+      const deps = {
+        mkdir: async () => {},
+        writeFile: async (p) => { writes.push(p); },
+        rename: async (from, to) => { renames.push([from, to]); },
+      };
+
+      await writeSyncManifest(tmpDir, { entries: [] }, deps);
+
+      assert.equal(writes.length, 1);
+      assert.notEqual(writes[0], finalPath, 'must not write directly to the final manifest path');
+      assert.equal(renames.length, 1);
+      assert.deepEqual(renames[0], [writes[0], finalPath]);
+    });
+
+    it('uses distinct temp files for concurrent writes', async () => {
+      const tempPaths = [];
+      const deps = {
+        mkdir: async () => {},
+        writeFile: async (p) => {
+          tempPaths.push(p);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        },
+        rename: async () => {},
+      };
+
+      await Promise.all([
+        writeSyncManifest(tmpDir, { entries: [] }, deps),
+        writeSyncManifest(tmpDir, { entries: [] }, deps),
+      ]);
+
+      assert.equal(tempPaths.length, 2);
+      assert.equal(new Set(tempPaths).size, 2, 'concurrent writes must not share a temp file');
+    });
+
+    it('leaves a single valid JSON document on disk under concurrent appends', async () => {
+      const entries = Array.from({ length: 30 }, (_, idx) => createSyncEntry({
+        action: 'upsert',
+        keyTag: `key:c-${idx}`,
+        content: String(idx),
+      }));
+
+      await Promise.all(entries.map((entry) => appendSyncEntry(tmpDir, entry)));
+
+      const raw = await readFile(join(tmpDir, 'sync-manifest.json'), 'utf8');
+      const parsed = JSON.parse(raw);
+      assert.equal(parsed.entries.length, 30);
     });
   });
 });

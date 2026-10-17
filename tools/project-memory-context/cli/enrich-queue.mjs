@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { open } from 'node:fs/promises';
 import { resolve, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
@@ -13,8 +13,30 @@ import { countPromptTokens, estimateTokens } from '../src/providers/ollama-token
 import { createCloudApiProvider } from '../src/providers/cloud-api-provider.mjs';
 import { createLocalModelProvider } from '../src/providers/local-model-provider.mjs';
 import { appendSubagentQueue } from '../src/subagent-queue.mjs';
-import { appendSyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
+import { appendSyncEntries, appendSyncEntry, createCommunitySyncEntry, createSyncEntry } from '../src/sync-manifest.mjs';
 import { isPidAlive } from '../src/watcher-lifecycle.mjs';
+import { spawnBackground } from '../src/platform.mjs';
+import { extractSemanticSummary, upsertSymbolIndexEntry } from '../src/symbol-index.mjs';
+import { buildNarrativePromptV2, normalizeSymbolKeys, PROMPT_VERSION } from '../src/cards/prompt-v2.mjs';
+import { NARRATIVE_SCHEMA, generateValidatedNarrative } from '../src/cards/narrative-schema.mjs';
+import { analyzeTrivialSymbol, tryBuildTrivialNarrative } from '../src/cards/trivial-template.mjs';
+import {
+  EXPLICIT_STALE_REASONS,
+  computeCurrentNarrativeEvidence,
+  evaluateNarrativeCache,
+  markDependentCallersStale,
+  readPreviousAcceptedSummary,
+  snapshotNarrativeContext,
+  validateNarrativeEvidence,
+} from '../src/cards/narrative-cache.mjs';
+import { runNarrativePool } from '../src/cards/batch-pool.mjs';
+import {
+  QUEUE_LOCK_RETRY_CODES,
+  readJsonFile,
+  withEnrichmentWrite,
+  withFileLockRetry,
+  writeJsonFile,
+} from '../src/cards/queue-state-io.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -65,8 +87,12 @@ let _enrichmentDir = '';
 let _queueStateFile = '';
 let _startedAt = '';
 
+// N6B: every queue JSON read/write goes through the shared queue-state-io
+// layer — bounded EBUSY/EPERM retry around the file operation itself plus an
+// atomic temp+rename write — while concurrency coordination stays in the
+// per-directory withEnrichmentWrite scope used by the merged saves below.
 async function loadJson(path) {
-  return JSON.parse(await readFile(path, 'utf8'));
+  return readJsonFile(path);
 }
 
 async function loadOptionalJson(path, fallback = null) {
@@ -78,37 +104,65 @@ async function loadOptionalJson(path, fallback = null) {
 }
 
 async function saveJson(path, data) {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  await writeJsonFile(path, data);
 }
 
 export async function saveWorklistMerged(worklistFile, memWorklist, { loadJson: _lj, saveJson: _sj } = {}) {
   const lj = _lj ?? loadJson;
   const sj = _sj ?? saveJson;
-  let diskWorklist = [];
-  try { diskWorklist = await lj(worklistFile); } catch {}
-  const diskByKey = new Map(diskWorklist.map(e => [e.symbolKey, e]));
-  for (const memEntry of memWorklist) {
-    const diskEntry = diskByKey.get(memEntry.symbolKey);
-    if (diskEntry?.status === 'enriched' && memEntry.status !== 'enriched' && memEntry.status !== 'already_enriched') {
-      Object.assign(memEntry, diskEntry);
+  // N6B: the whole load -> merge -> save sequence runs under the canonical
+  // per-directory coordinator (reentrant, so callers already inside a scoped
+  // transaction keep holding exactly one mutex over the full transaction).
+  return withEnrichmentWrite(dirname(resolve(worklistFile)), async () => {
+    let diskWorklist = [];
+    try {
+      diskWorklist = await lj(worklistFile);
+    } catch (error) {
+      // A transient lock that survived the bounded retry must fail this save
+      // VISIBLY: merging from an empty disk could revert accepted fields or
+      // explicit staleness marks written by another completion. Missing or
+      // malformed state keeps the historical merge behavior unchanged.
+      if (QUEUE_LOCK_RETRY_CODES.has(error?.code)) throw error;
     }
-  }
-  await sj(worklistFile, memWorklist);
+    const diskByKey = new Map(diskWorklist.map(e => [e.symbolKey, e]));
+    for (const memEntry of memWorklist) {
+      const diskEntry = diskByKey.get(memEntry.symbolKey);
+      if (diskEntry?.status === 'enriched' && memEntry.status !== 'enriched' && memEntry.status !== 'already_enriched') {
+        // N5B (plan 3.5 / S11): an explicit narrative staleness mark — hash
+        // evaluation, upward callee-summary invalidation or a stale queued
+        // fingerprint — is a DELIBERATE downgrade made by this run and must
+        // survive the "disk enriched wins" guard; every other downgrade keeps
+        // the historical merge behavior unchanged.
+        const explicitStale = memEntry.status === 'stale'
+          && typeof memEntry.staleReason === 'string'
+          && EXPLICIT_STALE_REASONS.has(memEntry.staleReason);
+        if (!explicitStale) {
+          Object.assign(memEntry, diskEntry);
+        }
+      }
+    }
+    await sj(worklistFile, memWorklist);
+  });
 }
 
 export async function saveSymbolIndexMerged(symbolIndexFile, memIndex, { loadJson: _lj, saveJson: _sj } = {}) {
   if (!symbolIndexFile) return;
   const lj = _lj ?? loadJson;
   const sj = _sj ?? saveJson;
-  let diskIndex = {};
-  try { diskIndex = await lj(symbolIndexFile); } catch {}
-  for (const [key, diskEntry] of Object.entries(diskIndex)) {
-    if (diskEntry?.status === 'enriched' && memIndex[key]?.status !== 'enriched') {
-      memIndex[key] = diskEntry;
+  return withEnrichmentWrite(dirname(resolve(symbolIndexFile)), async () => {
+    let diskIndex = {};
+    try {
+      diskIndex = await lj(symbolIndexFile);
+    } catch (error) {
+      if (QUEUE_LOCK_RETRY_CODES.has(error?.code)) throw error;
     }
-  }
-  await sj(symbolIndexFile, memIndex);
+    for (const [key, diskEntry] of Object.entries(diskIndex)) {
+      if (diskEntry?.status === 'enriched' && memIndex[key]?.status !== 'enriched') {
+        memIndex[key] = diskEntry;
+      }
+    }
+    await sj(symbolIndexFile, memIndex);
+  });
 }
 
 function safeKey(key) {
@@ -188,21 +242,70 @@ function createAgentSubagentProvider() {
   };
 }
 
-async function buildSymbolPromptMeta(symbol, projectRoot) {
+/**
+ * Build the enrichment prompt metadata for a worklist symbol.
+ *
+ * Legacy calls (two arguments) keep the exact historical prompt text and the
+ * exact `{prompt, totalLines}` return shape. Passing an explicit
+ * `narrativeContext` (plan 3.3 / spec S9) switches to prompt v2 and adds
+ * `promptVersion` and the shared `schema`; without that context nothing about
+ * the legacy flow changes.
+ *
+ * @param {object} symbol - worklist symbol entry (name/kind/language/filePath/range)
+ * @param {string} projectRoot
+ * @param {object} [options]
+ * @param {object} [options.narrativeContext] - authoritative caller-owned facts/roles context
+ * @param {string} [options.source] - exact source bytes already read by the
+ *   caller's cache check; when present no additional file read happens (C1
+ *   proof-read ordering). Absent: historical read.
+ * @returns {Promise<{prompt: string, totalLines: number, promptVersion?: string, schema?: object, trivial?: {narrative: object, proof: object}>}
+ */
+export async function buildSymbolPromptMeta(symbol, projectRoot, options) {
   const absoluteFile = resolve(projectRoot, symbol.filePath);
-  const content = await readFile(absoluteFile, 'utf8');
+  // Optional N5B seam: the queue's cache check may hand over the exact source
+  // bytes it just read so the proof/prompt consumes ONE read (preserving the
+  // C1 "initial proof read" ordering). Absent `source`, the historical read
+  // happens exactly as before.
+  const content = typeof options?.source === 'string' ? options.source : await readFile(absoluteFile, 'utf8');
   const lines = content.split('\n');
   const totalLines = lines.length;
 
   const codeSection = lines.slice(symbol.range.startLine - 1, symbol.range.endLine).join('\n');
   const importsSection = lines.slice(0, symbol.range.startLine - 1).filter(l => /^\s*import\b/.test(l) || /^\s*using\b/.test(l)).join('\n');
 
-  const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module`;
-  return { prompt, totalLines };
+  const narrativeContext = options?.narrativeContext ?? null;
+  if (narrativeContext === null) {
+    const prompt = `Symbol: ${symbol.name}\nKind: ${symbol.kind}\nLanguage: ${symbol.language}\nLocation: ${symbol.filePath}:${symbol.range.startLine}-${symbol.range.endLine}\n\nContext (imports):\n${importsSection || '(none)'}\n\nCode:\n${codeSection}\n\nReturn a compact structured explanation with:\n- responsibility\n- primary inputs\n- output\n- immediate dependencies\n- role in module\n\nWrite all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.`;
+    return { prompt, totalLines };
+  }
+
+  const { prompt } = buildNarrativePromptV2({ symbol, codeSection, importsSection, narrativeContext });
+
+  // Plan 3.4 / spec S10: attach typed trivial-template fastpath metadata in
+  // explicit narrative mode only. The prompt contract above is unchanged, the
+  // proof is derived from the real AST over the exact slice bytes already
+  // read, and any analysis or template-validation failure resolves to no
+  // metadata so callers keep the standard model-backed flow. This is never a
+  // bare caller boolean: `trivial` carries `{narrative, proof}` produced by
+  // src/cards/trivial-template.mjs itself.
+  const trivial = await tryBuildTrivialNarrative({
+    symbol,
+    projectRoot,
+    source: content,
+    knownKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+  });
+
+  return {
+    prompt,
+    totalLines,
+    promptVersion: PROMPT_VERSION,
+    schema: NARRATIVE_SCHEMA,
+    ...(trivial ? { trivial } : {}),
+  };
 }
 
-async function buildSymbolPrompt(symbol, projectRoot) {
-  const { prompt } = await buildSymbolPromptMeta(symbol, projectRoot);
+async function buildSymbolPrompt(symbol, projectRoot, options) {
+  const { prompt } = await buildSymbolPromptMeta(symbol, projectRoot, options);
   return prompt;
 }
 
@@ -243,6 +346,29 @@ function createQueueEnrichmentError(result) {
   error.lastModeUsed = result.lastModeUsed;
   error.failedAt = result.failedAt;
   return error;
+}
+
+/**
+ * Map an N5B cache-miss reason onto the persisted worklist `staleReason`.
+ * Unusable or absent stored proof (no artifact, corrupt bytes, missing
+ * fingerprint, invalid content/keys) requires ONE baseline regeneration;
+ * an input that genuinely differs from the stored fingerprint is the S11
+ * `narrative-hash-changed` invalidation.
+ */
+const NARRATIVE_MISSING_PROOF_REASONS = new Set([
+  'missing-stored-hash',
+  'invalid-stored-evidence',
+  'no-accepted-artifact',
+  'unreadable-artifact',
+  'corrupt-artifact',
+  'missing-content',
+  'invalid-evidence',
+  'wrong-key',
+  'invalid-content',
+]);
+
+function narrativeStaleReasonFor(reason) {
+  return NARRATIVE_MISSING_PROOF_REASONS.has(reason) ? 'narrative-hash-missing' : 'narrative-hash-changed';
 }
 
 export function buildQueueSummary(worklist) {
@@ -288,6 +414,11 @@ function createQueueProviders() {
  * @param {string} opts.symbolIndexFile
  * @param {string} opts.projectSlug
  * @param {Array}  [opts.attempts]    - enrichment attempt records to apply to worklist entry
+ * @param {string} [opts.semanticSummary] - explicit validated summary override (narrative mode)
+ * @param {object} [opts.narrativeEvidence] - complete S11 fingerprint bundle
+ *   `{symbolKey?, narrativeHash, calleeSummaryHashes, promptVersion}` for an
+ *   explicit narrative/template acceptance. Validated with TypeError before
+ *   any write; legacy calls omit it and persist exactly the historical bytes.
  * @returns {Promise<{memoryId: string, enrichedAt: string}>}
  */
 export async function persistEnrichmentSuccess({
@@ -302,58 +433,270 @@ export async function persistEnrichmentSuccess({
   symbolIndexFile,
   projectSlug,
   attempts = [],
+  semanticSummary: semanticSummaryOverride,
+  narrativeEvidence,
 }) {
   const memoryId = `queue-${safeKey(symbol.symbolKey)}`;
   const enrichedAt = new Date().toISOString();
   const memoryFile = resolve(enrichmentDir, `${safeKey(symbol.symbolKey)}.memory.json`);
 
-  await saveJson(memoryFile, {
-    content,
-    category: 'architecture',
-    tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`],
+  // N5B (plan 3.5 / S11): validate the bundle BEFORE any write so malformed
+  // metadata can never reach the worklist, index or accepted artifact.
+  let evidence = null;
+  if (narrativeEvidence !== undefined && narrativeEvidence !== null) {
+    const validated = validateNarrativeEvidence(narrativeEvidence);
+    evidence = {
+      symbolKey: symbol.symbolKey,
+      narrativeHash: validated.narrativeHash,
+      calleeSummaryHashes: validated.calleeSummaryHashes,
+      promptVersion: validated.promptVersion,
+    };
+  }
+
+  // N6B: the COMPLETE acceptance — memory artifact, worklist merge, index
+  // merge, upward propagation and sync-manifest append — runs as ONE scoped
+  // transaction on the canonical enrichment directory, so concurrent provider
+  // completions can never interleave half of it with another completion's
+  // read-merge-write. Model generation never happens inside this scope.
+  return withEnrichmentWrite(enrichmentDir, async () => {
+    // The PREVIOUS accepted FULL summary text (never the 200-char index
+    // truncation) is the upward-propagation comparison unit; captured before
+    // the accepted artifact is overwritten.
+    const previousAcceptedSummary = evidence ? await readPreviousAcceptedSummary(memoryFile) : null;
+    const semanticSummary = semanticSummaryOverride ?? symbol.semanticSummary ?? extractSemanticSummary(content);
+
+    // B4: stage the acceptance and publish it only after EVERY acceptance
+    // write completed. The prior shared state is snapshotted first, so any
+    // write failure restores the exact pre-acceptance shape and rethrows —
+    // a rejected acceptance can never survive in memory. The worklist
+    // acceptance write runs LAST, so a partial multi-file failure never
+    // leaves an uncommitted "enriched" claim on the counted worklist
+    // surface (the disk-enriched merge can then only ever re-adopt a
+    // PREVIOUS valid acceptance, which stays the N4C1/N5 contract), while
+    // cross-artifact cache evidence checks keep fail-closed on any
+    // remaining partial state.
+    const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+    const priorEntry = wlEntry ? { ...wlEntry } : null;
+    const hadIndexEntry = Object.hasOwn(symbolIndex, symbol.symbolKey);
+    const priorIndexEntry = symbolIndex[symbol.symbolKey];
+
+    try {
+      await saveJson(memoryFile, {
+        content,
+        category: 'architecture',
+        tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`],
+        ...(evidence ? { narrativeEvidence: evidence } : {}),
+      });
+
+      if (wlEntry) {
+        Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, attempts), {
+          status: 'enriched',
+          memoryId,
+          enrichedAt,
+          error: undefined,
+          failedAt: undefined,
+        });
+        if (evidence) {
+          wlEntry.narrativeHash = evidence.narrativeHash;
+          wlEntry.calleeSummaryHashes = evidence.calleeSummaryHashes;
+          wlEntry.promptVersion = evidence.promptVersion;
+        }
+      }
+
+      const updatedIndex = upsertSymbolIndexEntry(symbolIndex, {
+        symbolKey: symbol.symbolKey,
+        memoryId,
+        graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
+        codeHash: symbol.codeHash,
+        status: 'enriched',
+        lastEnrichedAt: enrichedAt,
+        semanticSummary,
+        ...(evidence ? {
+          narrativeHash: evidence.narrativeHash,
+          calleeSummaryHashes: evidence.calleeSummaryHashes,
+          promptVersion: evidence.promptVersion,
+        } : {}),
+      });
+      symbolIndex[symbol.symbolKey] = updatedIndex[symbol.symbolKey];
+
+      if (symbolIndexFile) {
+        await saveSymbolIndexMerged(symbolIndexFile, symbolIndex);
+      }
+
+      // The counted acceptance surface goes LAST: when any earlier write
+      // fails, the disk worklist never gains the uncommitted acceptance,
+      // so the caller's honest error path and the final report (enriched/
+      // errors counts) cannot be masked by the disk-enriched merge.
+      await saveWorklistMerged(worklistFile, worklist);
+    } catch (error) {
+      if (wlEntry && priorEntry) {
+        for (const own of Object.keys(wlEntry)) delete wlEntry[own];
+        Object.assign(wlEntry, priorEntry);
+      }
+      if (hadIndexEntry) {
+        symbolIndex[symbol.symbolKey] = priorIndexEntry;
+      } else {
+        delete symbolIndex[symbol.symbolKey];
+      }
+      throw error;
+    }
+
+    // S11 upward propagation: runs only AFTER the acceptance is durable on
+    // every surface, and moves upward ONLY when this callee's accepted
+    // summary TEXT actually changed byte-for-byte. A callee code/role/body
+    // edit with identical summary bytes must not stale anyone.
+    if (
+      evidence
+      && typeof semanticSummary === 'string'
+      && previousAcceptedSummary !== null
+      && previousAcceptedSummary !== semanticSummary
+    ) {
+      const marked = await markDependentCallersStale({
+        worklist,
+        symbolKey: symbol.symbolKey,
+        newSummaryText: semanticSummary,
+      });
+      if (marked.length > 0) {
+        try {
+          await saveWorklistMerged(worklistFile, worklist);
+        } catch (markError) {
+          // The acceptance itself is durable; the invalidation marks remain
+          // in memory and the next save/checkpoint persists them. The
+          // failure is reported with its exact message, never dropped.
+          console.error(`[queue] WARN: dependency staleness write failed for ${symbol.name}: ${markError.message}`);
+        }
+      }
+    }
+
+    try {
+      await withFileLockRetry(() => appendSyncEntry(enrichmentDir, createSyncEntry({
+        action: 'upsert',
+        keyTag: `key:symbol:${safeKey(symbol.symbolKey)}`,
+        content: `## ${symbol.name}\n\n${content}`,
+        category: 'architecture',
+        tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`, enrichedByTag],
+        source,
+        symbolKey: symbol.symbolKey,
+      })));
+    } catch (syncErr) {
+      console.error(`[queue] WARN: sync-manifest append failed for ${symbol.name}: ${syncErr.message}`);
+    }
+
+    return { memoryId, enrichedAt };
   });
+}
+
+/**
+ * Reconcile a validated cache hit into the worklist and symbol index:
+ * the accepted entry keeps its memoryId, summary and artifact bytes, while
+ * an explicitly stale/pending entry is restored to `enriched` and any missing
+ * stored fingerprint fields are re-aligned. Writes happen only when something
+ * actually differs — a fully consistent hit performs zero writes.
+ *
+ * @returns {Promise<{worklistDirty: boolean, indexDirty: boolean}>}
+ */
+async function reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile }) {
+  let worklistDirty = false;
+  let indexDirty = false;
 
   const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
   if (wlEntry) {
-    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, attempts), {
-      status: 'enriched',
-      memoryId,
-      enrichedAt,
-      error: undefined,
-      failedAt: undefined,
-    });
+    if (wlEntry.status !== 'enriched' && wlEntry.status !== 'already_enriched') {
+      wlEntry.status = 'enriched';
+      worklistDirty = true;
+    }
+    for (const field of ['narrativeHash', 'calleeSummaryHashes', 'promptVersion']) {
+      const value = cached.current[field];
+      if (JSON.stringify(wlEntry[field] ?? null) !== JSON.stringify(value)) {
+        wlEntry[field] = value;
+        worklistDirty = true;
+      }
+    }
   }
 
-  symbolIndex[symbol.symbolKey] = {
-    memoryId,
+  const existingIndex = symbolIndex?.[symbol.symbolKey] ?? null;
+  const desired = upsertSymbolIndexEntry(symbolIndex ?? {}, {
+    symbolKey: symbol.symbolKey,
+    memoryId: wlEntry?.memoryId ?? cached.memoryId ?? null,
     graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
     codeHash: symbol.codeHash,
     status: 'enriched',
-    lastEnrichedAt: enrichedAt,
-  };
-
-  await saveWorklistMerged(worklistFile, worklist);
-  if (symbolIndexFile) {
-    await saveSymbolIndexMerged(symbolIndexFile, symbolIndex);
+    lastEnrichedAt: wlEntry?.enrichedAt ?? cached.enrichedAt ?? null,
+    semanticSummary: cached.semanticSummary,
+    narrativeHash: cached.current.narrativeHash,
+    calleeSummaryHashes: cached.current.calleeSummaryHashes,
+    promptVersion: cached.current.promptVersion,
+  });
+  const desiredRecord = desired[symbol.symbolKey];
+  if (JSON.stringify(existingIndex) !== JSON.stringify(desiredRecord)) {
+    symbolIndex[symbol.symbolKey] = desiredRecord;
+    indexDirty = true;
   }
 
-  try {
-    await appendSyncEntry(enrichmentDir, createSyncEntry({
-      action: 'upsert',
-      keyTag: `key:symbol:${safeKey(symbol.symbolKey)}`,
-      content: `## ${symbol.name}\n\n${content}`,
-      category: 'architecture',
-      tags: ['symbol', symbol.language, symbol.kind, `project:${projectSlug}`, `file:${symbol.filePath}`, enrichedByTag],
-      source,
-      symbolKey: symbol.symbolKey,
-    }));
-  } catch (syncErr) {
-    console.error(`[queue] WARN: sync-manifest append failed for ${symbol.name}: ${syncErr.message}`);
-  }
-
-  return { memoryId, enrichedAt };
+  if (worklistDirty) await saveWorklistMerged(worklistFile, worklist);
+  if (indexDirty && symbolIndexFile) await saveSymbolIndexMerged(symbolIndexFile, symbolIndex);
+  return { worklistDirty, indexDirty };
 }
 
+/**
+ * Honest run report for a cache reuse: status stays `enriched` (the existing
+ * framework status), attempts stay empty because no attempt happened, no
+ * template/fastpath proof is claimed, and the ACCEPTED memoryId, summary and
+ * content are reported unchanged.
+ */
+function narrativeReuseResult({ symbol, cached, wlEntry, projectSlug }) {
+  return {
+    status: 'enriched',
+    symbolKey: symbol.symbolKey,
+    memoryId: cached.memoryId,
+    memoryContent: cached.content,
+    language: symbol.language,
+    kind: symbol.kind,
+    filePath: symbol.filePath,
+    projectSlug,
+    codeHash: symbol.codeHash,
+    attempts: [],
+    lastModeUsed: wlEntry?.lastModeUsed ?? cached.lastModeUsed ?? null,
+    enrichedAt: wlEntry?.enrichedAt ?? cached.enrichedAt ?? null,
+    promptVersion: cached.current.promptVersion,
+    semanticSummary: cached.semanticSummary,
+    reused: true,
+  };
+}
+
+/**
+ * Enrich a single worklist symbol through the provider chain, or — in
+ * explicit narrative mode only — through the plan 3.4 / spec S10
+ * trivial-template fast path (typed `{trivial: proof}` result metadata, no
+ * driver invocation and no attempts). The proof is re-derived here from the
+ * inspectable source, never accepted as a caller boolean; an unreadable
+ * source, unsupported grammar, syntax error or failed template validation
+ * keeps the existing model-backed flow unchanged.
+ *
+ * @param {object} args
+ * @param {object} args.symbol
+ * @param {string} args.projectRoot
+ * @param {string} args.projectSlug
+ * @param {number} args.timeoutMs
+ * @param {string} args.enrichmentDir
+ * @param {Array} args.worklist
+ * @param {string} args.worklistFile
+ * @param {object} [args.symbolIndex]
+ * @param {string} [args.symbolIndexFile]
+ * @param {object} [args.config]
+ * @param {Array} [args.providers]
+ * @param {object} [args.env]
+ * @param {string} [args.prompt] - pre-built prompt (skips the prompt rebuild)
+ * @param {object} [args.narrativeContext] - explicit narrative opt-in (plan 3.3 / S9)
+ * @param {boolean} [args.expectTrivialTemplate] - internal-only strictness seam
+ *   set by the main loop when it already bypassed token counting and the
+ *   subagent route on its initial trivial proof (N4 C1). It can never make a
+ *   symbol trivial: when the independent source recheck does not reproduce
+ *   the proof, the runner fails closed with the existing error semantics
+ *   instead of running a model behind bypassed routing. Callers that never
+ *   bypassed routing must not pass it and keep the standard fallback.
+ * @param {Function} [args.runEnrichmentWithFallbackImpl]
+ */
 export async function runQueueSymbolEnrichment({
   symbol,
   projectRoot,
@@ -369,29 +712,213 @@ export async function runQueueSymbolEnrichment({
   env = process.env,
   // Accept a pre-built prompt to avoid rebuilding when already counted tokens.
   prompt: prebuiltPrompt,
+  // Explicit opt-in (plan 3.3 / spec S9): authoritative caller-owned context.
+  narrativeContext = null,
+  // Internal-only strictness (N4 C1): the caller bypassed routing on an
+  // earlier proof and demands that this fresh recheck agree with it.
+  expectTrivialTemplate = false,
+  // Internal-only provenance seam (B1 / N5B correction): the EXACT source
+  // bytes the prebuilt prompt was built from. When the caller supplies a
+  // prebuilt prompt without this snapshot, no inspectable provenance exists:
+  // the run never claims a cache hit and never persists a fingerprint
+  // fabricated from code it cannot tie to the prompt. No CLI flag, no config.
+  promptSource = null,
   runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
 }) {
-  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot);
-  const result = await runEnrichmentWithFallbackImpl({
-    request: { prompt, timeoutMs },
-    config,
-    providers,
-    env,
-  });
-  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+  const narrativeMode = narrativeContext !== null && narrativeContext !== undefined;
+  if (narrativeMode && (typeof narrativeContext !== 'object' || Array.isArray(narrativeContext))) {
+    throw new TypeError('narrativeContext must be an object');
+  }
+  if (promptSource !== null && typeof promptSource !== 'string') {
+    throw new TypeError('promptSource must be a string when supplied');
+  }
 
-  for (const attempt of result.attempts ?? []) {
-    await appendProviderEvent(enrichmentDir, {
+  if (narrativeMode) {
+    // B1 metadata coherence: own ALL prompt/fingerprint inputs (signature,
+    // role, callee objects, symbol keys, callers, rules) BEFORE the first
+    // await of this runner, so cache check, prompt build and accepted
+    // fingerprint derive from ONE immutable value even if the caller-owned
+    // resolver object mutates while we await. The caller's object is never
+    // written to or frozen — this is a separate owned copy.
+    narrativeContext = snapshotNarrativeContext(narrativeContext);
+  }
+
+  const readDiskSource = async () => {
+    try {
+      return await readFile(resolve(projectRoot, symbol.filePath), 'utf8');
+    } catch {
+      return null;
+    }
+  };
+
+  // B1 (N5B correction): the persisted fingerprint must ALWAYS describe the
+  // exact source snapshot the prompt was built from — never a later disk
+  // read. Resolve that snapshot first:
+  //   - caller-supplied promptSource (main loop): inspectable snapshot; a
+  //     disk that no longer equals it is a freshness failure and can never
+  //     become a cache hit (fail closed before cache acceptance),
+  //   - direct runner (no prebuilt prompt): ONE read feeds both the cache
+  //     evidence and the prompt build, so prompt and fingerprint are aligned,
+  //   - prebuilt prompt without snapshot: unprovable provenance → no cache
+  //     claim, no persisted fingerprint (see currentEvidence below).
+  let snapshot = null;
+  let snapshotFresh = false;
+  if (narrativeMode) {
+    if (typeof promptSource === 'string') {
+      snapshot = promptSource;
+      snapshotFresh = (await readDiskSource()) === snapshot;
+    } else if (prebuiltPrompt === undefined) {
+      const disk = await readDiskSource();
+      if (disk !== null) {
+        snapshot = disk;
+        snapshotFresh = true;
+      }
+    }
+  }
+
+  // N5B (plan 3.5 / S11): derive the fingerprint from the prompt snapshot
+  // and consult the accepted artifact BEFORE the template proof or any
+  // provider/tokenizer/subagent work. A hit requires freshness (disk equals
+  // the snapshot) plus a matching stored bundle and a valid accepted
+  // artifact; every miss (missing/corrupt/inconsistent/stale source) falls
+  // through to the unchanged generation flow. Malformed context/range still
+  // throws here — fail closed, before any cache write.
+  let currentEvidence = null;
+  if (narrativeMode && snapshot !== null) {
+    currentEvidence = await computeCurrentNarrativeEvidence({
+      symbol,
+      projectRoot,
+      narrativeContext,
+      source: snapshot,
+    });
+    if (snapshotFresh) {
+      const cached = await evaluateNarrativeCache({
+        symbol,
+        projectRoot,
+        narrativeContext,
+        enrichmentDir,
+        worklistEntry: worklist.find((entry) => entry.symbolKey === symbol.symbolKey) ?? null,
+        indexEntry: symbolIndex?.[symbol.symbolKey] ?? null,
+        source: snapshot,
+      });
+      if (cached.hit) {
+        const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+        await reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile });
+        return narrativeReuseResult({ symbol, cached, wlEntry, projectSlug });
+      }
+    }
+  }
+
+  const prompt = prebuiltPrompt ?? await buildSymbolPrompt(symbol, projectRoot, narrativeMode
+    ? { narrativeContext, ...(snapshot !== null ? { source: snapshot } : {}) }
+    : undefined);
+
+  // One driver invocation per bounded schema attempt. Legacy requests stay
+  // exactly `{prompt, timeoutMs}`; narrative requests add Ollama's JSON-schema
+  // `format` (documented `string | object` field on POST /api/generate).
+  const driverResults = [];
+  const invokeDriver = async (format) => {
+    const request = { prompt, timeoutMs };
+    if (format !== undefined) request.format = format;
+    const result = await runEnrichmentWithFallbackImpl({ request, config, providers, env });
+    driverResults.push(result);
+    return result;
+  };
+
+  let validation = null;
+
+  // Plan 3.4 / spec S10 fast path: in explicit narrative mode the template
+  // proof is derived from the inspectable source BEFORE any driver
+  // invocation, so a proven trivial symbol makes zero model calls (no
+  // provider/fallback attempt, no schema retry). The proof is never a caller
+  // boolean: even with a prebuilt prompt this call re-derives it from the
+  // symbol's own file, and when the source is unavailable or the analysis,
+  // template build or validation fails, the standard model-backed flow below
+  // runs unchanged.
+  const trivialTemplate = narrativeMode
+    ? await tryBuildTrivialNarrative({
+      symbol,
+      projectRoot,
+      knownKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+    })
+    : null;
+
+  // N4 C1 (retained R3-source-recheck): when the caller already bypassed
+  // token counting and the subagent route on an earlier proof, a failed
+  // fresh recheck must never fall through to a model behind bypassed
+  // routing. Fail closed through the existing error semantics instead: an
+  // honest source-changed/unavailable message, zero attempts, no provider
+  // events, and previously accepted memory bytes, index summaries and sync
+  // manifest preserved for a later normal-queue retry. Direct callers that
+  // never bypassed routing pass no such flag and keep the standard
+  // non-trivial provider fallback below.
+  let recheckError = null;
+  if (expectTrivialTemplate && !trivialTemplate) {
+    const recheck = await analyzeTrivialSymbol({ symbol, projectRoot });
+    recheckError = `Trivial-template recheck failed for ${symbol.symbolKey}: the symbol source changed or became unavailable after the routing bypass (reason: ${recheck.reason ?? 'unavailable'}). Refusing to run model providers behind bypassed routing; retry this entry through the normal queue.`;
+  }
+
+  if (trivialTemplate) {
+    // The template was already validated against the shared N1 schema and
+    // the authoritative known keys; it enters the exact same validated
+    // persistence path with no attempts recorded.
+    validation = { status: 'validated', narrative: trivialTemplate.narrative, attempts: 0, errors: [] };
+  } else if (recheckError) {
+    // Intentionally no driver invocation: the failure path below records the
+    // honest error with empty attempts and preserves accepted artifacts.
+  } else if (narrativeMode) {
+    // The N1 helper bounds schema retries to exactly one retry. Provider
+    // failures abort validation immediately and keep their own semantics:
+    // the schema layer must never retry a provider failure.
+    try {
+      validation = await generateValidatedNarrative({
+        generate: async ({ schema }) => {
+          const result = await invokeDriver(schema);
+          if (result.status !== 'succeeded') {
+            const error = new Error(getLastAttemptError(result.attempts));
+            error.providerResult = result;
+            throw error;
+          }
+          return result.content;
+        },
+        symbolKeys: normalizeSymbolKeys(narrativeContext?.symbolKeys),
+      });
+    } catch (error) {
+      if (!error?.providerResult) throw error;
+      // Fall through to the existing failure semantics below: attempts stay
+      // logged, the entry becomes `error`, and no further retry happens.
+    }
+  } else {
+    await invokeDriver(undefined);
+  }
+
+  const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+  const attempts = driverResults.flatMap((result) => result.attempts ?? []);
+
+  for (const attempt of attempts) {
+    // Provider-event history is a file operation: coordinated per directory
+    // and retried only for transient lock codes, never for the attempt itself.
+    await withEnrichmentWrite(enrichmentDir, () => withFileLockRetry(() => appendProviderEvent(enrichmentDir, {
       symbolKey: symbol.symbolKey,
       name: symbol.name,
       ...attempt,
-    });
+    })));
   }
 
-  if (result.status === 'succeeded') {
+  const lastDriver = driverResults[driverResults.length - 1];
+  const succeeded = narrativeMode ? validation?.status === 'validated' : lastDriver?.status === 'succeeded';
+
+  if (succeeded) {
+    // Narrative records carry the validated JSON in the existing `content`
+    // field and the validated summary in the existing index field — no new
+    // persisted format, no output that failed validation.
+    const content = narrativeMode
+      ? `${JSON.stringify(validation.narrative, null, 2)}`
+      : lastDriver.content;
     const { memoryId, enrichedAt } = await persistEnrichmentSuccess({
       symbol,
-      content: result.content,
+      content,
+      semanticSummary: narrativeMode ? validation.narrative.summary : undefined,
       enrichedByTag: 'enriched-by-queue',
       enrichmentDir,
       worklist,
@@ -399,43 +926,54 @@ export async function runQueueSymbolEnrichment({
       symbolIndex,
       symbolIndexFile,
       projectSlug,
-      attempts: result.attempts,
+      attempts,
+      // Only an explicit narrative acceptance persists the aligned
+      // fingerprint bundle; legacy text runs never carry one.
+      ...(narrativeMode && currentEvidence ? { narrativeEvidence: currentEvidence } : {}),
     });
 
     return {
       status: 'enriched',
       symbolKey: symbol.symbolKey,
       memoryId,
-      memoryContent: result.content,
+      memoryContent: content,
       language: symbol.language,
       kind: symbol.kind,
       filePath: symbol.filePath,
       projectSlug,
       codeHash: symbol.codeHash,
-      attempts: result.attempts ?? [],
-      lastModeUsed: wlEntry?.lastModeUsed ?? result.mode ?? getLastAttemptMode(result.attempts),
+      attempts,
+      lastModeUsed: wlEntry?.lastModeUsed ?? lastDriver?.mode ?? getLastAttemptMode(attempts),
       enrichedAt,
+      ...(narrativeMode ? { promptVersion: PROMPT_VERSION, semanticSummary: validation.narrative.summary } : {}),
+      // Typed fastpath metadata (plan 3.4 / S10): the structural proof behind
+      // this template result. Absent for provider-generated narratives.
+      ...(trivialTemplate ? { trivial: trivialTemplate.proof } : {}),
     };
   }
 
-  const error = getLastAttemptError(result.attempts);
+  const error = validation
+    ? `Narrative validation failed: ${validation.errors.join('; ')}`
+    : recheckError ?? getLastAttemptError(attempts);
   const failedAt = new Date().toISOString();
 
   if (wlEntry) {
-    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, result.attempts), {
+    Object.assign(wlEntry, applyAttemptsToEntry(wlEntry, attempts), {
       status: 'error',
       error,
       failedAt,
     });
   }
 
-  symbolIndex[symbol.symbolKey] = {
+  const updatedErrorIndex = upsertSymbolIndexEntry(symbolIndex, {
+    symbolKey: symbol.symbolKey,
     memoryId: null,
     graphNodeId: wlEntry?.graphNodeId ?? symbol.graphNodeId ?? null,
     codeHash: symbol.codeHash,
     status: 'error',
     lastEnrichedAt: failedAt,
-  };
+  });
+  symbolIndex[symbol.symbolKey] = updatedErrorIndex[symbol.symbolKey];
 
   await saveWorklistMerged(worklistFile, worklist);
   if (symbolIndexFile) {
@@ -446,8 +984,8 @@ export async function runQueueSymbolEnrichment({
     status: 'error',
     symbolKey: symbol.symbolKey,
     error,
-    attempts: result.attempts ?? [],
-    lastModeUsed: wlEntry?.lastModeUsed ?? getLastAttemptMode(result.attempts),
+    attempts,
+    lastModeUsed: wlEntry?.lastModeUsed ?? getLastAttemptMode(attempts),
     failedAt,
   };
 
@@ -471,11 +1009,37 @@ export function buildQueueState({ status, pid, startedAt, heartbeatAt, finishedA
 }
 
 export async function writeQueueState(input) {
-  await saveJson(input.queueStateFile, buildQueueState(input));
+  await withEnrichmentWrite(dirname(resolve(input.queueStateFile)), () => saveJson(input.queueStateFile, buildQueueState(input)));
 }
 
-export async function finalizeQueueState(input) {
+export async function finalizeQueueState(input, options = {}) {
   await writeQueueState(input);
+
+  try {
+    const projectRoot = options.projectRoot ?? PROJECT_ROOT;
+    const syncScript = resolve(dirname(fileURLToPath(import.meta.url)), 'sync.mjs');
+    const spawnBackgroundImpl = options.spawnBackground ?? spawnBackground;
+    const openImpl = options.open ?? open;
+
+    const enrichmentDir = dirname(input.queueStateFile);
+    const outLog = resolve(enrichmentDir, 'sync-stdout.log');
+    const errLog = resolve(enrichmentDir, 'sync-stderr.log');
+
+    let outHandle, errHandle;
+    try {
+      outHandle = await openImpl(outLog, 'a');
+      errHandle = await openImpl(errLog, 'a');
+      spawnBackgroundImpl(process.execPath, [syncScript, '--background'], {
+        cwd: projectRoot,
+        stdio: ['ignore', outHandle.fd, errHandle.fd],
+      });
+    } finally {
+      if (outHandle) await outHandle.close();
+      if (errHandle) await errHandle.close();
+    }
+  } catch (err) {
+    // catch and log spawn failure without throwing
+  }
 }
 
 // Conservative staleness window: an enrichment heartbeat older than this means
@@ -514,8 +1078,49 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-async function main() {
-  const enrichmentDir = resolve(PROJECT_ROOT, '.planning/project-memory-context/enrichment');
+/**
+ * Enrichment queue entry point.
+ *
+ * Every option defaults to the historical CLI behavior. The options exist for
+ * programmatic in-process callers (fixture tests); the default real queue
+ * still reads its own runtime config, builds legacy text prompts, and runs the
+ * original provider chain. `narrativeResolver` is the explicit opt-in seam for
+ * plan 3.3 / spec S9 narrative context — it is never derived from the graph or
+ * from configuration automatically, and without it no schema, promptVersion or
+ * format ever reaches the queue or subagent routes.
+ *
+ * @param {object} [options]
+ * @param {string} [options.projectRoot]
+ * @param {object} [options.config] - resolved enrichment config; skips config file reads when set
+ * @param {Array}  [options.providers]
+ * @param {(symbol: object) => Promise<object|null>} [options.narrativeResolver]
+ * @param {Function} [options.countPromptTokensImpl]
+ * @param {Function} [options.runEnrichmentWithFallbackImpl]
+ * @param {number} [options.concurrency] - programmatic override of the bounded
+ *   pool size for the model/tokenizer jobs (plan 3.6 / S12). When omitted the
+ *   effective bound is the module's `PMC_CONCURRENCY` environment value
+ *   (historical raw default 8, non-positive fallback 1). A supplied value is
+ *   validated BEFORE any file write: a malformed value rejects with TypeError
+ *   and never silently runs unbounded. There is no CLI flag for this.
+ */
+export async function main({
+  projectRoot = PROJECT_ROOT,
+  config = null,
+  providers = null,
+  narrativeResolver = null,
+  countPromptTokensImpl = countPromptTokens,
+  runEnrichmentWithFallbackImpl = runEnrichmentWithFallback,
+  concurrency,
+} = {}) {
+  // S12: validate an EXPLICIT programmatic concurrency before the first file
+  // operation — a malformed bound must reject with zero provider calls and an
+  // untouched worklist, never start and then get ignored.
+  if (concurrency !== undefined && (!Number.isInteger(concurrency) || concurrency < 1)) {
+    throw new TypeError('main concurrency must be a positive integer when supplied');
+  }
+  const effectiveConcurrency = concurrency === undefined ? PMC_CONCURRENCY : concurrency;
+
+  const enrichmentDir = resolve(projectRoot, '.planning/project-memory-context/enrichment');
   await mkdir(enrichmentDir, { recursive: true });
 
   const worklistFile = resolve(enrichmentDir, 'worklist.json');
@@ -544,8 +1149,8 @@ async function main() {
   let symbolIndex = {};
   try { symbolIndex = await loadJson(symbolIndexFile); } catch {}
 
-  const enrichmentConfig = await loadRuntimeEnrichmentConfig(PROJECT_ROOT, process.env);
-  const providers = createQueueProviders();
+  const enrichmentConfig = config ?? await loadRuntimeEnrichmentConfig(projectRoot, process.env);
+  const queueProviders = providers ?? createQueueProviders();
 
   _enrichmentDir = enrichmentDir;
   _worklist = worklist;
@@ -555,6 +1160,63 @@ async function main() {
     if (entry.status === 'enriched' && entry.memoryId) {
       entry.status = 'already_enriched';
       console.error(`[resume] Skipping ${entry.name} (${entry.symbolKey}) — already enriched`);
+    }
+  }
+
+  // N5B (plan 3.5 / S11): with an EXPLICIT narrative resolver, already
+  // accepted entries are hash-evaluated against the current context instead
+  // of being skipped blindly: a matching stored fingerprint plus a valid
+  // accepted artifact stays accepted (a reported reuse, no model-bound work),
+  // anything else becomes stale for regeneration in this very run. Without a
+  // resolver the historical selection is untouched.
+  //
+  // Same-run accepted FULL summaries (validated reuse at hash-evaluation
+  // time, validated acceptance during the pool) — the ONLY source the SCC
+  // prepare overlay may copy from, so a failed job can never fabricate a
+  // "fresh" summary for a later caller.
+  const acceptedSummaries = new Map();
+  let hashEvalMarked = 0;
+  if (narrativeResolver) {
+    for (const entry of worklist) {
+      if (entry.status !== 'already_enriched') continue;
+      try {
+        const context = await narrativeResolver(entry);
+        if (!context) continue;
+        // B1 metadata coherence: own the caller data before the first await
+        // so the fingerprint evaluation can never observe mid-flight
+        // mutations of the resolver's object.
+        const ownedContext = snapshotNarrativeContext(context);
+        const cached = await evaluateNarrativeCache({
+          symbol: entry,
+          projectRoot,
+          narrativeContext: ownedContext,
+          enrichmentDir,
+          worklistEntry: entry,
+          indexEntry: symbolIndex[entry.symbolKey] ?? null,
+        });
+        if (cached.hit) {
+          console.error(`[queue] REUSE ${entry.name ?? entry.symbolKey} (${entry.filePath}) — accepted narrative cache hit — no model call`);
+          if (typeof cached.semanticSummary === 'string') {
+            acceptedSummaries.set(entry.symbolKey, cached.semanticSummary);
+          }
+        } else if (cached.reason === 'source-unavailable') {
+          // Fail closed without rewriting accepted state: the regular queue
+          // path reports the honest source error for this entry.
+          console.error(`[queue] WARN: narrative hash evaluation skipped for ${entry.symbolKey}: ${cached.error?.message ?? 'source unavailable'}`);
+        } else {
+          entry.status = 'stale';
+          entry.staleReason = narrativeStaleReasonFor(cached.reason);
+          hashEvalMarked += 1;
+          console.error(`[queue] STALE ${entry.name ?? entry.symbolKey} (${entry.filePath}) — ${cached.reason} — accepted narrative will be regenerated`);
+        }
+      } catch (error) {
+        // Fail closed: an unusable source or context never becomes a cache
+        // hit and never rewrites accepted state.
+        console.error(`[queue] WARN: narrative hash evaluation failed for ${entry.symbolKey}: ${error.message}`);
+      }
+    }
+    if (hashEvalMarked > 0) {
+      await saveWorklistMerged(worklistFile, worklist);
     }
   }
 
@@ -573,7 +1235,7 @@ async function main() {
       heartbeatAt: new Date().toISOString(),
       finishedAt: new Date().toISOString(),
       summary,
-    });
+    }, { projectRoot });
     console.log(JSON.stringify({ complete: true, total, enriched: summary.enriched, errors: summary.errors }));
     return;
   }
@@ -590,9 +1252,12 @@ async function main() {
 
   const threshold = enrichmentConfig.subagentTokenThreshold ?? 5000;
   const coverageThreshold = enrichmentConfig.fileCoverageThreshold ?? 0.8;
-  console.error(`[queue] Starting sequential enrichment: ${pending.length} pending (${staleCount} stale), ${alreadyEnriched} already enriched`);
+  // B3: the start line states what actually happens — parallel dispatch with
+  // an overlap > 1 must never claim sequential execution; concurrency 1
+  // keeps the accurate historical line.
+  console.error(`[queue] Starting ${effectiveConcurrency > 1 ? 'concurrent' : 'sequential'} enrichment: ${pending.length} pending (${staleCount} stale), ${alreadyEnriched} already enriched`);
   console.error(`[queue] Modes: ${enrichmentConfig.preferredModes.join(', ')} | Local: ${enrichmentConfig.localModel.baseUrl} | Model: ${enrichmentConfig.localModel.model} | Timeout: ${TIMEOUT_MS}ms per symbol`);
-  console.error(`[queue] Token routing: threshold=${threshold} | File coverage threshold=${Math.round(coverageThreshold * 100)}% | Tokenize timeout: ${TOKENIZE_TIMEOUT_MS}ms | Ollama concurrency: 1 (sequential)\n`);
+  console.error(`[queue] Token routing: threshold=${threshold} | File coverage threshold=${Math.round(coverageThreshold * 100)}% | Tokenize timeout: ${TOKENIZE_TIMEOUT_MS}ms | Ollama concurrency: ${effectiveConcurrency}\n`);
 
   const results = [];
   const errors = [];
@@ -600,77 +1265,201 @@ async function main() {
   const startTime = Date.now();
   let lastHeartbeat = Date.now();
 
-  for (const symbol of pending) {
+  // ── N6B (plan 3.6 / spec S12): bounded pool integration ──────────────
+  //
+  // Every selected symbol runs through runNarrativePool with ONE global
+  // bound of `effectiveConcurrency` shared by SCC preparation and the
+  // per-symbol work (prompt build, tokenizer probe, provider driver,
+  // subagent route). Outcomes are recorded per symbol key during execution;
+  // the final results/errors/subagentQueued arrays are assembled afterwards
+  // in the ORIGINAL selected worklist order, so the aggregate output —
+  // timing array, summary, final JSON — is deterministic no matter which
+  // independent job finishes first. Progress message formats are unchanged;
+  // only the wall-clock ordering between symbols moves with concurrency.
+  const outcomes = new Map();
+  // SCC-ready owned contexts (narrative mode only): resolved at the barrier,
+  // snapshotted immediately (N5 B1), overlaid, and consumed by the run below.
+  const preparedContexts = new Map();
+  const symbolByKey = new Map(pending.map((symbol) => [symbol.symbolKey, symbol]));
+
+  const recordOutcome = (key, outcome) => {
+    if (!outcomes.has(key)) outcomes.set(key, outcome);
+  };
+
+  // Discovery pass (narrative mode, at least two selected symbols): build
+  // the structured dependency plan from COMPLETE authoritative callee keys —
+  // the stored accepted callee-summary hash maps AND the resolver's callee
+  // list, never the top-5 display callers — in the canonical N2 `calls` edge
+  // shape. Discovery MAY resolve context here purely to shape the graph; the
+  // FRESH context feeding the cache and the prompt is resolved later inside
+  // prepareBatch at SCC ready, after every dependency settled, so a static
+  // discovery value can never leak into a prompt. Fewer than two selected
+  // symbols cannot contain an in-graph edge (every callee edge is
+  // out-of-graph by definition), so no discovery resolution happens there.
+  const edges = [];
+  if (narrativeResolver && pending.length > 1) {
+    const addEdge = (source, target) => {
+      edges.push({ relation: 'calls', source: { id: source }, target: { id: target } });
+    };
+    for (const symbol of pending) {
+      const storedCallees = symbol.calleeSummaryHashes;
+      if (storedCallees && typeof storedCallees === 'object') {
+        for (const calleeKey of Object.keys(storedCallees)) addEdge(symbol.symbolKey, calleeKey);
+      }
+      try {
+        const discovered = await narrativeResolver(symbol);
+        for (const callee of discovered?.callees ?? []) {
+          if (callee && typeof callee === 'object' && typeof callee.key === 'string') {
+            addEdge(symbol.symbolKey, callee.key);
+          }
+        }
+      } catch (error) {
+        // A discovery failure only loses plan edges for this key; the fresh
+        // SCC-ready resolution still surfaces the honest per-key error.
+        console.error(`[queue] WARN: dependency discovery failed for ${symbol.symbolKey}: ${error.message}`);
+      }
+    }
+  }
+
+  // The historical per-symbol processing, executed inside a bounded pool
+  // slot. In narrative mode `narrativeContext` is the SCC-ready owned
+  // snapshot from prepareBatch — the resolver is NEVER called after a
+  // prompt exists (C1 race guard).
+  async function processSymbol(symbol) {
     const symbolStart = Date.now();
 
-    // 1. Build prompt (also returns totalLines for file-coverage check)
+    // 1. Build prompt (also returns totalLines for file-coverage check).
+    //    The SCC-ready context is the only opt-in path to prompt v2; a
+    //    null/absent context keeps the legacy prompt byte-for-byte.
     let prompt;
     let totalLines = 0;
+    let promptVersion = null;
+    let schema = null;
+    let knownGraphKeys = null;
+    let trivial = null;
+    // Complete S11 fingerprint evidence derived with the cache check; only a
+    // non-null value (explicit narrative mode) ever reaches the subagent route.
+    let currentEvidence = null;
+    // The exact source bytes the cache check just read; shared with the
+    // prompt/proof build so a miss still consumes a single proof read (C1).
+    let currentSource = null;
+    const narrativeContext = narrativeResolver ? (preparedContexts.get(symbol.symbolKey) ?? null) : null;
     try {
-      ({ prompt, totalLines } = await buildSymbolPromptMeta(symbol, PROJECT_ROOT));
+      // N5B (plan 3.5 / S11): the cache check runs BEFORE buildSymbolPromptMeta
+      // so a validated hit can never trigger template generation, the Ollama
+      // tokenizer probe, the provider driver or the subagent route. The
+      // context is ALREADY an owned snapshot (prepareBatch), so cache,
+      // prompt, known keys and fingerprint all derive from this ONE value.
+      if (narrativeContext) {
+        const cached = await evaluateNarrativeCache({
+          symbol,
+          projectRoot,
+          narrativeContext,
+          enrichmentDir,
+          worklistEntry: worklist.find((entry) => entry.symbolKey === symbol.symbolKey) ?? null,
+          indexEntry: symbolIndex[symbol.symbolKey] ?? null,
+        });
+        if (cached.hit) {
+          const wlEntry = worklist.find((entry) => entry.symbolKey === symbol.symbolKey);
+          await reconcileNarrativeReuse({ symbol, cached, worklist, worklistFile, symbolIndex, symbolIndexFile });
+          const elapsed = Date.now() - symbolStart;
+          console.error(`[queue] REUSE ${symbol.name} (${symbol.filePath}) — accepted narrative cache hit — no model call (${elapsed}ms)`);
+          if (typeof cached.semanticSummary === 'string') {
+            acceptedSummaries.set(symbol.symbolKey, cached.semanticSummary);
+          }
+          recordOutcome(symbol.symbolKey, {
+            kind: 'reuse',
+            symbolKey: symbol.symbolKey,
+            memoryId: cached.memoryId,
+            elapsed,
+            // Only a validated narrative result carries a summary; reuse
+            // reports the ACCEPTED summary unchanged (S9 final-main contract).
+            semanticSummary: cached.semanticSummary,
+            reused: true,
+          });
+          return;
+        }
+        currentEvidence = cached.current;
+        currentSource = cached.source ?? null;
+      }
+      ({ prompt, totalLines, promptVersion, schema, trivial = null } = await buildSymbolPromptMeta(
+        symbol,
+        projectRoot,
+        narrativeContext
+          ? {
+            narrativeContext,
+            ...(typeof currentSource === 'string' ? { source: currentSource } : {}),
+          }
+          : undefined,
+      ));
+      if (promptVersion) {
+        knownGraphKeys = [...normalizeSymbolKeys(narrativeContext?.symbolKeys)];
+      }
     } catch (err) {
       console.error(`[queue] ERROR building prompt for ${symbol.name}: ${err.message}`);
-      errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed: 0, failedAt: new Date().toISOString() });
+      const failedAt = new Date().toISOString();
+      recordOutcome(symbol.symbolKey, {
+        kind: 'error',
+        symbolKey: symbol.symbolKey,
+        error: err.message,
+        elapsed: 0,
+        failedAt,
+        narrative: Boolean(narrativeContext),
+      });
       const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
       if (wlEntry) {
         wlEntry.status = 'error';
         wlEntry.error = err.message;
-        wlEntry.failedAt = new Date().toISOString();
+        wlEntry.failedAt = failedAt;
       }
       await saveWorklistMerged(worklistFile, worklist);
-      continue;
+      return;
     }
 
     const span = (symbol.range?.endLine ?? 0) - (symbol.range?.startLine ?? 0) + 1;
 
-    // 2. Count tokens via Ollama prompt_eval_count (num_predict:1).
-    //    Falls back to chars/4 heuristic on error or timeout.
-    let tokens;
-    try {
-      const counted = await countPromptTokens({
-        baseUrl: enrichmentConfig.localModel.baseUrl,
-        model: enrichmentConfig.localModel.model,
-        prompt,
-        timeoutMs: TOKENIZE_TIMEOUT_MS,
-      });
-      tokens = counted !== null ? counted : estimateTokens(prompt);
-    } catch {
-      tokens = estimateTokens(prompt);
-    }
-
-    // 3. Route: file-coverage check takes priority, then token threshold
-    const routing = shouldRouteToSubagent({ tokens, tokenThreshold: threshold, span, totalLines, coverageThreshold });
-    if (routing.route) {
-      // Emit to subagent queue — the /enrich skill will drain this with Task subagents
+    // Steps 2+3: token counting and routing. Plan 3.4 / spec S10: a
+    // structurally proven trivial symbol in explicit narrative mode skips
+    // both, because the fast path must precede the Ollama tokenizer probe
+    // and the subagent route — zero model calls means zero model calls, not
+    // merely zero enrich calls. `trivial` is typed metadata produced by
+    // src/cards/trivial-template.mjs over the real AST, never a caller
+    // boolean; runQueueSymbolEnrichment re-derives the proof from the
+    // inspectable source before persisting the template, and the internal
+    // expectTrivialTemplate seam added below makes a failed recheck fail
+    // closed (N4 C1) instead of running a model behind this bypassed
+    // routing. The tokenizer probe itself occupies the same bounded pool
+    // slot as the provider driver, so it is covered by the concurrency
+    // bound too.
+    let tokens = null;
+    let routing = null;
+    if (!trivial) {
+      // 2. Count tokens via Ollama prompt_eval_count (num_predict:1).
+      //    Falls back to chars/4 heuristic on error or timeout.
       try {
-        await appendSubagentQueue(_enrichmentDir, {
-          symbolKey: symbol.symbolKey,
-          name: symbol.name,
-          filePath: symbol.filePath,
-          language: symbol.language,
-          kind: symbol.kind,
-          tokenCount: tokens,
+        const counted = await countPromptTokensImpl({
+          baseUrl: enrichmentConfig.localModel.baseUrl,
+          model: enrichmentConfig.localModel.model,
           prompt,
-          queuedAt: new Date().toISOString(),
+          timeoutMs: TOKENIZE_TIMEOUT_MS,
         });
-      } catch (qErr) {
-        console.error(`[queue] WARN: failed to write subagent-queue for ${symbol.name}: ${qErr.message}`);
+        tokens = counted !== null ? counted : estimateTokens(prompt);
+      } catch {
+        tokens = estimateTokens(prompt);
       }
 
-      const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
-      if (wlEntry) wlEntry.status = 'subagent-queued';
-      await saveWorklistMerged(worklistFile, worklist);
+      // 3. Route: file-coverage check takes priority, then token threshold
+      routing = shouldRouteToSubagent({ tokens, tokenThreshold: threshold, span, totalLines, coverageThreshold });
+    }
 
-      const elapsed = Date.now() - symbolStart;
-      subagentQueued.push({ symbolKey: symbol.symbolKey, tokenCount: tokens });
-      const coveragePct = Math.round(routing.coverage * 100);
-      console.error(`[route] ${symbol.name} → subagent-queued (${routing.reason}: ${tokens} tokens, ${coveragePct}% file coverage, ${elapsed}ms)`);
-    } else {
-      // 4. Enrich via Ollama — sequential, awaited
+    if (trivial || !routing.route) {
+      // 4. Enrich via Ollama — awaited inside this pool slot. For a proven
+      //    trivial symbol this persists the deterministic template with no
+      //    driver invocation and no attempts.
       try {
         const result = await runQueueSymbolEnrichment({
           symbol,
-          projectRoot: PROJECT_ROOT,
+          projectRoot,
           projectSlug: PROJECT_SLUG,
           timeoutMs: TIMEOUT_MS,
           enrichmentDir: _enrichmentDir,
@@ -679,17 +1468,53 @@ async function main() {
           symbolIndex,
           symbolIndexFile,
           config: enrichmentConfig,
-          providers,
+          providers: queueProviders,
           env: process.env,
           prompt, // pass pre-built prompt — no double round-trip
+          ...(narrativeContext ? { narrativeContext } : {}),
+          // B1 provenance: hand over the EXACT source bytes this prompt was
+          // built from so the runner's fingerprint describes the actual
+          // provider prompt, never a later disk read. Absent (prompt built
+          // from an uninspectable read) → no cache claim, no fingerprint.
+          ...(narrativeContext && typeof currentSource === 'string' ? { promptSource: currentSource } : {}),
+          // Internal-only strictness (N4 C1): only this loop's initial-proof
+          // bypass may demand that the runner's independent recheck agree;
+          // a disagreement fails closed instead of reaching a model.
+          ...(trivial ? { expectTrivialTemplate: true } : {}),
+          runEnrichmentWithFallbackImpl,
         });
         const elapsed = Date.now() - symbolStart;
-        console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s — ${tokens} tokens`);
-        results.push({ symbolKey: symbol.symbolKey, memoryId: result.memoryId, elapsed });
+        // The completion message is bound to the ACTUAL result, never to the
+        // initial proof: only a real template result may claim the template
+        // path or "no model call" (N4 C1).
+        if (result.trivial) {
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — template narrative (${result.trivial.kind}) — no model call (${elapsed}ms)`);
+        } else {
+          console.error(`[queue] DONE ${symbol.name} (${symbol.filePath}) — ${Math.round(elapsed / 1000)}s${tokens === null ? '' : ` — ${tokens} tokens`}`);
+        }
+        if (typeof result.semanticSummary === 'string') {
+          acceptedSummaries.set(symbol.symbolKey, result.semanticSummary);
+        }
+        recordOutcome(symbol.symbolKey, {
+          kind: 'result',
+          symbolKey: symbol.symbolKey,
+          memoryId: result.memoryId,
+          elapsed,
+          // Only a validated narrative result carries a summary; the final
+          // index rebuild must keep it (S9 final-main contract, B1).
+          ...(result.semanticSummary !== undefined ? { semanticSummary: result.semanticSummary } : {}),
+        });
       } catch (err) {
         const elapsed = Date.now() - symbolStart;
         console.error(`[queue] ERROR ${symbol.name}: ${err.message} (${Math.round(elapsed / 1000)}s)`);
-        errors.push({ symbolKey: symbol.symbolKey, error: err.message, elapsed, failedAt: err.failedAt ?? null });
+        recordOutcome(symbol.symbolKey, {
+          kind: 'error',
+          symbolKey: symbol.symbolKey,
+          error: err.message,
+          elapsed,
+          failedAt: err.failedAt ?? null,
+          narrative: Boolean(narrativeContext),
+        });
 
         const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
         if (wlEntry) {
@@ -699,13 +1524,58 @@ async function main() {
         }
         await saveWorklistMerged(worklistFile, worklist);
       }
+    } else {
+      // Emit to subagent queue — the /enrich skill will drain this with Task subagents
+      try {
+        await withEnrichmentWrite(_enrichmentDir, () => withFileLockRetry(() => appendSubagentQueue(_enrichmentDir, {
+          symbolKey: symbol.symbolKey,
+          name: symbol.name,
+          filePath: symbol.filePath,
+          language: symbol.language,
+          kind: symbol.kind,
+          tokenCount: tokens,
+          prompt,
+          queuedAt: new Date().toISOString(),
+          // Opt-in narrative entries carry the same schema, prompt version and
+          // known canonical graph keys the apply step validates against, plus
+          // the COMPLETE S11 fingerprint evidence (N5B) so apply can re-derive
+          // it from the actual source before any accepted write.
+          ...(promptVersion
+            ? {
+              promptVersion,
+              schema,
+              knownGraphKeys: knownGraphKeys ?? [],
+              ...(currentEvidence ? { narrativeEvidence: currentEvidence } : {}),
+            }
+            : {}),
+        })));
+      } catch (qErr) {
+        console.error(`[queue] WARN: failed to write subagent-queue for ${symbol.name}: ${qErr.message}`);
+      }
+
+      const wlEntry = worklist.find((s) => s.symbolKey === symbol.symbolKey);
+      if (wlEntry) wlEntry.status = 'subagent-queued';
+      await saveWorklistMerged(worklistFile, worklist);
+
+      const elapsed = Date.now() - symbolStart;
+      recordOutcome(symbol.symbolKey, { kind: 'queued', symbolKey: symbol.symbolKey, tokenCount: tokens });
+      const coveragePct = Math.round(routing.coverage * 100);
+      console.error(`[route] ${symbol.name} → subagent-queued (${routing.reason}: ${tokens} tokens, ${coveragePct}% file coverage, ${elapsed}ms)`);
     }
 
-    // 5. Periodic heartbeat (non-blocking)
+    // 5. Periodic heartbeat (non-blocking), counted from live outcomes so
+    //    the historical message format holds while jobs run in parallel.
     if (Date.now() - lastHeartbeat >= REPORT_INTERVAL_MS) {
       const elapsedTotal = Date.now() - startTime;
-      const done = results.length + errors.length + subagentQueued.length;
-      console.error(`[queue status] done=${done} queued-subagent=${subagentQueued.length} errors=${errors.length} elapsed=${Math.round(elapsedTotal / 1000)}s`);
+      let done = 0;
+      let queuedCount = 0;
+      let errorCount = 0;
+      for (const outcome of outcomes.values()) {
+        done += 1;
+        if (outcome.kind === 'queued') queuedCount += 1;
+        if (outcome.kind === 'error') errorCount += 1;
+      }
+      console.error(`[queue status] done=${done} queued-subagent=${queuedCount} errors=${errorCount} elapsed=${Math.round(elapsedTotal / 1000)}s`);
       await writeQueueState({
         queueStateFile,
         status: 'running',
@@ -718,29 +1588,176 @@ async function main() {
     }
   }
 
+  // Run everything through the shared bounded pool: independent SCCs occupy
+  // slots together, a caller SCC dispatches only after every callee SCC
+  // settled (fulfilled OR rejected), and prepare + run share the single
+  // global bound. Awaiting the pool means every launched job — preparation
+  // and run — has settled before the final report, index rebuild and sync.
+  //
+  // Dispatch keys (B2): narrative mode keeps the pool's canonical graph
+  // order — the SCC barrier and canonical member order are the structured
+  // contract. Legacy mode carries NO edges, and its baseline contract is the
+  // SELECTED WORKLIST ORDER (pending first, stale last) at any concurrency:
+  // a stable zero-padded ordinal prefix maps that order onto the pool's
+  // canonical sort without touching the N6A helper API or ordering
+  // contract, and every callback/reconcile step maps straight back to the
+  // real symbol key. Concurrent legacy scheduling still fills the bound
+  // (FIFO dispatch, never silently sequential).
+  const dispatchKeys = pending.map((symbol, index) => (narrativeResolver
+    ? symbol.symbolKey
+    : `${String(index).padStart(10, '0')}|${symbol.symbolKey}`));
+  const realKeyForDispatch = new Map(pending.map((symbol, index) => [dispatchKeys[index], symbol.symbolKey]));
+
+  const poolResults = await runNarrativePool({
+    symbolKeys: dispatchKeys,
+    edges,
+    concurrency: effectiveConcurrency,
+    ...(narrativeResolver
+      ? {
+        prepareBatch: async (memberKeys) => {
+          // SCC READY: all dependency batches have settled. Resolve the
+          // FRESH context for each member here — owned immediately (N5 B1),
+          // BEFORE any prompt or fingerprint derives from it — and overlay
+          // the same-run accepted FULL summaries of finished dependencies so
+          // a static resolver can never feed a stale caller prompt or cache.
+          // Cycles get exactly this ONE pass over prior accepted summaries:
+          // no fixpoint loop and no claim of perfect cycle convergence.
+          for (const key of memberKeys) {
+            const symbol = symbolByKey.get(key);
+            const resolved = await narrativeResolver(symbol);
+            const context = snapshotNarrativeContext(resolved);
+            if (context && typeof context === 'object' && Array.isArray(context.callees)) {
+              for (const callee of context.callees) {
+                if (!callee || typeof callee !== 'object' || typeof callee.key !== 'string') continue;
+                const fresh = acceptedSummaries.get(callee.key);
+                if (fresh !== undefined) callee.summary = fresh;
+              }
+            }
+            preparedContexts.set(key, context);
+          }
+        },
+      }
+      : {}),
+    run: async (dispatchKey) => {
+      await processSymbol(symbolByKey.get(realKeyForDispatch.get(dispatchKey)));
+      return dispatchKey;
+    },
+  });
+
+  // A batch whose preparation failed never reached run: settle each member
+  // as an honest per-key error (status persisted), never a fabricated
+  // success. Callers of a failed callee still ran — failure is settlement.
+  let preparationErrorsSaved = false;
+  for (const settled of poolResults) {
+    const settledKey = realKeyForDispatch.get(settled.key);
+    if (outcomes.has(settledKey)) continue;
+    const symbol = symbolByKey.get(settledKey);
+    const reason = settled.status === 'rejected' ? settled.reason : null;
+    const message = reason?.message ?? (reason ? String(reason) : 'queue finished without a recorded outcome');
+    console.error(`[queue] ERROR building prompt for ${symbol?.name ?? settledKey}: ${message}`);
+    const failedAt = new Date().toISOString();
+    const wlEntry = worklist.find((entry) => entry.symbolKey === settledKey);
+    if (wlEntry) {
+      wlEntry.status = 'error';
+      wlEntry.error = message;
+      wlEntry.failedAt = failedAt;
+    }
+    preparationErrorsSaved = true;
+    recordOutcome(settledKey, {
+      kind: 'error',
+      symbolKey: settledKey,
+      error: message,
+      elapsed: 0,
+      failedAt,
+      narrative: Boolean(narrativeResolver),
+    });
+  }
+  if (preparationErrorsSaved) await saveWorklistMerged(worklistFile, worklist);
+
+  // Deterministic final aggregation in the ORIGINAL selected worklist order
+  // (pending first, stale last): pool-canonical completion order maps back to
+  // these stable positions, so the legacy baseline output — keysets, per-symbol
+  // records, timing order and summary counts — stays identical regardless of
+  // completion order or the concurrency value.
+  for (const symbol of pending) {
+    const outcome = outcomes.get(symbol.symbolKey);
+    if (!outcome) continue;
+    if (outcome.kind === 'result') {
+      results.push({
+        symbolKey: outcome.symbolKey,
+        memoryId: outcome.memoryId,
+        elapsed: outcome.elapsed,
+        ...(outcome.semanticSummary !== undefined ? { semanticSummary: outcome.semanticSummary } : {}),
+      });
+    } else if (outcome.kind === 'reuse') {
+      results.push({
+        symbolKey: outcome.symbolKey,
+        memoryId: outcome.memoryId,
+        elapsed: outcome.elapsed,
+        semanticSummary: outcome.semanticSummary,
+        reused: outcome.reused,
+      });
+    } else if (outcome.kind === 'queued') {
+      subagentQueued.push({ symbolKey: outcome.symbolKey, tokenCount: outcome.tokenCount });
+    } else {
+      errors.push({
+        symbolKey: outcome.symbolKey,
+        error: outcome.error,
+        elapsed: outcome.elapsed,
+        failedAt: outcome.failedAt,
+        narrative: outcome.narrative,
+      });
+    }
+  }
+
   await checkpointSave();
 
   for (const r of results) {
     const entry = worklist.find(s => s.symbolKey === r.symbolKey);
     if (entry) {
       symbolIndex[r.symbolKey] = {
-        memoryId: r.memoryId,
+        memoryId: r.memoryId ?? entry.memoryId ?? null,
         graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'enriched',
         lastEnrichedAt: entry.enrichedAt,
+        ...(r.semanticSummary !== undefined ? { semanticSummary: r.semanticSummary } : {}),
+        // N5B: the aligned fingerprint survives the final index rebuild for
+        // both fresh acceptances and validated cache reuses.
+        ...(entry.narrativeHash !== undefined
+          ? {
+            narrativeHash: entry.narrativeHash,
+            calleeSummaryHashes: entry.calleeSummaryHashes,
+            promptVersion: entry.promptVersion,
+          }
+          : {}),
       };
     }
   }
   for (const err of errors) {
     const entry = worklist.find(s => s.symbolKey === err.symbolKey);
     if (entry) {
+      // Narrative failures must never wipe a previously accepted summary;
+      // legacy error entries keep their exact historical shape (B1).
+      const current = symbolIndex[err.symbolKey];
       symbolIndex[err.symbolKey] = {
         memoryId: null,
         graphNodeId: entry.graphNodeId ?? null,
         codeHash: entry.codeHash,
         status: 'error',
         lastEnrichedAt: err.failedAt || null,
+        ...(err.narrative && current?.semanticSummary !== undefined
+          ? { semanticSummary: current.semanticSummary }
+          : {}),
+        // N5B: a failed narrative run preserves the previously accepted
+        // fingerprint bundle exactly like it preserves the summary.
+        ...(err.narrative && current?.narrativeHash !== undefined
+          ? {
+            narrativeHash: current.narrativeHash,
+            calleeSummaryHashes: current.calleeSummaryHashes,
+            promptVersion: current.promptVersion,
+          }
+          : {}),
       };
     }
   }
@@ -759,10 +1776,10 @@ async function main() {
     heartbeatAt: finishedAt,
     finishedAt,
     summary,
-  });
+  }, { projectRoot });
 
   const retryLaunch = await maybeLaunchRetryErrors({
-    projectRoot: PROJECT_ROOT,
+    projectRoot,
     enrichmentDir,
     summary,
     loadRetryState: async () => loadOptionalJson(resolve(enrichmentDir, 'retry-state.json')),
@@ -776,6 +1793,14 @@ async function main() {
 
   if (summary.subagentQueued > 0) {
     console.error(`[queue] ${summary.subagentQueued} symbol(s) routed to subagent-queue.json — run /enrich skill to process them (up to 5 Task subagents in parallel).`);
+  }
+
+  // Post-enrichment hook: name graph communities (graceful — never blocks the queue).
+  const naming = await maybeNameCommunities({ projectRoot, enrichmentDir, summary });
+  if (naming.ran) {
+    console.error(`[queue] Community naming — named: ${naming.result.named}, skipped: ${naming.result.skipped}, failed: ${naming.result.failed}`);
+  } else if (naming.reason === 'error') {
+    console.error(`[queue] WARN: community naming failed: ${naming.error}`);
   }
 
   console.log(JSON.stringify({
@@ -827,6 +1852,84 @@ export async function maybeLaunchRetryErrors({
   return { launched: true, reason: 'spawned', stdoutPath, stderrPath };
 }
 
+/**
+ * Post-enrichment hook: name graph communities via GLM-4-Flash, but only when
+ * this run actually enriched at least one symbol. Always resolves (never throws)
+ * so a naming failure cannot break the enrichment queue.
+ *
+ * @param {{
+ *   projectRoot: string,
+ *   enrichmentDir: string,
+ *   summary: { enriched?: number },
+ *   runNaming?: (spec: { projectRoot: string, enrichmentDir: string }) => Promise<object>,
+ * }} input
+ * @returns {Promise<{ ran: boolean, reason?: string, result?: object, error?: string }>}
+ */
+export async function maybeNameCommunities({
+  projectRoot,
+  enrichmentDir,
+  summary,
+  runNaming = runCommunityNaming,
+}) {
+  if ((summary?.enriched ?? 0) === 0) {
+    return { ran: false, reason: 'nothing-enriched' };
+  }
+
+  try {
+    const result = await runNaming({ projectRoot, enrichmentDir });
+    return { ran: true, result };
+  } catch (err) {
+    return { ran: false, reason: 'error', error: err.message };
+  }
+}
+
+/**
+ * Default community-naming runner: opens graph.db, runs the naming pipeline,
+ * and appends a sync-manifest upsert entry per named community so the names are
+ * persisted into agent-memory on the next `pmc sync-context`.
+ */
+async function runCommunityNaming({ projectRoot, enrichmentDir }) {
+  const graphDir = resolve(projectRoot, '.planning/project-memory-context/graph');
+  const dbPath = resolve(graphDir, 'graph.db');
+  const jsonPath = resolve(graphDir, 'graph.json');
+
+  const { existsSync } = await import('node:fs');
+  if (!existsSync(dbPath) || !existsSync(jsonPath)) {
+    return { named: 0, skipped: 0, failed: 0, reason: 'no-graph' };
+  }
+
+  const { openGraphDb } = await import('../src/graph-store/graph-db.mjs');
+  const { fetchCommunities, nameCommunities, API_KEY_ENV } = await import('./name-communities.mjs');
+  const { DatabaseSync } = await import('node:sqlite');
+
+  const store = openGraphDb(dbPath, jsonPath);
+  const rawDb = new DatabaseSync(dbPath);
+  store.fetchCommunities = () => fetchCommunities(rawDb);
+
+  try {
+    const result = await nameCommunities(store, { apiKey: process.env[API_KEY_ENV] });
+
+    // Persist each stored community name to the sync manifest for agent-memory.
+    if (result.named > 0) {
+      const entries = store.getAllCommunityNames().map((row) =>
+        createCommunitySyncEntry({
+          communityId: row.community_id,
+          name: row.name,
+          projectSlug: PROJECT_SLUG,
+        }),
+      );
+      if (entries.length > 0) {
+        await appendSyncEntries(enrichmentDir, entries);
+      }
+    }
+
+    return result;
+  } finally {
+    rawDb.close();
+    store.close();
+  }
+}
+
 async function launchRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrPath }) {
   const stdout = await open(stdoutPath, 'a');
   const stderr = await open(stderrPath, 'a');
@@ -842,7 +1945,7 @@ async function launchRetryProcess({ projectRoot, scriptPath, stdoutPath, stderrP
 
 export async function writeRetryState({ enrichmentDir, status, pid, projectRoot, startedAt, heartbeatAt, finishedAt = null, lastError = null }) {
   const retryStateFile = resolve(enrichmentDir, 'retry-state.json');
-  await saveJson(retryStateFile, { status, pid, projectRoot, startedAt, heartbeatAt, finishedAt, lastError });
+  await withEnrichmentWrite(enrichmentDir, () => saveJson(retryStateFile, { status, pid, projectRoot, startedAt, heartbeatAt, finishedAt, lastError }));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

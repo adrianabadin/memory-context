@@ -148,7 +148,8 @@ export function createGraph(state, callbacks) {
       const statusBadge = ringColor
         ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ringColor};margin-right:4px;vertical-align:middle;"></span>`
         : '';
-      tooltip.innerHTML = `<strong>${d.label}</strong><br><code>${d.source_file}:${d.source_location}</code><br>Community ${d.community} | ${statusBadge}${status}${active}`;
+      const communityName = state.communityNames?.[String(d.community)] ?? `Community ${d.community}`;
+      tooltip.innerHTML = `<strong>${d.label}</strong><br><code>${d.source_file}:${d.source_location}</code><br>${communityName} | ${statusBadge}${status}${active}`;
       tooltip.classList.add("visible");
       tooltip.style.left = `${event.offsetX + 12}px`;
       tooltip.style.top = `${event.offsetY - 8}px`;

@@ -44,6 +44,8 @@ export function buildSemanticPrompt(unit) {
     '- output',
     '- immediate dependencies',
     '- role in module',
+    '',
+    'Write all descriptive explanation fields in English, regardless of source comments or conversation language. Preserve code, identifiers, paths, tags and structured keys exactly.',
   ].join('\n');
 }
 

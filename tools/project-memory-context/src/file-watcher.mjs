@@ -1,12 +1,21 @@
-import { extname } from 'node:path';
+import { basename, extname } from 'node:path';
+import { IGNORED_DIRS, isGraphifyScope } from './walk-ignores.mjs';
 
 const WATCH_EXTENSIONS = new Set(['.ts', '.tsx', '.mjs', '.js', '.jsx', '.cs']);
-const IGNORE_PREFIXES = ['node_modules', 'dist', '.git', 'bin', 'obj', '.opencode', '.planning', 'graphify-out', '.next'];
 
 export function shouldWatch(filePath) {
   const normalized = filePath.replace(/\\/g, '/');
-  if (IGNORE_PREFIXES.some(prefix => normalized.includes(`/${prefix}/`) || normalized.startsWith(`${prefix}/`))) {
+  const fileName = basename(normalized);
+  if (isGraphifyScope(fileName)) {
     return false;
+  }
+  if (normalized.startsWith('.opencode/') || normalized.includes('/.opencode/')) {
+    return false;
+  }
+  for (const prefix of IGNORED_DIRS) {
+    if (normalized.startsWith(`${prefix}/`) || normalized.includes(`/${prefix}/`)) {
+      return false;
+    }
   }
   return WATCH_EXTENSIONS.has(extname(normalized));
 }
