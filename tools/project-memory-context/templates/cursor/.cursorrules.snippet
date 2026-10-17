@@ -69,7 +69,7 @@ to the user:
 
 This single command handles everything deterministic in one shot — no manual polling needed:
 - Checks enrichment status; launches background enrich + watchdog if needed
-- Reports pending sync operations (run `/sync-context` to apply manually)
+- Reports pending sync operations (run `/sync-context` to apply)
 - Loads project context from materialized disk artifacts tagged `project-context` (no MCP round-trip)
 - Reports if LLM subagent drain is needed
 
@@ -81,7 +81,7 @@ to drain those entries — that is the only step that requires LLM involvement.
 ## Mandatory Workflow (ENFORCED)
 
 - BEFORE reading any source file: run /get-context <file-or-symbol> FIRST
-- AFTER code changes: run `{{PMC_BIN}} refresh-context --enrich` (background sync auto-spawns; keep `sync-context` only as a manual override)
+- AFTER code changes: run `{{PMC_BIN}} refresh-context` then `{{PMC_BIN}} sync-context`
 - Default depth: compact. extended/deep only on explicit request.
 
 <!-- /pmc:init -->

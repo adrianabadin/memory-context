@@ -13,7 +13,7 @@ tokens, and injects a compact status + project context summary.
 
 This command handles everything deterministic in one shot:
 - Checks enrichment status; launches background enrich + watchdog if needed
-- Reports pending sync operations (run `/sync-context` to apply manually)
+- Reports pending sync operations (run `/sync-context` to apply)
 - Loads project context from materialized disk artifacts (no MCP round-trip)
 - Reports if LLM subagent drain is needed
 
@@ -23,7 +23,7 @@ to drain those entries — that is the only step that requires LLM involvement.
 ## Mandatory PMC Workflow (ENFORCED)
 
 - **BEFORE reading any source file**: Run `{{PMC_BIN}} get-context <file-or-symbol>` FIRST. Do NOT open files without first checking PMC context.
-- **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment; background sync will auto-spawn automatically).
+- **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `{{PMC_BIN}} sync-context` to persist new memories.
 - **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
 - **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
 
@@ -37,7 +37,7 @@ to drain those entries — that is the only step that requires LLM involvement.
 | Debugging complex issues | `{{PMC_BIN}} get-context <symbol> deep all` | deep |
 | Need raw source code | `{{PMC_BIN}} get-context <symbol> disk` | disk |
 | Quick project overview | `agent-memory_search "project context overview"` | — |
-| After code changes | `{{PMC_BIN}} refresh-context --enrich` (background sync auto-spawns) | — |
+| After code changes | `{{PMC_BIN}} refresh-context --enrich` then `{{PMC_BIN}} sync-context` | — |
 
 ## Memory Protocol — Deterministic Triggers
 

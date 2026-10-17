@@ -57,20 +57,6 @@ test('detectAgentType detects antigravity from .agents directory', async () => {
   });
 });
 
-test('detectAgentType detects codex from .codex directory', async () => {
-  await withTempProject(async (projectRoot) => {
-    await mkdir(join(projectRoot, '.codex'));
-    assert.equal(detectAgentType(projectRoot), 'codex');
-  });
-});
-
-test('detectAgentType detects kimi from .kimi-code directory', async () => {
-  await withTempProject(async (projectRoot) => {
-    await mkdir(join(projectRoot, '.kimi-code'));
-    assert.equal(detectAgentType(projectRoot), 'kimi');
-  });
-});
-
 test('detectAgentType returns generic when no markers exist', async () => {
   await withTempProject(async (projectRoot) => {
     assert.equal(detectAgentType(projectRoot), 'generic');

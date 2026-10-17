@@ -13,7 +13,7 @@ Do not manually recreate startup checks in the chat if the plugin already handle
 
 This command handles everything deterministic in one shot:
 - Checks enrichment status; launches background enrich + watchdog if needed
-- Reports pending sync operations (run `/sync-context` to apply manually)
+- Reports pending sync operations (run `/sync-context` to apply)
 - Loads project context from materialized disk artifacts (no MCP round-trip)
 - Reports if LLM subagent drain is needed
 - Ensures the file watcher is running (PID + heartbeat tracked; `{{PMC_BIN}} watch . --status` / `--stop` to manage)
@@ -28,7 +28,7 @@ Follow these triggers without being asked. Use the exact, fully-qualified tool n
 
 - **Session start**: call `pmc-agent-memory_set_session_context` once.
 - **Before reading source / changing code**: run `{{PMC_BIN}} get-context <target>` (default depth `compact`).
-- **After implementing code changes**: run `{{PMC_BIN}} refresh-context --enrich` (PTY-first when available, otherwise Bash; background sync will auto-spawn automatically).
+- **After implementing code changes**: run `{{PMC_BIN}} refresh-context --enrich` (PTY-first when available, otherwise Bash) then `{{PMC_BIN}} sync-context`.
 - **Session close**: call `pmc-agent-memory_store_session_summary`.
 - **Before AND after compaction**: call `pmc-agent-memory_store_session_summary` immediately to persist the pre-compaction state, then call `pmc-agent-memory_recall` to recover prior context before continuing.
 
@@ -82,7 +82,7 @@ Call `pmc-agent-memory_store` IMMEDIATELY after any of these, without being aske
 ## Mandatory PMC Workflow (ENFORCED)
 
 - **BEFORE reading any source file**: Run `{{PMC_BIN}} get-context <file-or-symbol>` FIRST. Do NOT open files with Read/Grep without first checking PMC context.
-- **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment; background sync will auto-spawn automatically).
+- **AFTER implementing code changes**: Run `{{PMC_BIN}} refresh-context --enrich` (refreshes graph incrementally, queues and launches enrichment) then `{{PMC_BIN}} sync-context` to persist new memories.
 - **Default context depth**: Always use `depth=compact`. Use `extended` or `deep` ONLY when explicitly asked.
 - **`map-project --all`** is only needed for full reinstall or ground-up graph rebuild. Day-to-day, `refresh-context` keeps everything current.
 
@@ -96,5 +96,5 @@ Call `pmc-agent-memory_store` IMMEDIATELY after any of these, without being aske
 | Debugging complex issues | `{{PMC_BIN}} get-context <symbol> deep all` | deep |
 | Need raw source code | `{{PMC_BIN}} get-context <symbol> disk` | disk |
 | Quick project overview | `agent-memory_search "project context overview"` | — |
-| After code changes | `{{PMC_BIN}} refresh-context --enrich` (background sync auto-spawns) | — |
+| After code changes | `{{PMC_BIN}} refresh-context --enrich` then `{{PMC_BIN}} sync-context` | — |
 <!-- /pmc:autostart -->

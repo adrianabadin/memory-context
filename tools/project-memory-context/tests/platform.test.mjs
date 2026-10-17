@@ -20,24 +20,6 @@ test('detectSetupAgentType uses opencode when only global opencode config exists
   assert.equal(agent, 'opencode');
 });
 
-test('detectSetupAgentType falls back to codex when only global ~/.codex exists', () => {
-  const agent = detectSetupAgentType('C:/repo', {
-    exists: (candidate) => candidate.replace(/\\/g, '/').endsWith('/.codex'),
-    homeDir: 'C:/Users/alice',
-  });
-
-  assert.equal(agent, 'codex');
-});
-
-test('detectSetupAgentType falls back to kimi when only global ~/.kimi-code exists', () => {
-  const agent = detectSetupAgentType('C:/repo', {
-    exists: (candidate) => candidate.replace(/\\/g, '/').endsWith('/.kimi-code'),
-    homeDir: 'C:/Users/alice',
-  });
-
-  assert.equal(agent, 'kimi');
-});
-
 test('detectSetupAgentType honours explicit requested agent', () => {
   const agent = detectSetupAgentType('C:/repo', {
     requestedAgent: 'opencode',
@@ -178,36 +160,4 @@ test('resolveGraphify throws a portable install hint when not found', () => {
     }),
     /PMC_GRAPHIFY_PATH.*PMC_GRAPHIFY_BIN|PMC_GRAPHIFY_BIN.*PMC_GRAPHIFY_PATH/i,
   );
-});
-
-test('spawnBackground supports options.stdio override', () => {
-  const calls = [];
-  let unrefCalled = false;
-
-  const pid = spawnBackground('pmc', ['enrich'], {
-    cwd: 'C:/repo',
-    stdio: ['ignore', 1, 2],
-    spawnImpl: (command, args, options) => {
-      calls.push({ command, args, options });
-      return {
-        pid: 42,
-        unref() {
-          unrefCalled = true;
-        },
-      };
-    },
-  });
-
-  assert.equal(pid, 42);
-  assert.equal(unrefCalled, true);
-  assert.deepEqual(calls, [{
-    command: 'pmc',
-    args: ['enrich'],
-    options: {
-      cwd: 'C:/repo',
-      detached: true,
-      stdio: ['ignore', 1, 2],
-      shell: false,
-    },
-  }]);
 });
