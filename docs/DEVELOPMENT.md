@@ -84,6 +84,51 @@ Nested closures and top-level expression calls have no invented outer source sym
 
 `src/cards/file-rollup.mjs` exports the pure, synchronous, read-only `buildFileNarrativeRollup({graphDb, filePath, narratives, symbolKeys})` (plan F5 5.1 / spec S18, deterministic-aggregation mechanism selected by the user): it rolls up EXISTING accepted symbol narratives into `{path, kind: 'file-narrative-rollup', narratives: [{symbolKey, summary}], text, rejected}`. Usage: supply the same GraphStore read surface and path contract as `buildFileCard`, the accepted narratives you read yourself (for example from accepted `.memory.json` artifacts) as `{symbolKey, narrative}` entries, and the authoritative graph-key `Set` used for mention membership. Determinism: entries are ordered by ascending canonical `symbolKey` (independent of input order, byte-stable across calls) and the aggregate `text` is exactly `- <symbolKey>: <summary>` lines joined by `\n`. Provenance and honesty limits: every `summary` is reproduced byte-verbatim from its supplied narrative — nothing is synthesized, summarized, concatenated into a fake ≤25-word narrative, derived from names, or turned into new relationships or graph facts — and `text` is a labeled verbatim concatenation, not narrative-schema-validated aggregate text. Each entry whose `symbolKey` is not a canonical member of the file, or whose narrative fails the shared `validateNarrative` (including mention membership), appears in `rejected` with a machine-readable reason (`symbol-not-in-file`, `non-canonical-symbol-key`, `invalid-narrative` plus the validator errors) and NEVER becomes rollup content. Malformed call shapes (non-array `narratives`, entries without `symbolKey`/`narrative`, duplicate `symbolKey`, non-Set `symbolKeys`) fail closed with `TypeError`; inputs are never mutated and the store is never written. Empty or missing narratives roll up to empty `narratives`/`text` with the file path honestly reported; unknown files roll up empty with every entry rejected. This unit is source-only opt-in: it adds no MCP tool, CLI command, persistence or schema change, and `buildFileCard`/`pmc_card` default outputs are unchanged. Focused check: `node --test tests/file-rollup.test.mjs`.
 
+`src/cards/community-card.mjs` exports the pure, synchronous, read-only `buildCommunityCard({graphDb, communityId, filePaths, narratives, symbolKeys})` (plan F5 5.1 second half / spec S19). Membership comes ONLY from actual current graph community assignments: the explicit `filePaths` array bounds the enumeration (the GraphStore facade exposes no node-listing API and this unit does not widen shared surfaces), and every listed member was verified row-by-row against the graph — `String(node.community) === String(communityId)`, canonical key, `symbol`/`member` node kind, and exactly one node carrying that key. The display name comes only from the existing verified `getCommunityName` read API and is honestly `null` when absent — names are never generated. Example:
+
+```js
+import { openGraphDb } from './src/graph-store/graph-db.mjs';
+import { buildCommunityCard } from './src/cards/community-card.mjs';
+
+const graphDb = openGraphDb('.../graph.db', '.../graph.json');
+const card = buildCommunityCard({
+  graphDb,
+  communityId: 1,
+  filePaths: ['src/services/user.service.ts', 'src/repositories/user.repository.ts'],
+  narratives: [{ symbolKey: 'ts|src/services/user.service.ts|class|exported|UserService|0', narrative }],
+  symbolKeys, // authoritative Set of graph keys, exactly like validateNarrative
+});
+// card => { kind: 'community-card', communityId: '1', name: 'Persistence & Service' | null,
+//           scannedFiles, members: [{ id, symbolKey, kind, path }],
+//           narratives: [{ symbolKey, summary }], text, rejected: [{ member, reason, errors? }] }
+```
+
+Determinism and honesty: members/narratives/rejected are canonically ordered (ascending key, independent of input order, byte-stable across calls), `text` is the same provenance-marked verbatim `- <symbolKey>: <summary>` concatenation as the file rollup, summaries are reproduced byte-verbatim and never synthesized, and `rejected` reports `file-not-in-graph`, `ambiguous-symbol-key` (withheld canonical collisions, the `buildFileCard` rule), `symbol-not-in-community`, `non-canonical-symbol-key` and `invalid-narrative` (plus validator errors) so missing or ambiguous membership is never silently fabricated. Malformed shapes (bad `communityId`, non-array `filePaths`, invalid paths, malformed/duplicate narrative entries, non-Set `symbolKeys`) fail closed with `TypeError`; inputs are never mutated and the store is never written. Limitations: the card only sees the caller's enumerated files, aggregate `text` is labeled concatenation rather than a synthesized community narrative, and this unit is source-only — no MCP tool, CLI command, persistence, schema change or inference; `buildFileCard`/`buildFileNarrativeRollup`/`pmc_card` outputs are unchanged. Focused check: `node --test tests/community-card.test.mjs`.
+
+`src/cards/feature-card.mjs` exports the pure, synchronous, read-only `buildFeatureCard({graphDb, name, members, narratives, symbolKeys})` (spec S19; membership decision: "Grupo explícito de símbolos/archivos (recomendado)" — "El consumidor proporciona nombre y miembros canónicos; PMC agrega evidencia sin inferir funcionalidades."). The consumer supplies the feature name and the canonical member keys — symbol keys (`lang|path|kind|scope|name|arity`, plus the 7-part csharp form) and file keys (`file|<path>`) — and the card verifies each declared member against the graph; it never infers feature clustering from names, filenames, roles or topology. Example:
+
+```js
+import { openGraphDb } from './src/graph-store/graph-db.mjs';
+import { buildFeatureCard } from './src/cards/feature-card.mjs';
+
+const graphDb = openGraphDb('.../graph.db', '.../graph.json');
+const card = buildFeatureCard({
+  graphDb,
+  name: 'User management',
+  members: [
+    'ts|src/services/user.service.ts|class|exported|UserService|0', // symbol member
+    'file|src/models/user.model.ts',                               // file member
+  ],
+  narratives: [{ symbolKey: 'ts|src/services/user.service.ts|class|exported|UserService|0', narrative }],
+  symbolKeys,
+});
+// card => { kind: 'feature-card', name: 'User management',
+//           symbols: [{ id, symbolKey, kind, path }], files: [{ id, path, kind: 'file' }],
+//           narratives: [{ symbolKey, summary }], text, rejected: [{ member, reason, errors? }] }
+```
+
+Verification and honesty limits: a symbol member verifies only when exactly ONE node carried by its file carries that canonical key — zero matches report `symbol-not-in-graph` (including stale identities whose node id is contradicted by canonical metadata) and multiple matches report `ambiguous-symbol-key`; a file member verifies only when the graph carries nodes for that path (`file-not-in-graph` otherwise); strings that are neither canonical symbol keys nor `file|` keys report `non-canonical-member-key`. Narratives aggregate only VERIFIED symbol members (`symbol-not-in-feature` otherwise) with the file rollup's byte-verbatim provenance, canonical ordering and `invalid-narrative` gating. Duplicates and malformed shapes fail closed with `TypeError`; inputs are never mutated and the store is never written. Limitations: feature membership is exactly what the consumer declares (unprovable members surface as `rejected`, never as valid graph evidence), aggregate `text` is labeled verbatim concatenation rather than a synthesized feature narrative, and this unit is source-only — no MCP tool, CLI command, persistence, schema change, dependency or inference; the F5.1A `buildFileNarrativeRollup` helper and end-to-end file narrative exposure remain unchanged and unwired respectively. Focused check: `node --test tests/feature-card.test.mjs`.
+
 Focused checks: `node --test tests/native-calls.test.mjs tests/native-calls-blockers.test.mjs tests/native-imports.test.mjs` from `tools/project-memory-context`; keep the entire `relational-eval.test.mjs` excluded from ordinary verification as above.
 
 ## Role Classifier and Profiles (plan F2 2.1–2.3, R1 bounded to generic + node-cli)
