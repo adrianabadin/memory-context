@@ -140,6 +140,8 @@ OpenCode plugin hooks
 | Architecture question | `pmc-query_pmc_query_project <question>` | — |
 | Find a symbol by name/description | `pmc-query_pmc_search_symbols <query>` | — |
 | Before modifying a symbol | `pmc-query_pmc_get_dependencies` + `pmc-query_pmc_get_dependents` | — |
+| Trace what reaches a symbol (entrypoints/controllers) | `pmc-query_pmc_entrypoints_for` | — |
+| Assess change blast radius (dependents, covering tests, affected roles) | `pmc-query_pmc_impact` | — |
 
 ### After code changes
 
@@ -168,7 +170,11 @@ OpenCode plugin hooks
 - `pmc-query_pmc_search_symbols` — semantic symbol search
 - `pmc-query_pmc_get_dependencies` — what a symbol depends on
 - `pmc-query_pmc_get_dependents` — who uses a symbol
-- `pmc-query_pmc_get_context` — multi-depth structural context retrieval; pass `focus=impact` for blast-radius analysis of a changed target (no standalone `pmc_get_impact` MCP tool exists — impact is a focus mode of `get_context`)
+- `pmc-query_pmc_relations` — typed canonical edges; optional `stopAtRole` stops the walk at the nearest node with that canonical role
+- `pmc-query_pmc_entrypoints_for` — which entrypoints (CLI commands, MCP tools, routes, `main`) and controllers reach a target
+- `pmc-query_pmc_impact` — dependents, covering tests, and affected roles ranked by deterministic PageRank
+- `pmc-query_pmc_card` — symbol facts + enrichment; optional `level` compact|extended|deep with deterministic token ceilings (omit `level` for the legacy facts-only payload)
+- `pmc-query_pmc_get_context` — multi-depth structural context retrieval; pass `focus=impact` for blast-radius analysis of a changed target
 
 ### Memory (persistent knowledge) — `pmc-agent-memory_*` server
 - `pmc-agent-memory_store` — save a single memory (bugfix, decision, discovery, etc.)

@@ -82,6 +82,53 @@ Nested closures and top-level expression calls have no invented outer source sym
 
 `src/cards/file-card.mjs` exports the read-only `buildFileCard(graphDb, filePath)` returning `{path, kind: 'file', exports, importsFrom, importedBy, symbolCount, members}`. Symbol entries link their registry `id` and canonical `symbolKey`; file dependencies link `file|<path>` endpoints. Exports/members/counts include only uniquely identified registry symbols from the requested file; ambiguous keys are withheld, not overwritten. Native file imports remain file-scoped. Paths normalize separators and reject absolute/root-escaping/control-character inputs. Unknown files return empty cards, and all reads leave persisted rows unchanged. Focused check: `node --test tests/file-card.test.mjs`.
 
+`src/cards/file-rollup.mjs` exports the pure, synchronous, read-only `buildFileNarrativeRollup({graphDb, filePath, narratives, symbolKeys})` (plan F5 5.1 / spec S18, deterministic-aggregation mechanism selected by the user): it rolls up EXISTING accepted symbol narratives into `{path, kind: 'file-narrative-rollup', narratives: [{symbolKey, summary}], text, rejected}`. Usage: supply the same GraphStore read surface and path contract as `buildFileCard`, the accepted narratives you read yourself (for example from accepted `.memory.json` artifacts) as `{symbolKey, narrative}` entries, and the authoritative graph-key `Set` used for mention membership. Determinism: entries are ordered by ascending canonical `symbolKey` (independent of input order, byte-stable across calls) and the aggregate `text` is exactly `- <symbolKey>: <summary>` lines joined by `\n`. Provenance and honesty limits: every `summary` is reproduced byte-verbatim from its supplied narrative — nothing is synthesized, summarized, concatenated into a fake ≤25-word narrative, derived from names, or turned into new relationships or graph facts — and `text` is a labeled verbatim concatenation, not narrative-schema-validated aggregate text. Each entry whose `symbolKey` is not a canonical member of the file, or whose narrative fails the shared `validateNarrative` (including mention membership), appears in `rejected` with a machine-readable reason (`symbol-not-in-file`, `non-canonical-symbol-key`, `invalid-narrative` plus the validator errors) and NEVER becomes rollup content. Malformed call shapes (non-array `narratives`, entries without `symbolKey`/`narrative`, duplicate `symbolKey`, non-Set `symbolKeys`) fail closed with `TypeError`; inputs are never mutated and the store is never written. Empty or missing narratives roll up to empty `narratives`/`text` with the file path honestly reported; unknown files roll up empty with every entry rejected. This unit is source-only opt-in: it adds no MCP tool, CLI command, persistence or schema change, and `buildFileCard`/`pmc_card` default outputs are unchanged. Focused check: `node --test tests/file-rollup.test.mjs`.
+
+`src/cards/community-card.mjs` exports the pure, synchronous, read-only `buildCommunityCard({graphDb, communityId, filePaths, narratives, symbolKeys})` (plan F5 5.1 second half / spec S19). Membership comes ONLY from actual current graph community assignments: the explicit `filePaths` array bounds the enumeration (the GraphStore facade exposes no node-listing API and this unit does not widen shared surfaces), and every listed member was verified row-by-row against the graph — `String(node.community) === String(communityId)`, canonical key, `symbol`/`member` node kind, and exactly one node carrying that key. The display name comes only from the existing verified `getCommunityName` read API and is honestly `null` when absent — names are never generated. Example:
+
+```js
+import { openGraphDb } from './src/graph-store/graph-db.mjs';
+import { buildCommunityCard } from './src/cards/community-card.mjs';
+
+const graphDb = openGraphDb('.../graph.db', '.../graph.json');
+const card = buildCommunityCard({
+  graphDb,
+  communityId: 1,
+  filePaths: ['src/services/user.service.ts', 'src/repositories/user.repository.ts'],
+  narratives: [{ symbolKey: 'ts|src/services/user.service.ts|class|exported|UserService|0', narrative }],
+  symbolKeys, // authoritative Set of graph keys, exactly like validateNarrative
+});
+// card => { kind: 'community-card', communityId: '1', name: 'Persistence & Service' | null,
+//           scannedFiles, members: [{ id, symbolKey, kind, path }],
+//           narratives: [{ symbolKey, summary }], text, rejected: [{ member, reason, errors? }] }
+```
+
+Determinism and honesty: members/narratives/rejected are canonically ordered (ascending key, independent of input order, byte-stable across calls), `text` is the same provenance-marked verbatim `- <symbolKey>: <summary>` concatenation as the file rollup, summaries are reproduced byte-verbatim and never synthesized, and `rejected` reports `file-not-in-graph`, `ambiguous-symbol-key` (withheld canonical collisions, the `buildFileCard` rule), `symbol-not-in-community`, `non-canonical-symbol-key` and `invalid-narrative` (plus validator errors) so missing or ambiguous membership is never silently fabricated. Malformed shapes (bad `communityId`, non-array `filePaths`, invalid paths, malformed/duplicate narrative entries, non-Set `symbolKeys`) fail closed with `TypeError`; inputs are never mutated and the store is never written. Limitations: the card only sees the caller's enumerated files, aggregate `text` is labeled concatenation rather than a synthesized community narrative, and this unit is source-only — no MCP tool, CLI command, persistence, schema change or inference; `buildFileCard`/`buildFileNarrativeRollup`/`pmc_card` outputs are unchanged. Focused check: `node --test tests/community-card.test.mjs`.
+
+`src/cards/feature-card.mjs` exports the pure, synchronous, read-only `buildFeatureCard({graphDb, name, members, narratives, symbolKeys})` (spec S19; membership decision: "Grupo explícito de símbolos/archivos (recomendado)" — "El consumidor proporciona nombre y miembros canónicos; PMC agrega evidencia sin inferir funcionalidades."). The consumer supplies the feature name and the canonical member keys — symbol keys (`lang|path|kind|scope|name|arity`, plus the 7-part csharp form) and file keys (`file|<path>`) — and the card verifies each declared member against the graph; it never infers feature clustering from names, filenames, roles or topology. Example:
+
+```js
+import { openGraphDb } from './src/graph-store/graph-db.mjs';
+import { buildFeatureCard } from './src/cards/feature-card.mjs';
+
+const graphDb = openGraphDb('.../graph.db', '.../graph.json');
+const card = buildFeatureCard({
+  graphDb,
+  name: 'User management',
+  members: [
+    'ts|src/services/user.service.ts|class|exported|UserService|0', // symbol member
+    'file|src/models/user.model.ts',                               // file member
+  ],
+  narratives: [{ symbolKey: 'ts|src/services/user.service.ts|class|exported|UserService|0', narrative }],
+  symbolKeys,
+});
+// card => { kind: 'feature-card', name: 'User management',
+//           symbols: [{ id, symbolKey, kind, path }], files: [{ id, path, kind: 'file' }],
+//           narratives: [{ symbolKey, summary }], text, rejected: [{ member, reason, errors? }] }
+```
+
+Verification and honesty limits: a symbol member verifies only when exactly ONE node carried by its file carries that canonical key — zero matches report `symbol-not-in-graph` (including stale identities whose node id is contradicted by canonical metadata) and multiple matches report `ambiguous-symbol-key`; a file member verifies only when the graph carries nodes for that path (`file-not-in-graph` otherwise); strings that are neither canonical symbol keys nor `file|` keys report `non-canonical-member-key`. Narratives aggregate only VERIFIED symbol members (`symbol-not-in-feature` otherwise) with the file rollup's byte-verbatim provenance, canonical ordering and `invalid-narrative` gating. Duplicates and malformed shapes fail closed with `TypeError`; inputs are never mutated and the store is never written. Limitations: feature membership is exactly what the consumer declares (unprovable members surface as `rejected`, never as valid graph evidence), aggregate `text` is labeled verbatim concatenation rather than a synthesized feature narrative, and this unit is source-only — no MCP tool, CLI command, persistence, schema change, dependency or inference; the F5.1A `buildFileNarrativeRollup` helper and end-to-end file narrative exposure remain unchanged and unwired respectively. Focused check: `node --test tests/feature-card.test.mjs`.
+
 Focused checks: `node --test tests/native-calls.test.mjs tests/native-calls-blockers.test.mjs tests/native-imports.test.mjs` from `tools/project-memory-context`; keep the entire `relational-eval.test.mjs` excluded from ordinary verification as above.
 
 ## Role Classifier and Profiles (plan F2 2.1–2.3, R1 bounded to generic + node-cli)
@@ -246,6 +293,202 @@ Focused check: `node --test tests/mcp-entrypoints.test.mjs tests/mcp-stop-at-rol
 `src/query/impact.mjs` exports `walkImpact(context, {resolved})`, consumed by a new `impact(options)` method on the shared `src/query/relations.mjs` reader — same per-request read-only `DatabaseSync` lifecycle and same target resolution, ambiguity and conflict contracts; `mcp/query-tools.mjs` registers the read-only `pmc_impact` tool with a strict `{target}`-only input schema (every undocumented key rejects at the MCP boundary, non-string/empty targets surface as `isError`, and the ranking parameters are never accepted). Each request builds the full known canonical dependency graph from the canonical read view — one node per registry symbol key plus one endpoint per known project file (registry paths, native import evidence and standalone known file nodes recognized by the same reader/card coherence inside the existing per-request canonical node scan — an empty file vertex never disappears from the ranking), call edges gathered per sorted registry seed through the guarded engine seam (native plus legacy with endpoint coherence and constructor-edge exclusions) and file-import edges through the same scope-aware file-card contract, deduplicated as directed neighbour pairs — then computes PageRank once and walks the complete reverse dependency closure: S14 per-seed one-hop union before selection, visited-set-bounded cycles, no hop or role cut, zero-hop proven registry membership expansion for class/file targets, and the binding-resolved inbound import lift (exported symbols of a file whose resolved binding actually targets the visited symbol) for file import dependents; these lift edges are walk evidence only and are deliberately not ranking edges, so one import relation is never weighted twice. The resolved response is `{status, target, dependents, tests, roles, rankModel}`: dependents `{symbolKey, kind, distance, role, layer, rank, path}` sorted rank DESC then canonical key ASC with `distance` counting actual dependency hops; `tests` reuses the existing `buildFacts` evidence verbatim (importer files, existing test-path filter, top-level exported symbols) labelled `provenance: 'static-import-reference'` — static referenced candidates, never executed coverage, and never a filename-derived role; `roles` aggregates the canonical non-null roles of the unique affected keys (dependents and tests counted once per canonical key) with summed member ranks and `layer` only when every contributing record carries the same known canonical layer (an absent canonical layer or any mixture aggregates as null; nothing is inferred from profile, filename or owner), sorted rank DESC then role ASC. Missing/ambiguous targets keep the shared `{status, candidates}` shape with empty projections and no `rankModel`. No shared store/engine mutation, no raw SQL beyond the reader's existing canonical node scan, no persistent cache or state write, no CLI flag, config key, role registration, database write, inference or golden/classification/facts change was added.
 
 Focused check: `node --test tests/s15-independent-verification.test.mjs tests/pagerank.test.mjs tests/mcp-impact.test.mjs tests/mcp-stop-at-role.test.mjs tests/mcp-relations.test.mjs tests/mcp-relations-independent.test.mjs tests/mcp-relations-targeted-controls.test.mjs tests/query.test.mjs tests/mcp-entrypoints.test.mjs` from `tools/project-memory-context`.
+
+## Offline Evaluation Report (F5.2A / S20)
+
+`src/evaluation/offline-report.mjs` exports the pure, synchronous `buildOfflineEvaluationReport(input)` (plan F5 5.2 / spec S20, "Evaluación offline primero" selected by the user): a deterministic LOCAL evaluation/report BUILDER that performs arithmetic only over evidence the caller explicitly supplies. It runs no evaluation, no model, no judge and no agent; each of its four sections reports `status: 'measured'` only when attributable evidence was provided for it, and otherwise `status: 'not-measured'` with null numerics — never a fabricated score. Accepted top-level input keys are exactly `relationQuestions`, `narratives`, `authoritativeKeys`, `recordedTaskEvidence` and `judgeEvidence`; unknown keys, wrong types, malformed entries, duplicate `id`/`taskId`/`sampleId` values and non-integer or negative file-read counts all fail closed with `TypeError`. The report is plain JSON (`JSON.stringify(report)` works locally), deterministic and byte-stable for identical input, free of timestamps/randomness/environment reads, and caller inputs are never mutated. Example (asserted verbatim by `tests/offline-report.test.mjs`): input fixtures demonstrate arithmetic, NOT real performance.
+
+```js
+import { buildOfflineEvaluationReport } from './src/evaluation/offline-report.mjs';
+
+const A = 'ts|src/a.ts|function|exported|a|0';
+const B = 'ts|src/b.ts|class|exported|B|0';
+const C = 'ts|src/c.ts|function|exported|c|1';
+const narrative = (mentions) => ({
+  summary: 'Valid summary within the word limit', behavior: [], sideEffects: [],
+  errors: [], contracts: [], changeNotes: '', mentions,
+});
+
+const report = buildOfflineEvaluationReport({
+  relationQuestions: [
+    { id: 'q1-callers-find-by-id', expected: [A, B], observed: [A] },
+    { id: 'q2-callees-find-by-id', expected: [C], observed: [C, B] },
+  ],
+  narratives: [{ id: 'n1', narrative: narrative([A, 'ghost|nowhere|function|exported|ghost|0']) }],
+  authoritativeKeys: new Set([A, B, C]),
+  recordedTaskEvidence: [
+    { taskId: 't1', success: true, fileReads: 3 },
+    { taskId: 't2', success: false, fileReads: 1 },
+  ],
+  judgeEvidence: [{ sampleId: 's1', verdict: 'pass' }],
+});
+```
+
+Exact output of that input:
+
+```json
+{
+  "kind": "offline-evaluation-report",
+  "relationAccuracy": {
+    "status": "measured",
+    "questionCount": 2,
+    "exactMatchCount": 0,
+    "exactMatchRate": 0,
+    "totalTruePositives": 2,
+    "totalFalsePositives": 1,
+    "totalFalseNegatives": 1,
+    "microPrecision": 0.6666666666666666,
+    "microRecall": 0.6666666666666666,
+    "microF1": 0.6666666666666666,
+    "macroPrecision": 0.75,
+    "macroRecall": 0.75,
+    "questions": [
+      {
+        "id": "q1-callers-find-by-id",
+        "expectedValues": ["ts|src/a.ts|function|exported|a|0", "ts|src/b.ts|class|exported|B|0"],
+        "observedValues": ["ts|src/a.ts|function|exported|a|0"],
+        "truePositives": 1, "falsePositives": 0, "falseNegatives": 1,
+        "precision": 1, "recall": 0.5, "exactMatch": false
+      },
+      {
+        "id": "q2-callees-find-by-id",
+        "expectedValues": ["ts|src/c.ts|function|exported|c|1"],
+        "observedValues": ["ts|src/b.ts|class|exported|B|0", "ts|src/c.ts|function|exported|c|1"],
+        "truePositives": 1, "falsePositives": 1, "falseNegatives": 0,
+        "precision": 0.5, "recall": 1, "exactMatch": false
+      }
+    ]
+  },
+  "narrativeMentionValidity": {
+    "status": "measured",
+    "narrativeCount": 1,
+    "totalMentions": 2,
+    "validMentions": 1,
+    "invalidMentions": 1,
+    "mentionValidity": 0.5,
+    "unknownMentions": ["ghost|nowhere|function|exported|ghost|0"],
+    "invalidNarratives": [
+      { "id": "n1", "errors": ["Mention does not exist in graph: ghost|nowhere|function|exported|ghost|0"] }
+    ]
+  },
+  "agentTaskSuccess": {
+    "status": "measured",
+    "taskCount": 2,
+    "successCount": 1,
+    "failureCount": 1,
+    "successRate": 0.5,
+    "totalFileReads": 4,
+    "meanFileReadsPerTask": 2,
+    "tasks": [
+      { "taskId": "t1", "success": true, "fileReads": 3 },
+      { "taskId": "t2", "success": false, "fileReads": 1 }
+    ]
+  },
+  "sampledJudge": {
+    "status": "measured",
+    "sampleCount": 1,
+    "passCount": 1,
+    "failCount": 0,
+    "passRate": 1,
+    "samples": [ { "sampleId": "s1", "verdict": "pass" } ]
+  }
+}
+```
+
+### Relation accuracy formulas (`relationQuestions: [{id, expected, observed}]`)
+
+Values are deduplicated and canonically sorted (ascending, input-order independent) before any arithmetic; questions are reported sorted by `id`. With `E` = deduplicated expected values, `O` = deduplicated observed values, `TP = |E ∩ O|`, `FP = |O \ E|`, `FN = |E \ O|` per question:
+
+- `precision = TP / |O|` when `|O| > 0`, else `null` (undefined denominator — never an invented 0 or 1).
+- `recall = TP / |E|` when `|E| > 0`, else `null`.
+- `exactMatch = (FP == 0 && FN == 0)` — two empty sets match exactly.
+- Aggregates: `microPrecision = ΣTP / (ΣTP + ΣFP)` and `microRecall = ΣTP / (ΣTP + ΣFN)` over all questions, each `null` when its denominator is 0; `microF1 = 2·P·R / (P + R)` when both micro values are non-null and `P + R > 0`, `0` when both are `0`, and `null` if either is `null`; `macroPrecision`/`macroRecall` are the means over only the per-question values that are non-null (`null` when no per-question value is defined); `exactMatchRate = exactMatchCount / questionCount` (`null` when `questionCount` is 0).
+
+### Missing-evidence policy (all sections)
+
+An absent or empty evidence array yields `status: 'not-measured'` with an explicit `reason`, zero counts and `null` numerics — an empty evaluation is NOT a score of 0 or 1. `buildOfflineEvaluationReport({})` is valid and returns the all-not-measured skeleton with stable top-level key order `kind`, `relationAccuracy`, `narrativeMentionValidity`, `agentTaskSuccess`, `sampledJudge`.
+
+### Structural validity vs. semantic judge (honesty boundary)
+
+`narrativeMentionValidity` is STRUCTURAL validity only: `mentionValidity = validMentions / totalMentions` (`null` when `totalMentions` is 0) against the caller-supplied authoritative key `Set`, plus the shared `validateNarrative` verdict per narrative in `invalidNarratives` (schema shape, ≤25-word summary, mention membership). It is never "semantic faithfulness": whether a narrative's prose faithfully describes the symbol cannot be decided deterministically and is NOT measured here. The `sampledJudge` section never runs a judge — it aggregates `verdict: 'pass' | 'fail'` records from a sampled LLM-judge run the caller performed and recorded elsewhere, keyed by `sampleId`; without such recorded evidence its `passRate` stays `null`. Similarly `agentTaskSuccess` aggregates only RECORDED task evidence keyed by `taskId` (success boolean and the ACTUAL recorded integer `fileReads` count); `status: 'measured'` attests only to arithmetic over the supplied records, never to "real agent success". When evidence provenance is missing or ambiguous, this module rejects the input (`TypeError`) or reports `not-measured` — it never guesses a measured result, defines no metric thresholds and adds no CI gating.
+
+### Scope limits
+
+Source-only opt-in unit: no CLI command, package export change, MCP tool, persistence, schema, config or dependency was added, and all existing modules/MCP/CLI outputs are unchanged byte-for-byte. There is no `.github/workflows` in this checkout, so no CI seam was touched; wiring this report into CI, real live-judge measurement and live-agent task acceptance remain pending the separate F5.2 closure unit. Focused check: `node --test tests/offline-report.test.mjs` from `tools/project-memory-context`.
+
+## Offline Evaluation Runner and CI Golden Gate (F5.2B / S21)
+
+`tools/offline-eval.mjs` is a source-tree runner — deliberately NOT an npm package command or `package.json` script — that turns the F5.2A `buildOfflineEvaluationReport` builder into a reproducible LOCAL golden gate over the layered-app fixture. OFFLINE policy: it measures only evidence that deterministically exists. No models, providers, credentials, inference, thresholds or not-yet-measured metrics are involved.
+
+### Invocation
+
+From `tools/project-memory-context` (requires `node:sqlite`, i.e. Node ≥ 22.5; verified on Node 24):
+
+```
+node tools/offline-eval.mjs --help
+node tools/offline-eval.mjs
+node tools/offline-eval.mjs --expected /path/to/owned-expected.json
+node tools/offline-eval.mjs --fixture-dir /path/to/owned-layered-app-copy
+node tools/offline-eval.mjs > offline-evaluation-report.json   # CI gate: redirect, never a pipe
+```
+
+Options: `--help`/`-h` prints the usage text and exits 0; `--expected <path>` selects an explicitly owned golden questions input (default `tests/fixtures/layered-app/expected.json`); `--fixture-dir <path>` selects an owned copy of the layered-app sources (default `tests/fixtures/layered-app`). Unknown flags, missing values, missing paths and malformed JSON/shape exit 2 with an `offline-eval: `-prefixed stderr message and an empty stdout. The runner only READS the stored fixture and the authoritative `expected.json` (hash-verified byte-identical before/after in tests): every run assembles its own isolated fixture in a fresh `mkdtemp` directory (with `HOME`/`USERPROFILE`/`TMPDIR`/`TEMP`/`TMP` pointed inside it for the run) using the existing native extractors (`extractNativeCalls`, `extractNativeImportBindings`), the shared graph.db build seam and the approved F2 `generic` role ledger (`classifySymbol`/`persistNodeRoles`), then removes it.
+
+### Covered question IDs (observed via the current public query/card surface)
+
+Observed answers come from the live MCP surface (in-memory `McpServer` + `registerQueryTools`) — never from copied expected arrays or hardcoded outputs:
+
+| covered question id | public call → observed field |
+|---|---|
+| `q1-callers-user-service-find-by-id` | `pmc_relations` (findById, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q2-callees-user-service-find-by-id` | `pmc_relations` (findById, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q3-dependents-format-name` | `pmc_relations` (formatName, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q4-callers-main` | `pmc_relations` (main, in/calls/depth 1) → `edges[].source.symbolKey` (expected empty) |
+| `q5-callees-main` | `pmc_relations` (main, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q6-dependencies-render-user` | `pmc_relations` (renderUser, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q7-nearest-controller-user-service` | `pmc_relations` (UserService class, in/calls/depth 1, `stopAtRole: 'controller'`) → `matches[].symbolKey` |
+| `q8-entrypoint-user-service` | `pmc_entrypoints_for` (UserService class) → `entrypoints[].symbolKey` |
+| `q9-callers-user-repository-find-one` | `pmc_relations` (findOne, in/calls/depth 1) → `edges[].source.symbolKey` |
+| `q10-callees-user-repository-find-one` | `pmc_relations` (findOne, out/calls/depth 1) → `edges[].target.symbolKey` |
+| `q11-imports-user-controller` | `pmc_relations` (UserController class, out/imports/depth 1) → `edges[].target.symbolKey` |
+| `q12-tests-user-service` | `pmc_impact` (UserService class) → `tests[].symbolKey` |
+
+All 12 golden questions are covered and listed verbatim in the report's `coveredQuestionIds`. Any golden question NOT in the coverage table is reported as `notMeasuredQuestions: [{id, reason: 'not-covered-by-current-public-api'}]` — never evaluated by proxy and never forced to pass. Conversely, a covered question missing from the supplied input is a runner error (exit 2), not a silent pass.
+
+### Report shape and exit codes
+
+stdout carries exactly one deterministic pretty-JSON document (byte-identical across runs — two independent isolated runs are asserted equal in tests):
+
+```json
+{
+  "kind": "offline-evaluation-run",
+  "fixture": "layered-app",
+  "coveredQuestionIds": ["q1-callers-user-service-find-by-id", "… all 12 …"],
+  "notMeasuredQuestions": [],
+  "gate": { "status": "pass", "mismatchedQuestionIds": [] },
+  "evaluation": { "kind": "offline-evaluation-report", "relationAccuracy": { "…": "…" }, "narrativeMentionValidity": { "…": "…" }, "agentTaskSuccess": { "…": "…" }, "sampledJudge": { "…": "…" } }
+}
+```
+
+Exit codes: `0` — evaluation succeeded and every covered question matched the golden expectation EXACTLY (set equality after canonical dedup/sort; no precision or accuracy thresholds); `1` — a covered golden question mismatched: the full honest report is printed on stdout first, each mismatch is diagnosed on stderr (`offline-eval: golden mismatch: <id> …`), and the nonzero status is preserved; `2` — runner error, malformed golden/fixture input or CLI misuse: empty stdout, `offline-eval: ` diagnostic on stderr.
+
+### GitHub Actions workflow (`.github/workflows/pmc-offline-evaluation.yml`)
+
+- Triggers: `push` to `main` plus `pull_request`; workflow-level `permissions: contents: read` (no secrets anywhere); job `timeout-minutes: 15`; `ubuntu-latest`; Node 24 via `actions/setup-node@v4` with the npm download cache keyed on the existing `package-lock.json`.
+- Install: `npm ci` in `tools/project-memory-context` — reproducible from the checked-in lockfile (lockfileVersion 3, dependency specs verified in sync with `package.json`); the tracked `node_modules` tree is never trusted as a cache (`npm ci` removes and reinstalls it). No dependency versions are edited and no packages are added.
+- Tests: an explicit focused file array — `tests/offline-eval-runner.test.mjs`, `tests/offline-report.test.mjs`, `tests/card-facts.test.mjs`, `tests/mcp-relations.test.mjs`. `tests/relational-eval.test.mjs` is never executed or imported; no existing checks are removed or disabled.
+- Gate: `node tools/offline-eval.mjs > offline-evaluation-report.json` — shell redirection (never a pipe or `|| true`), so the runner's nonzero exit fails the job; the step runs with `if: always() && steps.install.outcome == 'success'` so the report is produced even when the test step failed, while an install failure skips it. No `continue-on-error` anywhere.
+- Artifact: `actions/upload-artifact@v4` with `if: always()`, name `pmc-offline-evaluation-report`, the single report JSON, 7-day retention, `if-no-files-found: warn` — a hard runner error (exit 2) emits no JSON; shell redirection may still create an empty artifact file. An empty file is not a measured report, and the job remains failed.
+
+### What this gate does NOT measure (honesty limits)
+
+- `evaluation.relationAccuracy` — measured: exact deterministic answer-set equality over the 12 covered questions. There is no “accuracy ≥ X” threshold; a single extra or missing key fails the gate.
+- `evaluation.narrativeMentionValidity` — `not-measured` (`no-narrative-evidence`): the layered-app fixture contains NO validated narrative artifacts (only an ignored `x.memory.json` scope marker), so no narratives are supplied. Mention validity remains structural validity, never semantic faithfulness.
+- `evaluation.agentTaskSuccess` — `not-measured` (`no-recorded-task-evidence`): no recorded agent runs or file-read counts exist; nothing is fabricated to fill the numbers.
+- `evaluation.sampledJudge` — `not-measured` (`no-recorded-judge-evidence`): no sampled LLM-judge verdicts exist; this runner never calls a model.
+- Real Pi session acceptance, live sampled-judge measurement and live agent-task success remain PENDING the F5.2 closure unit. The original S20 scope (“Eval metrics in CI: relation accuracy, narrative faithfulness (mention validity plus a sampled LLM judge), and agent task success with file-read counts.”) is only partially wired: the offline deterministic relation gate runs in CI today; the judge and agent portions wait for real recorded evidence. Whole F5 is NOT complete — cards remain source-only.
+
+Code mapping: `tools/offline-eval.mjs` (CLI, isolated fixture assembly, MCP observation, gating) → `mcp/query-tools.mjs` (the public `pmc_relations` / `pmc_entrypoints_for` / `pmc_impact` surface) → `src/evaluation/offline-report.mjs` (`buildOfflineEvaluationReport` arithmetic). Focused check: `node --test tests/offline-eval-runner.test.mjs tests/offline-report.test.mjs tests/card-facts.test.mjs tests/mcp-relations.test.mjs` from `tools/project-memory-context`.
 
 ## Relational Evaluation Harness
 
