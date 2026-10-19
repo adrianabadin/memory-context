@@ -14,6 +14,7 @@ const PACKAGE_ROOT = resolve(TEST_DIR, '..');
 test('resolveCommand maps the new agent-facing names', () => {
   const expected = new Map([
     ['map-project', resolve(PACKAGE_ROOT, 'cli', 'bootstrap.mjs')],
+    ['card', resolve(PACKAGE_ROOT, 'cli', 'card.mjs')],
     ['backfill-symbol-keys', resolve(PACKAGE_ROOT, 'cli', 'backfill-symbol-keys.mjs')],
     ['get-context', resolve(PACKAGE_ROOT, 'cli', 'context.mjs')],
     ['enrich-status', resolve(PACKAGE_ROOT, 'cli', 'status.mjs')],

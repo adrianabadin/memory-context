@@ -148,4 +148,35 @@ export function registerQueryTools(server, options = {}) {
     try { return textResult(await reader.card(args)); }
     catch (error) { return errorResult('pmc_card', error); }
   });
+  server.registerTool('pmc_file_rollup', {
+    description: 'Deterministic rollup of EXISTING accepted symbol narratives for one canonical file (S18; no model calls, no synthesis): byte-verbatim summaries in ascending canonical key order with symbolKey provenance, plus per-symbol `diagnostics` withholding missing/stale/conflicting/malformed/foreign artifacts. `target` must resolve to a canonical existing FILE — a symbol target returns an explicit not-a-file status, never a file rollup.',
+    inputSchema: z.object({
+    target: z.string().min(1).describe('Project-relative file path or file|<path> key; must resolve to an existing graph file'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.fileRollup(args)); }
+    catch (error) { return errorResult('pmc_file_rollup', error); }
+  });
+  server.registerTool('pmc_community_card', {
+    description: 'Community card for one graph community built ONLY from actual current community assignments (S19): the reader enumerates all known coherent file endpoints and indexed source files internally (never caller-supplied files), members are verified row-by-row with withheld collisions, the display name comes only from the stored community name (null when absent), and accepted narratives aggregate with byte-verbatim provenance plus honest `diagnostics`; no name/role guesses, no model calls.',
+    inputSchema: z.object({
+    communityId: z.union([z.string().min(1), z.number()]).describe('Graph community id as a string or number'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.communityCard(args)); }
+    catch (error) { return errorResult('pmc_community_card', error); }
+  });
+  server.registerTool('pmc_feature_card', {
+    description: 'Feature card from EXPLICIT caller-declared membership (S19): a feature name plus canonical symbol/file keys verified against the graph — unverifiable members are reported in `rejected` (symbol-not-in-graph, ambiguous-symbol-key, non-canonical-member-key), never guessed or inferred — and only accepted narratives aggregate with byte-verbatim provenance plus honest `diagnostics`; no persistent feature config, no model calls.',
+    inputSchema: z.object({
+    name: z.string().min(1).describe('Explicit feature name supplied by the consumer, reproduced verbatim'),
+    members: z.array(z.string().min(1)).min(1).describe('Explicit canonical symbol keys or file|<path> keys verified against the graph'),
+    }).strict(),
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async args => {
+    try { return textResult(await reader.featureCard(args)); }
+    catch (error) { return errorResult('pmc_feature_card', error); }
+  });
 }

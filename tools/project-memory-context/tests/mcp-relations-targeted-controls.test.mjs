@@ -136,7 +136,7 @@ test('direct regression: own AST golden Q1-Q3 and six-tool stdio parity', async 
   await client.connect(transport);
   try {
     const standalone = await client.listTools(), composed = await f.client.listTools();
-    assert.equal(standalone.tools.length, 8);
+    assert.equal(standalone.tools.length, 11);
     assert.deepEqual(JSON.parse(JSON.stringify(standalone)), JSON.parse(JSON.stringify(composed)));
     for (const name of ['pmc_relations', 'pmc_card']) assert.equal(standalone.tools.find(tool => tool.name === name).annotations.readOnlyHint, true);
   } finally { await client.close(); }

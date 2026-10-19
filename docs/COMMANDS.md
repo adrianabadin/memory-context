@@ -9,6 +9,7 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 | Command | CLI File | Purpose | Example |
 |---------|----------|---------|---------|
 | `backfill-symbol-keys` | `cli/backfill-symbol-keys.mjs` | Plans or explicitly applies symbol-key attachments for legacy memories found by known index tags | `pmc backfill-symbol-keys .` |
+| `card` | `cli/card.mjs` | Read-only file/community/explicit-feature cards with accepted narrative provenance | `pmc card file src/index.ts` |
 | `doctor` | `cli/doctor.mjs` | Runs health checks on the PMC environment (Node, Python, Ollama, agent-memory) | `pmc doctor .` |
 | `enrich` | `cli/enrich.mjs` | Launches enrichment queue for pending/stale symbols | `pmc enrich .` |
 | `enrich-status` | `cli/status.mjs` | Reports current enrichment status: counts of pending/enriched/error entries, queue state | `pmc enrich-status .` |
@@ -31,6 +32,29 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 | `sync-context` | `cli/sync.mjs` | Syncs pending enrichment data from the local graph into agent memory via MCP | `pmc sync-context` |
 | `view-context` | `bin/pmc-view-context.mjs` | Opens the PMC Graph Explorer web UI | `pmc view-context` |
 | `watch` | `cli/watch.mjs` | Watches project files for changes with debounced refresh-context triggers | `pmc watch .` |
+
+## card — Aggregate Cards (S23)
+
+Run inside a PMC-enabled project (root found by walking up to `install.json`):
+
+```bash
+pmc card file src/services/user.service.ts
+pmc card community 1
+pmc card feature auth --member "ts|src/auth.ts|function|exported|login|2" --member "file|src/auth.ts"
+pmc card --help
+```
+
+Only `--member <canonical-key>` (repeatable, feature only) and `--help`/`-h` are supported. No `--level`, depth, project-root flag or inferred membership. Each subcommand takes exactly one positional argument; feature requires nonempty, duplicate-free members. Valid output is deterministic pretty JSON on stdout (exit 0); errors have empty stdout, diagnostic stderr and exit 1. Help is stdout, exit 0. Withheld narrative reasons are JSON `diagnostics`, not stderr warnings. Unverifiable explicit members remain honest `rejected` entries; file membership does not implicitly select all its symbols.
+
+The shared query registry now exposes eleven tools, adding these strict read-only tools (unknown options reject):
+
+- `pmc_file_rollup({target: string})`: canonical existing graph FILE only (`path` or `file|path`); a symbol returns `status: 'not-a-file'`, absent files return `missing`, ambiguous identities return candidates. Uses `buildFileNarrativeRollup`.
+- `pmc_community_card({communityId: string | number})`: actual graph community assignments; internally scans all coherent known file nodes, indexed source files and canonical native-import file endpoints. `scannedFiles` reports the full enumeration even for files lacking symbol rows. Unknown communities yield empty members and stored name or null.
+- `pmc_feature_card({name: string, members: string[]})`: explicit canonical symbols/files verified against the graph; no feature inference or persistence.
+
+None accepts `level`. Existing eight descriptors and `pmc_card` defaults remain unchanged, including file `enrichment: ''` when narrative artifacts exist.
+
+Narratives require matching validated stored fingerprints in symbol-index, unique worklist entry and canonical `.memory.json` artifact, plus artifact key identity and shared schema/graph-mention validation. Missing, malformed, stale, conflicting, foreign, ambiguous or escaped evidence is withheld in `diagnostics`; summaries are never fabricated from `semanticSummary`. No accepted artifacts means empty narratives/text. DB, metadata and artifact realpaths must remain contained; symlink/junction escapes fail closed. These are read-only SQLite/artifact operations: no DDL, config writes, providers or model calls. Acceptance checks the stored three-way binding, **not live source recomputation**; it cannot detect source edits not yet reflected in those stored fingerprints. This is not real Pi runtime acceptance.
 
 ## backfill-symbol-keys Details
 

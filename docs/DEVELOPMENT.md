@@ -131,6 +131,27 @@ Verification and honesty limits: a symbol member verifies only when exactly ONE 
 
 Focused checks: `node --test tests/native-calls.test.mjs tests/native-calls-blockers.test.mjs tests/native-imports.test.mjs` from `tools/project-memory-context`; keep the entire `relational-eval.test.mjs` excluded from ordinary verification as above.
 
+## Public Aggregate Cards (S23 / S18–S19 exposure)
+
+The source-only builder descriptions above document the original F5.1 units. S23 now connects those unchanged builders through `src/query/aggregate-cards.mjs` and `createRelationsReader({projectRoot})`:
+
+```js
+const reader = createRelationsReader({ projectRoot });
+await reader.fileRollup({ target: 'src/services/user.service.ts' });
+await reader.communityCard({ communityId: 1 });
+await reader.featureCard({ name: 'storage', members: ['file|src/models/user.model.ts'] });
+```
+
+The same methods back strict `pmc_file_rollup({target})`, `pmc_community_card({communityId})`, `pmc_feature_card({name,members})` and `pmc card file|community|feature`. See [COMMANDS.md](COMMANDS.md#card--aggregate-cards-s23) for exact CLI options/examples and status/error behavior. The registry is additive (eight unchanged descriptors plus three new tools); none of the new tools implements `level`. `pmc_card` still returns its original payload, with empty file enrichment even when accepted artifacts exist.
+
+Community enumeration is internal and complete for coherent known file endpoints, registry source files and native-import file endpoints, preserving builder `scannedFiles` and truthful `file-not-in-graph` rejections for empty endpoints. Membership comes only from current graph assignments. Features accept explicit duplicate-free canonical membership; file membership does not expand into symbol narratives, and nothing is persisted or inferred.
+
+`loadAcceptedNarratives` derives sanitized paths via `narrativeMemoryPath`, but path existence is not acceptance: `validateNarrativeEvidence` must validate matching narrativeHash/promptVersion/calleeSummaryHashes in index, unique worklist row and artifact. Artifact evidence must name the graph key; any explicit index evidence identity must also match. Duplicate worklist identities fail closed instead of last-row-wins. Content must parse and pass `validateNarrative` with the coherent graph-key Set. Missing/unaccepted, stale/conflicting, malformed, foreign and sanitized-key-collision evidence is withheld with per-key `diagnostics`; no `semanticSummary` fallback. Empty accepted evidence produces honest empty narratives/text, never generated content.
+
+Read-only per-request SQLite opens close in `finally`; no DDL, mutation, config, persistence, source-file reads or model/provider calls. New surfaces check realpath containment for DB, metadata and artifacts, including directory junctions, before content reads. This assumes a stable filesystem during a request (not an atomic defense against concurrent hostile path replacement). **Acceptance relies on the stored three-way fingerprints, not live source recomputation** as performed by the enrichment queue's `evaluateNarrativeCache`; unrecorded source edits cannot be detected here. No installed activation or actual Pi session acceptance is established by generic MCP transport tests.
+
+Focused tests: `node --test tests/card-commands.test.mjs tests/command-dispatch.test.mjs` (owned layered-app SQLite/artifacts, actual in-memory public MCP and real CLI spawns). Continue excluding the entire `relational-eval.test.mjs` from ordinary suites.
+
 ## Role Classifier and Profiles (plan F2 2.1–2.3, R1 bounded to generic + node-cli)
 
 `src/roles/classify.mjs` exposes `loadProfile(name)`, `classifySymbol(record, {profile, allSymbols})` and `classifyFile({path}, {profile})`. Each returns exactly `{role, layer, confidence, evidence[]}` for a file or symbol. `confidence` is a finite 0..1 heuristic evidence strength (noisy-OR over the agreeing signals' weights), not a calibrated probability or semantic-accuracy score. With no supporting evidence the classifier returns the documented unknown shape `{role: null, layer: null, confidence: 0, evidence: []}` — it never invents an "unknown" role enum. A member inherits a **uniquely** identified container's role (same file, one matching class); an ambiguous or absent container fails closed rather than resolving by array order, and a member's own stronger provided evidence (a structured decorator annotation) overrides the inherited role. Classification is pure: it reads no project, fixture, or graph at call time, never mutates its inputs, is deterministic, and never hardcodes golden keys or paths.

@@ -420,7 +420,11 @@ test('S15 old seven tools default response byte parity (conditional archive)', {
   try {
     const nowTools = (await client.listTools()).tools;
     const oldTools = (await old.client.listTools()).tools;
-    assert.deepEqual(nowTools.filter(tool => tool.name !== 'pmc_impact'), oldTools,
+    // S23: the additive aggregate-card tools are excluded here together with
+    // pmc_impact so the HISTORICAL baseline tool set is still compared
+    // byte-for-byte against its own descriptors and defaults.
+    const newAggregateTools = ['pmc_file_rollup', 'pmc_community_card', 'pmc_feature_card'];
+    assert.deepEqual(nowTools.filter(tool => tool.name !== 'pmc_impact' && !newAggregateTools.includes(tool.name)), oldTools,
       'the pre-existing seven tools keep byte-identical descriptors');
     let count = 0;
     for (const [name, args] of [

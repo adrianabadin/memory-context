@@ -174,6 +174,9 @@ OpenCode plugin hooks
 - `pmc-query_pmc_entrypoints_for` — which entrypoints (CLI commands, MCP tools, routes, `main`) and controllers reach a target
 - `pmc-query_pmc_impact` — dependents, covering tests, and affected roles ranked by deterministic PageRank
 - `pmc-query_pmc_card` — symbol facts + enrichment; optional `level` compact|extended|deep with deterministic token ceilings (omit `level` for the legacy facts-only payload)
+- `pmc-query_pmc_file_rollup` — deterministic file rollup of accepted symbol narratives with provenance (missing/stale/foreign artifacts withheld, never synthesized)
+- `pmc-query_pmc_community_card` — community card from actual graph community assignments (internal file enumeration; stored name or null, no guesses)
+- `pmc-query_pmc_feature_card` — feature card from explicit canonical member keys verified against the graph (no feature inference, no config)
 - `pmc-query_pmc_get_context` — multi-depth structural context retrieval; pass `focus=impact` for blast-radius analysis of a changed target
 
 ### Memory (persistent knowledge) — `pmc-agent-memory_*` server
