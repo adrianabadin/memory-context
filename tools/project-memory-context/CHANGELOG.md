@@ -5,6 +5,54 @@ CLI) are documented here. This project adheres to [Semantic Versioning](https://
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-20
+
+Changes since the published `0.9.1`.
+
+### Added
+
+- **Unified client-adapter installer** — detection, planning, isolated
+  execution, verification and reporting through one pipeline, with
+  adapters for OpenCode, Claude Code, Cursor, Antigravity, generic, Codex,
+  Kimi and Pi.
+- **Native call/import relations** with canonical symbol identity, typed
+  `graph.db` facts and file cards.
+- **Role classification** (`generic`, `node-cli` and framework profiles,
+  plus project `roles.json` overrides) exposed in facts, cards and
+  `get-context`.
+- **Opt-in structured narratives** — schema validation, call-order (SCC)
+  batching, trivial-symbol templates, `narrativeHash` invalidation and a
+  `PMC_CONCURRENCY` bounded pool. Text output remains the default.
+- **Role-aware MCP tools** — `pmc_relations` gains `stopAtRole`;
+  new `pmc_entrypoints_for`, `pmc_impact` (deterministic PageRank) and
+  `pmc_card` levels `compact` / `extended` / `deep` with token ceilings.
+- **Aggregate cards** — MCP tools `pmc_file_rollup`, `pmc_community_card`
+  and `pmc_feature_card`, plus the `pmc card file|community|feature` CLI.
+  They use only accepted narratives with explicit provenance.
+
+### Changed
+
+- **Pi**: the Pi adapter (`pmc install-pmc --pi` or `--client=pi`, or
+  auto-detected from a project `.pi/` directory) writes native Pi 1.3
+  `.pi/mcp.json` (`mcpServers`, stdio). It no longer registers `pi-mcp-adapter`, which
+  replaces Pi's built-in MCP; existing `.pi/settings.json` is left untouched.
+- **Kimi**: `.kimi-code/mcp.json` now uses the standard MCP stdio format
+  and registers both `pmc-query` and `pmc-agent-memory`.
+- **Codex**: project `.codex/config.toml` is merged programmatically
+  (TOML), replacing the static snippet.
+- Agent instruction templates advertise the full MCP tool surface.
+- The eight pre-existing MCP tool descriptors and default `pmc_card`
+  output are unchanged.
+
+### Removed
+
+- `templates/codex/config.toml.snippet` and `templates/kimi/mcp.json.snippet`
+  (superseded by the adapters above).
+
+### Dependencies
+
+- Added `smol-toml` for lossless TOML config merging.
+
 ## [0.9.0] — 2026-07-29
 
 ### Added

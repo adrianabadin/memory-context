@@ -77,3 +77,4 @@ to close the session once it completes (this is a bounded, one-shot operation, n
 
 > `map-project --all` is only needed for full reinstall or to rebuild the graph from scratch.
 > For day-to-day code changes, `refresh-context` keeps everything up-to-date.
+> Foreground Bash invocations are bounded by timeouts (graphify 60s, global sync 15s) so a stuck graphify or agent-memory handshake cannot block the agent indefinitely.
