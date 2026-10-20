@@ -17,7 +17,7 @@ These rules are NOT optional. The agent MUST follow them without being asked. Us
 
 - **Session start**: call `pmc-agent-memory_set_session_context` once, then `pmc-agent-memory_recall` to recover prior context on the current topic.
 - **Before reading source / changing code**: run `pmc get-context <target>` (default depth `compact`).
-- **After implementing code changes**: run `pmc refresh-context --enrich` (PTY-first when available, otherwise Bash) then `pmc sync-context`.
+- **After implementing code changes**: run `pmc refresh-context --enrich` (PTY-first when available, otherwise Bash). The sync process now auto-spawns, so `pmc sync-context` (or `pmc sync-context --detach`) is only needed as a manual override.
 - **Session close** (BEFORE saying "done" / "listo" / "that's it"): call `pmc-agent-memory_store_session_summary`. This is NOT optional — if skipped, the next session starts blind.
 - **Before AND after compaction**: call `pmc-agent-memory_store_session_summary` immediately to persist the pre-compaction state, then call `pmc-agent-memory_recall` to recover prior context before continuing.
 
@@ -145,8 +145,8 @@ OpenCode plugin hooks
 
 ### After code changes
 
-- If the PTY file watcher is running: automatic — just run `pmc sync-context` after
-- If watcher is NOT running: run `pmc refresh-context --enrich` then `pmc sync-context`
+- If the PTY file watcher is running: automatic — no manual sync needed as the watcher's refresh automatically triggers sync.
+- If watcher is NOT running: run `pmc refresh-context --enrich` (background sync auto-spawns; keep `pmc sync-context` / `/sync-context --detach` only as a manual override).
 
 ---
 

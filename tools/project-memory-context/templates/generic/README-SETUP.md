@@ -20,7 +20,7 @@ This project uses PMC (Project Memory Context) for persistent structured memory.
 # Sanitize (re-run graphify, mark stale entries)
 {{PMC_BIN}} sanitize
 
-# Sync pending PMC updates into agent-memory
+# Sync pending PMC updates into agent-memory (optional manual trigger)
 {{PMC_BIN}} sync-context
 ```
 
@@ -28,7 +28,7 @@ This project uses PMC (Project Memory Context) for persistent structured memory.
 
 1. **Map Project** runs `graphify` to map your codebase structure, extracts symbols, and creates an enrichment worklist.
 2. **Enrich** processes each symbol through a semantic enrichment pipeline (local model -> cloud API -> agent subagent fallback chain).
-3. **Sync** pushes enriched memories to `agent-memory-mcp` for persistent retrieval via `{{PMC_BIN}} sync-context`.
+3. **Sync** pushes enriched memories to `agent-memory-mcp` for persistent retrieval (done automatically in the background after refresh/enrich, or manually via `{{PMC_BIN}} sync-context`).
 4. **Context** materializes 9 base project-context memories (stack, architecture, dependencies, etc.).
 
 ## Files
