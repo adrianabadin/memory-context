@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -162,4 +163,122 @@ test('legacy new-project help points to the new public command name', async () =
   const output = stdout.join('');
   assert.match(output, /pmc map-project/);
   assert.doesNotMatch(output, /node new-project\.mjs/);
+});
+
+test('resolveCommand resolves top-level --help and --version', () => {
+  const helpCmd = resolveCommand(['--help']);
+  assert.equal(helpCmd.name, '--help');
+  assert.equal(helpCmd.valid, true);
+  assert.equal(helpCmd.modulePath, null);
+  assert.deepEqual(helpCmd.args, []);
+
+  const versionCmd = resolveCommand(['--version']);
+  assert.equal(versionCmd.name, '--version');
+  assert.equal(versionCmd.valid, true);
+  assert.equal(versionCmd.modulePath, null);
+  assert.deepEqual(versionCmd.args, []);
+});
+
+test('resolveCommand does not hijack flags after an existing sibling command', () => {
+  const mapHelp = resolveCommand(['map-project', '--help']);
+  assert.equal(mapHelp.name, 'map-project');
+  assert.equal(mapHelp.valid, true);
+  assert.deepEqual(mapHelp.args, ['--help']);
+
+  const doctorVersion = resolveCommand(['doctor', '--version']);
+  assert.equal(doctorVersion.name, 'doctor');
+  assert.equal(doctorVersion.valid, true);
+  assert.deepEqual(doctorVersion.args, ['--version']);
+
+  const cardHelp = resolveCommand(['card', '--help']);
+  assert.equal(cardHelp.name, 'card');
+  assert.equal(cardHelp.valid, true);
+  assert.deepEqual(cardHelp.args, ['--help']);
+});
+
+test('runCommand --help exits 0, empty stderr, matches existing help output', async () => {
+  const helpStdout = [];
+  const helpStderr = [];
+  const helpExit = await runCommand(['help'], {
+    stdout: { write: (v) => helpStdout.push(String(v)) },
+    stderr: { write: (v) => helpStderr.push(String(v)) },
+    stdio: 'pipe',
+  });
+
+  const dashHelpStdout = [];
+  const dashHelpStderr = [];
+  const dashHelpExit = await runCommand(['--help'], {
+    stdout: { write: (v) => dashHelpStdout.push(String(v)) },
+    stderr: { write: (v) => dashHelpStderr.push(String(v)) },
+    stdio: 'pipe',
+  });
+
+  assert.equal(helpExit, 0);
+  assert.equal(dashHelpExit, 0);
+  assert.equal(helpStderr.join(''), '');
+  assert.equal(dashHelpStderr.join(''), '');
+  assert.equal(dashHelpStdout.join(''), helpStdout.join(''));
+  assert.match(dashHelpStdout.join(''), /Usage: pmc/);
+});
+
+test('runCommand --version exits 0, empty stderr, prints package.json version', async () => {
+  const stdout = [];
+  const stderr = [];
+  const exitCode = await runCommand(['--version'], {
+    stdout: { write: (v) => stdout.push(String(v)) },
+    stderr: { write: (v) => stderr.push(String(v)) },
+    stdio: 'pipe',
+  });
+
+  const pkg = JSON.parse(readFileSync(resolve(PACKAGE_ROOT, 'package.json'), 'utf8'));
+  assert.equal(exitCode, 0);
+  assert.equal(stderr.join(''), '');
+  assert.equal(stdout.join(''), `${pkg.version}\n`);
+});
+
+test('public bin/pmc.mjs executable handles --help and --version in isolated temp directory', () => {
+  const binPath = resolve(PACKAGE_ROOT, 'bin', 'pmc.mjs');
+  const tempDir = mkdtempSync(resolve(tmpdir(), 'pmc-bin-test-'));
+  const pkg = JSON.parse(readFileSync(resolve(PACKAGE_ROOT, 'package.json'), 'utf8'));
+
+  try {
+    // Probe --help
+    const helpResult = spawnSync(process.execPath, [binPath, '--help'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+    assert.equal(helpResult.status, 0);
+    assert.equal(helpResult.stderr, '');
+    assert.match(helpResult.stdout, /Usage: pmc/);
+
+    // Probe --version
+    const versionResult = spawnSync(process.execPath, [binPath, '--version'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+    assert.equal(versionResult.status, 0);
+    assert.equal(versionResult.stderr, '');
+    assert.equal(versionResult.stdout, `${pkg.version}\n`);
+
+    // Probe sibling forwarding: pmc card --help
+    const cardHelpResult = spawnSync(process.execPath, [binPath, 'card', '--help'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+    assert.equal(cardHelpResult.status, 0);
+    assert.match(cardHelpResult.stdout, /Usage: pmc card/);
+
+    // Probe invalid command
+    const invalidResult = spawnSync(process.execPath, [binPath, 'invalid-cmd-probe'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+    assert.equal(invalidResult.status, 1);
+    assert.match(invalidResult.stderr, /Invalid command: invalid-cmd-probe/);
+
+    // Verify hermetic boundary: tempDir must remain completely empty
+    assert.deepEqual(readdirSync(tempDir), []);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
 });
