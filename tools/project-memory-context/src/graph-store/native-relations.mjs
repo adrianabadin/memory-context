@@ -77,7 +77,7 @@ function endpointOf(value, role) {
  * @param {{relations: Array<object>, unresolved: Array<object>}} extractResult
  * @returns {{inserted: number, duplicates: number, unresolved: Record<string, number>}}
  */
-export function persistNativeRelations(db, extractResult) {
+export function persistNativeRelations(db, extractResult, options = {}) {
   if (!extractResult || !Array.isArray(extractResult.relations) || !Array.isArray(extractResult.unresolved)) {
     throw new TypeError('extractResult must provide relations and unresolved arrays');
   }
@@ -125,6 +125,10 @@ export function persistNativeRelations(db, extractResult) {
   db.exec('SAVEPOINT native_relation_batch');
   try {
   db.exec(NATIVE_EDGES_SCHEMA_SQL);
+  if (options?.replace) {
+    db.prepare('DELETE FROM native_edges').run();
+    db.prepare('DELETE FROM native_import_bindings').run();
+  }
   const insert = db.prepare(
     'INSERT OR IGNORE INTO native_edges (source_id, target_id, relation, source_kind, target_kind) VALUES (?, ?, ?, ?, ?)',
   );

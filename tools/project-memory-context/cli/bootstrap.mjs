@@ -141,7 +141,7 @@ async function runStageB(projectRoot) {
   log('Running stage-b (build-worklist)...');
 
   const files = [
-    ...findFiles(projectRoot, ['.ts', '.mjs', '.js'], projectRoot),
+    ...findFiles(projectRoot, ['.ts', '.tsx', '.mjs', '.js', '.jsx'], projectRoot),
     ...findFiles(projectRoot, ['.cs'], projectRoot),
   ];
 

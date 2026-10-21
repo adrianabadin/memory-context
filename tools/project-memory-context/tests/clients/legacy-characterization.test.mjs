@@ -83,6 +83,8 @@ function sanitizeSemanticContent(str) {
     .replace(/golden-proj-[A-Za-z0-9]+/g, 'PROJECT_ROOT_FIXTURE')
     .replace(/pmc-golden-global-[A-Za-z0-9]+/g, 'GLOBAL_CONFIG_FIXTURE')
     .replace(/golden-glob-[A-Za-z0-9]+/g, 'GLOBAL_CONFIG_FIXTURE')
+    // Ignore only fixture-root parents; retain descendant paths and all content.
+    .replace(/(?:[A-Za-z]:)?\/[^"'\\\r\n]*\/(?=(?:PROJECT_ROOT_FIXTURE|GLOBAL_CONFIG_FIXTURE)(?:\/|["'\\\s]|$))/g, '')
     .trim();
 }
 
@@ -152,6 +154,8 @@ test('Golden Baseline (Static): OpenCode legacy host installation & exact tree p
     const actualGlobalFiles = await collectFiles(globalConfigDir);
 
     const expected = goldenData.goldens.opencode;
+    const actualConfig = JSON.parse(actualProjectFiles['.opencode/opencode.json']);
+    assert.equal(actualConfig.mcp['pmc-query'].environment.PMC_PROJECT_ROOT, projectRoot);
 
     assertTreeMatchesGolden(actualProjectFiles, expected.projectFiles);
     assertTreeMatchesGolden(actualGlobalFiles, expected.globalFiles);
@@ -178,6 +182,9 @@ test('Golden Baseline (Static): Claude Code legacy host installation & exact tre
     const actualGlobalFiles = await collectFiles(globalConfigDir);
 
     const expected = goldenData.goldens['claude-code'];
+    const actualSettings = JSON.parse(actualGlobalFiles['settings.json']);
+    assert.equal(actualSettings.hooks.SessionStart[0].hooks[0].command,
+      `node "${join(globalConfigDir, 'hooks', 'pmc-session-start.js').replace(/\\/g, '/')}"`);
 
     assertTreeMatchesGolden(actualProjectFiles, expected.projectFiles);
     assertTreeMatchesGolden(actualGlobalFiles, expected.globalFiles);

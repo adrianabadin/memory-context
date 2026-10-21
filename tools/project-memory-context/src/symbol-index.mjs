@@ -122,12 +122,19 @@ export function upsertSymbolIndexEntry(index, entry) {
     semanticSummary = existing.semanticSummary;
   }
 
+  let status = entry.status !== undefined ? entry.status : (existing?.status ?? 'pending');
+  const memoryId = entry.memoryId !== undefined ? entry.memoryId : (existing?.memoryId ?? null);
+  // Never mark unenriched records enriched via structural codeHash alone
+  if (status === 'enriched' && !memoryId && existing?.status !== 'enriched') {
+    status = existing?.status ?? 'pending';
+  }
+
   const record = {
-    memoryId: entry.memoryId ?? null,
-    graphNodeId: entry.graphNodeId ?? null,
+    memoryId,
+    graphNodeId: entry.graphNodeId !== undefined ? entry.graphNodeId : (existing?.graphNodeId ?? null),
     codeHash: entry.codeHash,
-    status: entry.status,
-    lastEnrichedAt: entry.lastEnrichedAt ?? null,
+    status,
+    lastEnrichedAt: entry.lastEnrichedAt !== undefined ? entry.lastEnrichedAt : (existing?.lastEnrichedAt ?? null),
   };
 
   if (semanticSummary !== undefined && semanticSummary !== null) {
