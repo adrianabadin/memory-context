@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 
-import { runGraphifyUpdate, ensureGraphifyIgnore } from '../src/graphify-runner.mjs';
+import { runGraphifyUpdate, ensureGraphifyIgnore, installGraphify } from '../src/graphify-runner.mjs';
 
 let counter = 0;
 function tmp(label) {
@@ -247,4 +247,110 @@ test('10. runGraphifyUpdate degrades gracefully and does not throw when .graphif
     'must log error about .graphifyignore',
   );
   await rm(T, { recursive: true, force: true });
+});
+
+test('11. installGraphify respects PMC_GRAPHIFY_PATH and skips pip installation', () => {
+  const spawnCalls = [];
+  const messages = [];
+  const result = installGraphify({
+    env: { PMC_GRAPHIFY_PATH: '/custom/bin/graphify' },
+    spawnSyncImpl: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+    log: (m) => messages.push(m),
+  });
+  assert.equal(result, true, 'must return true when skipping install');
+  assert.equal(spawnCalls.length, 0, 'spawnSync must NOT be called when PMC_GRAPHIFY_PATH is set');
+  assert.ok(
+    messages.some((m) => m.includes('PMC_GRAPHIFY_PATH') && m.includes('skipping')),
+    'must log truthful skip message mentioning PMC_GRAPHIFY_PATH',
+  );
+});
+
+test('12. installGraphify skips pip installation when graphify executable is already available', () => {
+  const spawnCalls = [];
+  const messages = [];
+  const result = installGraphify({
+    env: {},
+    resolveGraphifyFn: () => '/usr/bin/graphify',
+    spawnSyncImpl: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+    log: (m) => messages.push(m),
+  });
+  assert.equal(result, true, 'must return true when skipping install');
+  assert.equal(spawnCalls.length, 0, 'spawnSync must NOT be called when graphify is already available');
+  assert.ok(
+    messages.some((m) => m.includes('already available') && m.includes('skipping')),
+    'must log truthful skip message mentioning executable is already available',
+  );
+});
+
+test('13. installGraphify preserves legacy PMC_GRAPHIFY_BIN and skips pip installation', () => {
+  const spawnCalls = [];
+  const messages = [];
+  const result = installGraphify({
+    env: { PMC_GRAPHIFY_BIN: 'custom-graphify-bin' },
+    spawnSyncImpl: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+    log: (m) => messages.push(m),
+  });
+  assert.equal(result, true, 'must return true when skipping install');
+  assert.equal(spawnCalls.length, 0, 'spawnSync must NOT be called when PMC_GRAPHIFY_BIN is set');
+  assert.ok(
+    messages.some((m) => m.includes('PMC_GRAPHIFY_BIN') && m.includes('skipping')),
+    'must log truthful skip message mentioning PMC_GRAPHIFY_BIN',
+  );
+});
+
+test('14. installGraphify never falls through to global pip install on rejected or invalid explicit config', () => {
+  const spawnCalls = [];
+  const messages = [];
+  const result = installGraphify({
+    env: { PMC_GRAPHIFY_PATH: '/nonexistent/path/graphify' },
+    resolveGraphifyFn: () => {
+      throw new Error('graphify not found');
+    },
+    spawnSyncImpl: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+    log: (m) => messages.push(m),
+  });
+  assert.equal(result, true, 'must return true when explicit override is provided');
+  assert.equal(spawnCalls.length, 0, 'spawnSync must NOT be called even if override is unresolvable');
+  assert.ok(
+    messages.some((m) => m.includes('PMC_GRAPHIFY_PATH') && m.includes('skipping')),
+    'must log truthful skip rather than falling through to global pip install',
+  );
+});
+
+test('15. installGraphify falls back to pip install fork when graphify is missing and no explicit override exists', () => {
+  const spawnCalls = [];
+  const messages = [];
+  const result = installGraphify({
+    env: {},
+    resolveGraphifyFn: () => {
+      throw new Error('graphify not found');
+    },
+    resolvePythonBinFn: () => 'fake-python',
+    spawnSyncImpl: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+    log: (m) => messages.push(m),
+  });
+  assert.equal(result, true, 'must return true on successful pip install');
+  assert.equal(spawnCalls.length, 1, 'spawnSync must be called once when graphify is missing');
+  assert.equal(spawnCalls[0][0], 'fake-python');
+  assert.deepEqual(spawnCalls[0][1], [
+    '-m',
+    'pip',
+    'install',
+    'git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction',
+  ]);
 });
