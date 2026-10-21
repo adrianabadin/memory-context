@@ -15,6 +15,9 @@ import { CLIENT_REGISTRY } from '../src/clients/registry.mjs';
 import { PROBE_TABLE } from '../src/clients/probes.mjs';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { installGraphify } from '../src/graphify-runner.mjs';
+
+export { installGraphify };
 
 export const AGENT_FLAGS = {
   '--antigravity': 'antigravity',
@@ -39,19 +42,7 @@ export function parseArgs(args) {
   return { agents: [...new Set(flagIds)] };
 }
 
-export function installGraphify() {
-  const candidates = process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python'];
-  for (const command of candidates) {
-    const forkUrl = 'git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction';
-    const result = spawnSync(command, ['-m', 'pip', 'install', forkUrl], { stdio: 'inherit' });
-    if (result.status === 0) return command;
-  }
-  console.warn(`\n⚠  Could not install graphifyy automatically.`);
-  console.warn(`   Python not found? Download it from: https://www.python.org/downloads/`);
-  console.warn(`   Then run manually:`);
-  console.warn(`   pip install git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction\n`);
-  return null;
-}
+
 
 function spawnCheck(bin, args) {
   const result = spawnSync(bin, args, { encoding: 'utf-8', timeout: 5000 });

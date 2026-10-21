@@ -54,7 +54,8 @@ test('refreshContext detects new file and updates worklist', async () => {
   );
 
   const result = await refreshContext(T, {
-    // Inject mock spawnBackground so we don't spawn real sync process
+    // Inject mock spawnBackground and runGraphifyUpdate so we don't spawn real sync process or external graphify
+    runGraphifyUpdate: async () => ({ ran: false, copied: [] }),
     spawnBackground: () => 123,
     open: async () => ({ fd: 1, close: async () => {} }),
   });
@@ -119,12 +120,14 @@ test('refreshContext marks symbols as removed when file is deleted', async () =>
     JSON.stringify([]),
   );
   await refreshContext(T, {
+    runGraphifyUpdate: async () => ({ ran: false, copied: [] }),
     spawnBackground: () => 123,
     open: async () => ({ fd: 1, close: async () => {} }),
   });
 
   await rm(join(T, 'src', 'temp.mjs'));
   const result = await refreshContext(T, {
+    runGraphifyUpdate: async () => ({ ran: false, copied: [] }),
     spawnBackground: () => 123,
     open: async () => ({ fd: 1, close: async () => {} }),
   });
@@ -154,6 +157,7 @@ test('refreshContext auto-spawns background sync when enrich is false', async ()
 
   await refreshContext(T, {
     enrich: false,
+    runGraphifyUpdate: async () => ({ ran: false, copied: [] }),
     spawnBackground: (cmd, args, opts) => {
       spawnCalls.push({ cmd, args, opts });
       return 1234;
@@ -188,6 +192,7 @@ test('refreshContext does NOT spawn background sync when enrich is true and ther
 
   await refreshContext(T, {
     enrich: true,
+    runGraphifyUpdate: async () => ({ ran: false, copied: [] }),
     spawnBackground: (cmd, args, opts) => {
       spawnCalls.push({ cmd, args, opts });
       return 1234;

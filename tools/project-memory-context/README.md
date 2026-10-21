@@ -23,6 +23,7 @@ This gives your AI agent persistent, recallable knowledge of your entire codebas
   - [Multi-agent setup](#multi-agent-setup--flags)
   - [Automated detection](#automated-detection)
 - [CLI Reference](#cli-reference)
+  - [`pmc --help` and `pmc --version`](#pmc---help-and-pmc---version)
   - [`pmc setup`](#pmc-setup)
   - [`pmc map-project`](#pmc-map-project)
   - [`pmc enrich`](#pmc-enrich)
@@ -256,6 +257,15 @@ When run without flags, `pmc setup` detects your agent by checking (in order):
 ---
 
 ## CLI Reference
+
+### `pmc --help` and `pmc --version`
+
+Top-level flags for usage help and version reporting:
+
+```bash
+pmc --help       # Print CLI usage text and exit 0 (same as `pmc help`)
+pmc --version    # Print installed package version and exit 0
+```
 
 ### `pmc setup`
 

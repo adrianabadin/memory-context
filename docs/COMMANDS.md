@@ -1,6 +1,6 @@
 # PMC Commands Reference
 
-All commands are run via `pmc <command> [args]` (globally installed) or `node tools/project-memory-context/cli/<command>.mjs [args]` (source repo).
+All commands are run via `pmc <command> [args]` (globally installed) or `node tools/project-memory-context/cli/<command>.mjs [args]` (source repo). Top-level flags `pmc --help` and `pmc --version` are also supported.
 
 ## Registered Commands
 
@@ -8,6 +8,8 @@ The `pmc` binary dispatches to these subcommands (defined in `src/command-dispat
 
 | Command | CLI File | Purpose | Example |
 |---------|----------|---------|---------|
+| `--help` | — | Shows usage text (alias for `help`) | `pmc --help` |
+| `--version` | — | Prints installed package version | `pmc --version` |
 | `backfill-symbol-keys` | `cli/backfill-symbol-keys.mjs` | Plans or explicitly applies symbol-key attachments for legacy memories found by known index tags | `pmc backfill-symbol-keys .` |
 | `card` | `cli/card.mjs` | Read-only file/community/explicit-feature cards with accepted narrative provenance | `pmc card file src/index.ts` |
 | `doctor` | `cli/doctor.mjs` | Runs health checks on the PMC environment (Node, Python, Ollama, agent-memory) | `pmc doctor .` |

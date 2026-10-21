@@ -222,19 +222,62 @@ function waitForChild(child, { timeoutMs, log }) {
 }
 
 /**
- * Install graphify Python package from the fork with Razor/CSHTML support.
- * Returns true on success, false on failure (non-throwing).
+ * Install graphify Python package from the fork with Razor/CSHTML support,
+ * or skip if already available or explicitly configured.
  *
- * @param {{ log?: (msg: string) => void }} options
+ * Returns true on success or truthful skip, false on failure (non-throwing).
+ *
+ * @param {{
+ *   log?: (msg: string) => void,
+ *   env?: NodeJS.ProcessEnv,
+ *   platform?: NodeJS.Platform,
+ *   resolveGraphifyFn?: (opts?: any) => string,
+ *   resolvePythonBinFn?: (opts?: any) => string,
+ *   spawnSyncImpl?: typeof import('node:child_process').spawnSync,
+ *   execFileSyncImpl?: typeof import('node:child_process').execFileSync,
+ * }} options
  * @returns {boolean}
  */
 export function installGraphify(options = {}) {
   const log = options.log ?? ((msg) => console.error(`[graphify-runner] ${msg}`));
+  const env = options.env ?? process.env;
+  const platform = options.platform ?? process.platform;
+  const resolveGraphifyFn = options.resolveGraphifyFn ?? resolveGraphify;
+  const resolvePythonBinFn = options.resolvePythonBinFn ?? resolvePythonBin;
+  const spawnSyncImpl = options.spawnSyncImpl ?? spawnSync;
+  const execFileSyncImpl = options.execFileSyncImpl;
+
+  // 1. Check explicit environment overrides (PMC_GRAPHIFY_PATH or legacy PMC_GRAPHIFY_BIN).
+  // Explicit configuration must never silently fall through to a global install.
+  if (env.PMC_GRAPHIFY_PATH) {
+    log(`graphify already configured via PMC_GRAPHIFY_PATH (${env.PMC_GRAPHIFY_PATH}) — skipping install.`);
+    return true;
+  }
+  if (env.PMC_GRAPHIFY_BIN) {
+    log(`graphify already configured via PMC_GRAPHIFY_BIN (${env.PMC_GRAPHIFY_BIN}) — skipping install.`);
+    return true;
+  }
+
+  // 2. Check if an executable is already available on PATH.
+  let availableExe;
+  try {
+    availableExe = resolveGraphifyFn({ env, platform, execFileSyncImpl });
+  } catch {
+    availableExe = null;
+  }
+
+  if (availableExe) {
+    log(`graphify already available (${availableExe}) — skipping install.`);
+    return true;
+  }
+
+  // 3. Graphify is truly missing and no explicit override exists.
+  // Fall back to pip installation from the fork.
   log('Installing graphify (Python)...');
-  const pythonBin = resolvePythonBin();
+  const pythonBin = resolvePythonBinFn({ platform, execFileSyncImpl });
   // Temporarily installing from fork until PR #1085 is merged into safishamsi/graphify
   const forkUrl = 'git+https://github.com/adrianabadin/graphify.git@feat/cshtml-mvc-razor-extraction';
-  const r = spawnSync(pythonBin, ['-m', 'pip', 'install', forkUrl], { stdio: 'inherit' });
+  const r = spawnSyncImpl(pythonBin, ['-m', 'pip', 'install', forkUrl], { stdio: 'inherit' });
   if (r.status === 0) {
     log(`graphifyy (fork with Razor/CSHTML support) installed via ${pythonBin}`);
     return true;

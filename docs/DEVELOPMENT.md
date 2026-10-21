@@ -23,6 +23,7 @@ PMC walkers exclude non-source scopes and generator artifacts consistently:
 - Scopes excluded: `.planning/**`, `.worktrees/**`, `graphify-out/**`, `.graphify_*.json`, build outputs (`dist`, `build`, `obj`, `bin`, `coverage`, `target`), vendor directories (`node_modules`), and version control metadata (`.git`).
 - `.planning/**` declared intake artifacts remain explicitly readable via artifact paths under `.planning/project-memory-context/`.
 - `ensureGraphifyIgnore(projectRoot)` in `src/graphify-runner.mjs` idempotently appends `.worktrees/`, `.planning/`, `node_modules/`, `graphify-out/`, and `.graphify_*.json` to `.graphifyignore` prior to invoking graphify, preserving existing user rules and comments. If writing `.graphifyignore` fails (such as on a directory collision), `runGraphifyUpdate` degrades gracefully without throwing.
+- `installGraphify(options)` in `src/graphify-runner.mjs` checks `PMC_GRAPHIFY_PATH`, legacy `PMC_GRAPHIFY_BIN`, and executable discovery on PATH before attempting pip installation. When Graphify is already configured or available, it logs a truthful skip rather than invoking pip. If Graphify is missing and no explicit override exists, it falls back to installing from the fork with Razor/CSHTML support via pip. Explicit configuration never silently falls through to a global install.
 
 ## Symbol Index Semantic Summary Persistence
 
@@ -565,3 +566,11 @@ node tools/project-memory-context/src/eval/relational-eval.mjs --stub
 - **End-to-End Pipeline:** When `graphify` is resolved via platform runner detection, the baseline invokes `runGraphifyUpdate` on an isolated temporary child directory using fixture sources only, extracts symbols with `extractTopLevelSymbols`, resolves nodes with `attachGraphNodeIds`, and queries `createQueryOrchestrator`. It measures an accuracy of 2/12 (~0.167) matching top-level function calls and empty entrypoint caller sets.
 - **Extraction Capabilities:** Separately reported from the relational baseline. Current tree-sitter extraction scans 10 files and extracts 12 top-level symbols, but 0 methods are extracted because `src/extractors/tree-sitter/extract.mjs`'s `isTopLevel` filter rejects member nodes in TypeScript. This is a code capability limitation addressed in Task 1.2.
 - **Fallback / Not Run:** If `graphify` cannot be resolved or its update fails, the report states `endToEnd: { status: "UNAVAILABLE" | "NOT_RUN", reason: "..." }` with no numeric relational score.
+
+## Native Production Pipeline Integration (Plan S1 / T1)
+
+`src/native-pipeline.mjs` exports `executeNativePipeline({ projectRoot, files, dirs, graph, profile, replace, log })`.
+This shared pipeline connects AST symbol extraction, native relations (`extractNativeCalls`, `extractNativeImportBindings`), deterministic roles (`classifySymbol`, `loadProjectProfile`), canonical identity matching (`attachGraphNodeIds`, `backfillGraphNode`), and SQLite GraphStore persistence (`persistNativeRelations`, `persistNodeRoles`).
+It is shared by `build-worklist.mjs` (bootstrap Stage B) and `refresh-context.mjs`.
+Full current eligible sources are processed across incremental and deleted-file runs so stale native edges, import bindings, and role assignments are replaced safely while unrelated accepted enrichment in symbol index and worklist is preserved.
+Unenriched symbols remain `pending` with null memory IDs; matching structural code hashes alone never mark unenriched symbols as enriched without accepted semantic evidence.

@@ -19,8 +19,13 @@ export async function extractTopLevelSymbols({ filePath, content }) {
 
 export function buildEnrichmentWorklist({ symbols, symbolIndex }) {
   return symbols.map((symbol) => {
-    const prior = symbolIndex[symbol.symbolKey];
-    const status = prior && prior.codeHash === symbol.codeHash ? 'enriched' : 'pending';
+    const prior = symbolIndex?.[symbol.symbolKey];
+    const isEnriched = Boolean(
+      prior &&
+      prior.codeHash === symbol.codeHash &&
+      (prior.status === 'enriched' || (prior.status === undefined && prior.memoryId))
+    );
+    const status = isEnriched ? 'enriched' : 'pending';
     return {
       ...symbol,
       status,

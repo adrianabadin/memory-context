@@ -1,10 +1,13 @@
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getPackageVersion } from './package-version.mjs';
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const COMMANDS = new Map([
+  ['--help', null],
+  ['--version', null],
   ['backfill-symbol-keys', 'cli/backfill-symbol-keys.mjs'],
   ['card', 'cli/card.mjs'],
   ['doctor', 'cli/doctor.mjs'],
@@ -63,6 +66,11 @@ export async function runCommand(argv = [], options = {}) {
     writeLine(stderr, `Invalid command: ${command.name}`);
     writeLine(stdout, usageText());
     return 1;
+  }
+
+  if (command.name === '--version') {
+    writeLine(stdout, getPackageVersion());
+    return 0;
   }
 
   if (!command.modulePath) {

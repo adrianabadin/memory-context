@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, mkdir, cp, copyFile, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { existsSync } from 'node:fs';
 import childProcess, { spawnSync } from 'node:child_process';
 import os from 'node:os';
@@ -293,8 +293,13 @@ test('new-project generates project-context artifacts', async () => {
 
     const intentLog = await result.readSentinelLog();
     assert.ok(
+      intentLog.some((e) => e.type === 'where-graphify'),
+      'graphify availability probe should have been observed in sentinel log',
+    );
+    assert.equal(
       intentLog.some((e) => e.type === 'pip-install'),
-      'fake install request should have been observed in sentinel log',
+      false,
+      'pip install must not run when graphify is already available',
     );
   } finally {
     await result?.cleanup?.();
@@ -347,9 +352,10 @@ test('bootstrap.mjs uses resolveGraphify when running stage-a (respects PMC_GRAP
     );
 
     const intentLog = await result.readSentinelLog();
-    assert.ok(
+    assert.equal(
       intentLog.some((e) => e.type === 'pip-install'),
-      'fake install request should have been observed in sentinel log',
+      false,
+      'pip install must not run when PMC_GRAPHIFY_PATH is set',
     );
   } finally {
     await result?.cleanup?.();
@@ -390,8 +396,13 @@ test('bootstrap.mjs CLI produces full install structure when run standalone', as
 
     const intentLog = await result.readSentinelLog();
     assert.ok(
+      intentLog.some((e) => e.type === 'where-graphify'),
+      'graphify availability probe should have been observed in sentinel log',
+    );
+    assert.equal(
       intentLog.some((e) => e.type === 'pip-install'),
-      'fake install request should have been observed in sentinel log',
+      false,
+      'pip install must not run when graphify is already available',
     );
   } finally {
     await result?.cleanup?.();
@@ -436,8 +447,13 @@ test('bootstrap.mjs copies bundled tools when executed from package layout', asy
 
     const intentLog = await result.readSentinelLog();
     assert.ok(
+      intentLog.some((e) => e.type === 'where-graphify'),
+      'graphify availability probe should have been observed in sentinel log',
+    );
+    assert.equal(
       intentLog.some((e) => e.type === 'pip-install'),
-      'fake install request should have been observed in sentinel log',
+      false,
+      'pip install must not run when graphify is already available',
     );
   } finally {
     await result?.cleanup?.();
@@ -473,8 +489,13 @@ test('bootstrap.mjs stage-b ignores .next build artifacts', async () => {
 
     const intentLog = await result.readSentinelLog();
     assert.ok(
+      intentLog.some((e) => e.type === 'where-graphify'),
+      'graphify availability probe should have been observed in sentinel log',
+    );
+    assert.equal(
       intentLog.some((e) => e.type === 'pip-install'),
-      'fake install request should have been observed in sentinel log',
+      false,
+      'pip install must not run when graphify is already available',
     );
   } finally {
     await result?.cleanup?.();
@@ -783,5 +804,45 @@ test('controlled hermetic boundary rejects sibling and unknown script paths unde
     await result?.cleanup?.();
     await optionResult?.cleanup?.();
     await rm(fixtureDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
+test('installGraphify inside controlled boundary invokes pip-install on missing graphify but skips on explicit override', async () => {
+  const runnerUrl = pathToFileURL(join(packageRoot, 'src', 'graphify-runner.mjs')).href;
+  const missingScript = `
+    import { installGraphify } from '${runnerUrl}';
+    const ok = installGraphify({
+      resolveGraphifyFn: () => { throw new Error('not found'); },
+    });
+    console.log('INSTALL_RESULT:' + ok);
+  `;
+  let missingResult;
+  try {
+    missingResult = await runFixtureScript(missingScript, { timeout: 10000 });
+    assert.equal(missingResult.status, 0, missingResult.stderr);
+    assert.match(missingResult.stdout, /INSTALL_RESULT:true/);
+    const intentLog = await missingResult.readSentinelLog();
+    assert.ok(intentLog.some((e) => e.type === 'pip-install'), 'pip-install must be observed when graphify is missing');
+  } finally {
+    await missingResult?.cleanup?.();
+  }
+
+  const skipScript = `
+    import { installGraphify } from '${runnerUrl}';
+    const ok = installGraphify({
+      env: { PMC_GRAPHIFY_PATH: '/custom/bin/graphify' },
+      resolveGraphifyFn: () => { throw new Error('not found'); },
+    });
+    console.log('SKIP_RESULT:' + ok);
+  `;
+  let skipResult;
+  try {
+    skipResult = await runFixtureScript(skipScript, { timeout: 10000 });
+    assert.equal(skipResult.status, 0, skipResult.stderr);
+    assert.match(skipResult.stdout, /SKIP_RESULT:true/);
+    const intentLog = await skipResult.readSentinelLog();
+    assert.equal(intentLog.some((e) => e.type === 'pip-install'), false, 'pip-install must NOT be observed when override is set');
+  } finally {
+    await skipResult?.cleanup?.();
   }
 });

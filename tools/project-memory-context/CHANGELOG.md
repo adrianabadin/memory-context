@@ -5,6 +5,24 @@ CLI) are documented here. This project adheres to [Semantic Versioning](https://
 
 ## [Unreleased]
 
+## [0.10.1] — Pending Release
+
+### Added
+
+- **Production native pipeline integration** — `map-project` and
+  `refresh-context` directly materialize canonical identities, native
+  call/import relations, deterministic roles, and symbol index from source.
+- **Top-level flags** — `--help` and `--version` support on the root `pmc`
+  CLI, resolving package version dynamically and preserving subcommands.
+
+### Changed
+
+- **Graphify override & availability detection** — respects `PMC_GRAPHIFY_PATH`
+  and detects an available host Graphify executable before falling back to
+  pip installation.
+- **Dynamic MCP package version** — `pmc-query-server` reports the actual
+  installed package version instead of a hardcoded version.
+
 ## [0.10.0] — 2026-10-20
 
 Changes since the published `0.9.1`.

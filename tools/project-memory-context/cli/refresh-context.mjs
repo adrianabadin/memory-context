@@ -16,6 +16,7 @@ import { appendSyncEntries, createSyncEntry } from '../src/sync-manifest.mjs';
 import { runGraphifyUpdate } from '../src/graphify-runner.mjs';
 import { spawnBackground } from '../src/platform.mjs';
 import { openGraphDb } from '../src/graph-store/graph-db.mjs';
+import { executeNativePipeline } from '../src/native-pipeline.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -139,7 +140,11 @@ async function hashCodeFragment(content, startLine, endLine) {
 }
 
 export async function refreshContext(projectRoot, options = {}) {
-  const { enrich = false } = options;
+  const {
+    enrich = false,
+    runGraphifyUpdate: runGraphifyUpdateImpl = runGraphifyUpdate,
+  } = options;
+  const log = options.log ?? ((msg) => console.error(`[refresh-context] ${msg}`));
   const projectSlug = basename(projectRoot).toLowerCase();
   const dirs = await ensureProjectMemoryContextDirs(projectRoot);
 
@@ -162,7 +167,7 @@ export async function refreshContext(projectRoot, options = {}) {
 
   // Refresh the graph before resolving symbol node IDs so attachGraphNodeIds
   // can link new/changed symbols to up-to-date nodes (with startLine, edges, community).
-  await runGraphifyUpdate(projectRoot, { log });
+  await runGraphifyUpdateImpl(projectRoot, { log });
 
   // Rebuild graph.db so get-context queries use the updated graph.
   const graphJsonPath = resolve(dirs.graph, 'graph.json');
@@ -179,33 +184,16 @@ export async function refreshContext(projectRoot, options = {}) {
     }
   }
 
-  let existingGraph = await readJsonArtifact(resolve(dirs.graph, 'graph.json'), { nodes: [], edges: [] });
-
-  log('Extracting symbols from changed files...');
-  const changedFileSymbols = [];
-  for (const file of changedFiles) {
-    try {
-      const content = await readFile(resolve(projectRoot, file), 'utf8');
-      const symbols = await extractTopLevelSymbols({ filePath: file, content });
-      for (const sym of symbols) {
-        sym.codeHash = await hashCodeFragment(content, sym.range.startLine, sym.range.endLine);
-      }
-      changedFileSymbols.push(...symbols);
-    } catch { /* skip unreadable */ }
-  }
-
-  const resolvedChangedSymbols = attachGraphNodeIds({ symbols: changedFileSymbols, graph: existingGraph });
-
+  log('Extracting symbols and running native pipeline over current eligible sources...');
   const existingWorklist = await readJsonArtifact(resolve(dirs.enrichment, 'worklist.json'), []);
+  const { resolvedSymbols } = await executeNativePipeline({
+    projectRoot,
+    dirs,
+    replace: true,
+    log,
+  });
 
-  const changedFileSet = new Set(changedFiles);
-  const removedFileSet = new Set(fileDelta.removed);
-  const unchangedWorklistEntries = existingWorklist.filter(
-    entry => !changedFileSet.has(entry.filePath) && !removedFileSet.has(entry.filePath)
-  );
-
-  const allCurrentSymbols = [...resolvedChangedSymbols, ...unchangedWorklistEntries];
-  const symbolDelta = computeSymbolDelta(allCurrentSymbols, existingWorklist);
+  const symbolDelta = computeSymbolDelta(resolvedSymbols, existingWorklist);
 
   const syncOps = [];
 

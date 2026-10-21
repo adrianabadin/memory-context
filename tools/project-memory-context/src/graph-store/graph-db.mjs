@@ -485,8 +485,8 @@ export function createSqliteGraphStore(db) {
     // (survives graph.json rebuilds) and reads them back as canonical
     // endpoint pairs. Unresolved facts are never edges. See
     // src/graph-store/native-relations.mjs.
-    persistNativeRelations(extractResult) {
-      return persistNativeRelations(db, extractResult);
+    persistNativeRelations(extractResult, options) {
+      return persistNativeRelations(db, extractResult, options);
     },
 
     listNativeEdges(filters) {
@@ -503,6 +503,13 @@ export function createSqliteGraphStore(db) {
 
     persistNodeRoles(assignments, options) {
       return persistNodeRoles(db, assignments, options);
+    },
+
+    clearNodeRoles() {
+      const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='node_role_assignments'").get();
+      if (hasTable) {
+        db.prepare('DELETE FROM node_role_assignments').run();
+      }
     },
 
     getNodeRole(endpointId) {
